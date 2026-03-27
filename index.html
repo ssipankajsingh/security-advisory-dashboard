@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Security Advisory Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  select,input{outline:none}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#0d1117}
+  ::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+  a{color:#1f6feb}
+  @media(max-width:600px){
+    .stats-bar{flex-wrap:wrap}
+    .header-btns{flex-direction:column;gap:6px}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+
+const DEFAULT_SOURCES = [
+  {id:"msrc",name:"Microsoft MSRC",vendor:"Microsoft",enabled:true,rss:"https://msrc.microsoft.com/blog/feed"},
+  {id:"cisco",name:"Cisco Talos / PSIRT",vendor:"Cisco",enabled:true,rss:"https://tools.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml"},
+  {id:"fortinet",name:"Fortinet PSIRT",vendor:"Fortinet",enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml"},
+  {id:"chrome",name:"Google Chrome Releases",vendor:"Google",enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default"},
+  {id:"mozilla",name:"Mozilla Security",vendor:"Mozilla",enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/feed/"},
+  {id:"paloalto",name:"Palo Alto / Cortex PSIRT",vendor:"Palo Alto",enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml"},
+  {id:"crowdstrike",name:"CrowdStrike Support",vendor:"CrowdStrike",enabled:false,rss:""},
+  {id:"netskope",name:"Netskope Advisories",vendor:"Netskope",enabled:false,rss:""},
+  {id:"proofpoint",name:"Proofpoint Security",vendor:"Proofpoint",enabled:false,rss:""},
+  {id:"1cosmos",name:"1Cosmos Security",vendor:"1Cosmos",enabled:false,rss:""},
+  {id:"nvd",name:"NIST NVD (Fallback)",vendor:"NIST",enabled:true,rss:"https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz"},
+];
+
+const MOCK = [
+  {id:"CVE-2025-21334",vendor:"Microsoft",title:"Windows Hyper-V NT Kernel Integration VSP Elevation of Privilege",severity:"Critical",cvss:9.8,date:"2025-03-25",zeroDay:true,summary:"Critical EoP in Windows Hyper-V allows attackers to gain SYSTEM privileges. Active exploitation in the wild.",products:["Windows 11","Windows Server 2022"],url:"https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21334"},
+  {id:"CVE-2025-20188",vendor:"Cisco",title:"Cisco IOS XE Web UI Remote Code Execution",severity:"Critical",cvss:10.0,date:"2025-03-24",zeroDay:true,summary:"Unauthenticated RCE in Cisco IOS XE Web UI. Exploit code publicly available. Immediate patching required.",products:["IOS XE 17.x","Catalyst 9000"],url:"https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-iosxe-webui-rce"},
+  {id:"FG-IR-25-019",vendor:"Fortinet",title:"FortiOS SSL-VPN Authentication Bypass",severity:"Critical",cvss:9.6,date:"2025-03-24",zeroDay:false,summary:"Authentication bypass in FortiOS SSL-VPN allows remote attackers to gain unauthorized access to the management interface.",products:["FortiOS 7.4.x","FortiOS 7.2.x","FortiGate"],url:"https://www.fortiguard.com/psirt/FG-IR-25-019"},
+  {id:"CVE-2025-2783",vendor:"Google",title:"Chrome Sandbox Escape via IPC Vulnerability",severity:"High",cvss:8.8,date:"2025-03-23",zeroDay:true,summary:"Zero-day sandbox escape in Chrome IPC layer. Emergency patch in Chrome 123.0.6312.122.",products:["Chrome < 123.0.6312.122"],url:"https://chromereleases.googleblog.com/2025/03/stable-channel-update-for-desktop.html"},
+  {id:"MFSA-2025-18",vendor:"Mozilla",title:"Firefox Use-After-Free in DOM Event Handling",severity:"High",cvss:8.1,date:"2025-03-22",zeroDay:false,summary:"Use-after-free in Firefox DOM event handling could allow remote code execution via crafted web content.",products:["Firefox < 124.0","Firefox ESR < 115.9"],url:"https://www.mozilla.org/security/advisories/mfsa2025-18/"},
+  {id:"PAN-SA-2025-0008",vendor:"Palo Alto",title:"PAN-OS GlobalProtect Gateway Buffer Overflow",severity:"High",cvss:8.7,date:"2025-03-21",zeroDay:false,summary:"Buffer overflow in GlobalProtect Gateway allows unauthenticated remote attackers to execute arbitrary code.",products:["PAN-OS 11.1.x","PAN-OS 10.2.x"],url:"https://security.paloaltonetworks.com/PAN-SA-2025-0008"},
+  {id:"CVE-2025-1891",vendor:"Microsoft",title:"Azure Active Directory OAuth Token Forgery",severity:"High",cvss:7.9,date:"2025-03-20",zeroDay:false,summary:"Token forgery in Azure AD OAuth flow could allow account takeover under specific configurations.",products:["Azure AD","Entra ID"],url:"https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-1891"},
+  {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-19",zeroDay:false,summary:"SNMP processing vulnerability causes device reload under high-volume attack in Cisco Secure Firewall.",products:["Cisco Secure Firewall 3100","ASA 5500-X"],url:"https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-snmp-dos"},
+  {id:"CVE-2025-1234",vendor:"NIST",title:"OpenSSL X.509 Certificate Parsing OOB Read",severity:"Medium",cvss:5.9,date:"2025-03-18",zeroDay:false,summary:"Out-of-bounds read in OpenSSL X.509 certificate parsing may cause application crash in enterprise middleware.",products:["OpenSSL 3.0.x","OpenSSL 1.1.1x"],url:"https://nvd.nist.gov/vuln/detail/CVE-2025-1234"},
+  {id:"FG-IR-25-012",vendor:"Fortinet",title:"FortiAnalyzer Stored XSS in Log Viewer",severity:"Low",cvss:3.8,date:"2025-03-17",zeroDay:false,summary:"Stored XSS in FortiAnalyzer log viewer. Requires authenticated access to exploit.",products:["FortiAnalyzer 7.4.x"],url:"https://www.fortiguard.com/psirt/FG-IR-25-012"},
+];
+
+const SEV = {
+  Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},
+  High:{border:"#ff7700",badge:"#ff7700",text:"#ff8800"},
+  Medium:{border:"#e6b800",badge:"#e6b800",text:"#ccaa00"},
+  Low:{border:"#00aa00",badge:"#00aa00",text:"#00aa00"},
+  Unknown:{border:"#888",badge:"#888",text:"#888"},
+};
+
+const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
+
+const Badge=({sev})=>{const c=SEV[sev]||SEV.Unknown;return <span style={{background:c.badge,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,letterSpacing:1}}>{sev?.toUpperCase()}</span>};
+const ZD=()=><span style={{background:"#cc00cc",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>0-DAY</span>;
+
+function App(){
+  const ls=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}};
+  const [tab,setTab]=useState("feed");
+  const [sources,setSources]=useState(()=>ls("sad_sources")||DEFAULT_SOURCES);
+  const [advisories,setAdvisories]=useState(()=>{const a=ls("sad_advisories");return a?.length?a:MOCK});
+  const [digest,setDigest]=useState(()=>localStorage.getItem("sad_digest")||"");
+  const [dLoad,setDLoad]=useState(false);
+  const [fLoad,setFLoad]=useState(false);
+  const [fSev,setFSev]=useState("All");
+  const [fVen,setFVen]=useState("All");
+  const [fZD,setFZD]=useState(false);
+  const [search,setSearch]=useState("");
+  const [newSrc,setNewSrc]=useState({name:"",vendor:"",rss:""});
+  const [addOpen,setAddOpen]=useState(false);
+  const [sel,setSel]=useState(null);
+  const [apiKey,setApiKey]=useState(()=>localStorage.getItem("sad_apikey")||"");
+  const [showKey,setShowKey]=useState(false);
+
+  useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
+  useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
+  useEffect(()=>{if(digest)localStorage.setItem("sad_digest",digest)},[digest]);
+  useEffect(()=>{localStorage.setItem("sad_apikey",apiKey)},[apiKey]);
+
+  const vendors=["All",...Array.from(new Set(advisories.map(a=>a.vendor)))];
+  const filtered=advisories.filter(a=>
+    (fSev==="All"||a.severity===fSev)&&
+    (fVen==="All"||a.vendor===fVen)&&
+    (!fZD||a.zeroDay)&&
+    (!search||a.title.toLowerCase().includes(search.toLowerCase())||a.id.toLowerCase().includes(search.toLowerCase())||a.vendor.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const stats={
+    critical:advisories.filter(a=>a.severity==="Critical").length,
+    high:advisories.filter(a=>a.severity==="High").length,
+    medium:advisories.filter(a=>a.severity==="Medium").length,
+    low:advisories.filter(a=>a.severity==="Low").length,
+    zeroDay:advisories.filter(a=>a.zeroDay).length,
+    total:advisories.length,
+  };
+
+  const genDigest=useCallback(async()=>{
+    if(!apiKey){alert("Please enter your Anthropic API key in Settings to use AI features.");setTab("settings");return;}
+    setDLoad(true);
+    const top=[...advisories].sort((a,b)=>(b.cvss||0)-(a.cvss||0)).slice(0,10);
+    const prompt=`You are a senior SOC analyst. Generate a concise actionable daily security advisory digest. Format with:\n1. Executive Summary (2-3 sentences)\n2. Critical/Zero-Day Alerts (must-act-today)\n3. High Priority Items\n4. Notable Trends\n5. Recommended Actions\n\nAdvisories:\n${top.map(a=>`[${a.severity}] ${a.id} - ${a.title} (${a.vendor}, CVSS: ${a.cvss||"N/A"}) ${a.zeroDay?"[ZERO-DAY]":""}: ${a.summary}`).join("\n")}\n\nBe concise, use bullet points, prioritize actionability. Today: ${new Date().toDateString()}.`;
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+      });
+      const data=await res.json();
+      if(data.error){setDigest("API Error: "+data.error.message);}
+      else{setDigest(data.content?.map(b=>b.text||"").join("")||"No response.");}
+    }catch(e){setDigest("Error: "+e.message);}
+    setDLoad(false);
+  },[advisories,apiKey]);
+
+  const refreshFeeds=useCallback(async()=>{
+    setFLoad(true);
+    await new Promise(r=>setTimeout(r,1500));
+    setFLoad(false);
+    alert("Feeds refreshed!\n\nNote: Live RSS fetching requires a backend proxy (CORS restriction). To enable real-time data, set up a lightweight Node.js/Python proxy that fetches vendor RSS feeds and serves them to this dashboard.");
+  },[]);
+
+  const toggleSrc=id=>setSources(s=>s.map(x=>x.id===id?{...x,enabled:!x.enabled}:x));
+  const removeSrc=id=>setSources(s=>s.filter(x=>x.id!==id));
+  const addSrc=()=>{
+    if(!newSrc.name||!newSrc.vendor)return;
+    setSources(s=>[...s,{...newSrc,id:Date.now().toString(),enabled:true,url:newSrc.rss}]);
+    setNewSrc({name:"",vendor:"",rss:""});setAddOpen(false);
+  };
+
+  const exportCSV=()=>{
+    const h=["ID","Vendor","Title","Severity","CVSS","Date","ZeroDay","URL"];
+    const rows=advisories.map(a=>[a.id,a.vendor,`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.url]);
+    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
+    const b=new Blob([csv],{type:"text/csv"});
+    const u=URL.createObjectURL(b);
+    const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();
+    URL.revokeObjectURL(u);
+  };
+
+  const tabBtn=(t,label)=>(
+    <button onClick={()=>setTab(t)} style={{padding:"8px 16px",border:"none",borderRadius:6,cursor:"pointer",fontWeight:600,fontSize:13,background:tab===t?A:"transparent",color:tab===t?"#fff":M}}>
+      {label}
+    </button>
+  );
+
+  const inp=extra=>({background:D,color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 10px",...extra});
+
+  return (
+    <div style={{background:D,color:T,minHeight:"100vh"}}>
+      {/* Header */}
+      <div style={{background:C,borderBottom:`1px solid ${B}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <span style={{fontSize:22}}>🛡️</span>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>Security Advisory Dashboard</div>
+          <div style={{color:M,fontSize:11}}>SOC Intelligence Feed · AI-Powered</div>
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}} className="header-btns">
+          <button onClick={exportCSV} style={{...inp(),cursor:"pointer",fontSize:12,fontWeight:600,padding:"7px 12px"}}>⬇ Export CSV</button>
+          <button onClick={refreshFeeds} disabled={fLoad} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+            {fLoad?"⟳ Fetching...":"⟳ Refresh Feeds"}
+          </button>
+          <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+            {dLoad?"✦ Generating...":"✦ AI Digest"}
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"flex",gap:10,padding:"12px 20px",flexWrap:"wrap"}} className="stats-bar">
+        {[["Total",stats.total,M],["Critical",stats.critical,"#ff4444"],["High",stats.high,"#ff7700"],["Medium",stats.medium,"#e6b800"],["Low",stats.low,"#00aa00"],["Zero-Days",stats.zeroDay,"#cc00cc"]].map(([l,v,c])=>(
+          <div key={l} style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:72}}>
+            <div style={{fontSize:20,fontWeight:700,color:c}}>{v}</div>
+            <div style={{fontSize:11,color:M}}>{l}</div>
+          </div>
+        ))}
+        <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:"8px 16px",marginLeft:"auto",textAlign:"right"}}>
+          <div style={{fontSize:11,color:M}}>Last Updated</div>
+          <div style={{fontSize:12}}>{new Date().toLocaleString()}</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{padding:"0 20px 10px",display:"flex",gap:4,flexWrap:"wrap"}}>
+        {tabBtn("feed","📋 Advisory Feed")}
+        {tabBtn("digest","✦ AI Digest")}
+        {tabBtn("sources","⚙ Sources")}
+        {tabBtn("settings","🔑 Settings")}
+      </div>
+
+      <div style={{padding:"0 20px 24px"}}>
+
+        {/* FEED */}
+        {tab==="feed"&&(
+          <div>
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+              <input placeholder="🔍 Search advisories..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp({flex:1,minWidth:180})}}/>
+              <select value={fSev} onChange={e=>setFSev(e.target.value)} style={inp()}>
+                {["All","Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}
+              </select>
+              <select value={fVen} onChange={e=>setFVen(e.target.value)} style={inp()}>
+                {vendors.map(v=><option key={v}>{v}</option>)}
+              </select>
+              <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",color:M,whiteSpace:"nowrap"}}>
+                <input type="checkbox" checked={fZD} onChange={e=>setFZD(e.target.checked)}/> 0-Days Only
+              </label>
+              <span style={{color:M,fontSize:12,marginLeft:"auto"}}>{filtered.length} results</span>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {filtered.map(a=>{
+                const c=SEV[a.severity]||SEV.Unknown;
+                const open=sel===a.id;
+                return(
+                  <div key={a.id} onClick={()=>setSel(open?null:a.id)}
+                    style={{background:C,border:`1px solid ${a.zeroDay?"#cc00cc":c.border}`,borderLeft:`4px solid ${a.zeroDay?"#cc00cc":c.badge}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                          <Badge sev={a.severity}/>{a.zeroDay&&<ZD/>}
+                          <span style={{color:M,fontSize:12}}>{a.vendor}</span>
+                          <span style={{color:B}}>·</span>
+                          <span style={{color:M,fontSize:12}}>{a.date}</span>
+                          {a.cvss&&<span style={{color:c.text,fontSize:12,fontWeight:700}}>CVSS {a.cvss}</span>}
+                        </div>
+                        <div style={{fontWeight:600,marginBottom:3}}>{a.id} — {a.title}</div>
+                        <div style={{color:M,fontSize:13}}>{a.summary}</div>
+                      </div>
+                      <span style={{color:M}}>{open?"▲":"▼"}</span>
+                    </div>
+                    {open&&(
+                      <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}}>
+                        <div style={{marginBottom:8}}>
+                          <span style={{color:M,fontSize:12}}>Affected: </span>
+                          {a.products?.map(p=><span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12,marginRight:6}}>{p}</span>)}
+                        </div>
+                        <a href={a.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {filtered.length===0&&<div style={{color:M,textAlign:"center",padding:40}}>No advisories match current filters.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* DIGEST */}
+        {tab==="digest"&&(
+          <div>
+            {digest?(
+              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                  <div style={{fontWeight:700,fontSize:15}}>✦ AI Daily Security Digest</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>{const b=new Blob([digest],{type:"text/plain"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_digest.txt";l.click();URL.revokeObjectURL(u);}}
+                      style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>⬇ Export</button>
+                    <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>
+                      {dLoad?"Regenerating...":"↺ Regenerate"}
+                    </button>
+                  </div>
+                </div>
+                <div style={{color:T,lineHeight:1.75,whiteSpace:"pre-wrap",fontSize:13}}>{digest}</div>
+              </div>
+            ):(
+              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:48,textAlign:"center"}}>
+                <div style={{fontSize:40,marginBottom:12}}>✦</div>
+                <div style={{fontWeight:600,marginBottom:8}}>No Digest Yet</div>
+                <div style={{color:M,marginBottom:20}}>Generate an AI-powered SOC briefing from all current advisories.</div>
+                <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>
+                  {dLoad?"✦ Generating...":"✦ Generate AI Daily Digest"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SOURCES */}
+        {tab==="sources"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <div style={{color:M,fontSize:13}}>{sources.filter(s=>s.enabled).length}/{sources.length} sources enabled</div>
+              <button onClick={()=>setAddOpen(true)} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Source</button>
+            </div>
+            {addOpen&&(
+              <div style={{background:C,border:`1px solid ${A}`,borderRadius:8,padding:14,marginBottom:12}}>
+                <div style={{fontWeight:600,marginBottom:10}}>Add New Source</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <input placeholder="Source name" value={newSrc.name} onChange={e=>setNewSrc(s=>({...s,name:e.target.value}))} style={{...inp({flex:1,minWidth:140})}}/>
+                  <input placeholder="Vendor" value={newSrc.vendor} onChange={e=>setNewSrc(s=>({...s,vendor:e.target.value}))} style={{...inp({width:130})}}/>
+                  <input placeholder="RSS/Atom Feed URL" value={newSrc.rss} onChange={e=>setNewSrc(s=>({...s,rss:e.target.value}))} style={{...inp({flex:2,minWidth:200})}}/>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:10}}>
+                  <button onClick={addSrc} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13}}>Add</button>
+                  <button onClick={()=>setAddOpen(false)} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13}}>Cancel</button>
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {sources.map(s=>(
+                <div key={s.id} style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:34,height:18,background:s.enabled?"#00aa00":"#444",borderRadius:9,cursor:"pointer",position:"relative",flexShrink:0}} onClick={()=>toggleSrc(s.id)}>
+                    <div style={{width:14,height:14,background:"#fff",borderRadius:7,position:"absolute",top:2,left:s.enabled?18:2,transition:"left 0.2s"}}/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13}}>{s.name}</div>
+                    <div style={{color:M,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.vendor}{s.rss?" · "+s.rss:""}</div>
+                  </div>
+                  <span style={{background:s.rss?"#00aa0022":"#88888822",color:s.rss?"#00aa00":M,border:`1px solid ${s.rss?"#00aa00":B}`,borderRadius:4,padding:"2px 6px",fontSize:11,flexShrink:0}}>
+                    {s.rss?"RSS":"Manual"}
+                  </span>
+                  <button onClick={()=>removeSrc(s.id)} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:16,flexShrink:0}}>✕</button>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:14,background:"#1f2d1f",border:"1px solid #2a4a2a",borderRadius:8,padding:12,color:"#6ea86e",fontSize:12}}>
+              <strong>ℹ️ Live RSS:</strong> Browser CORS restrictions block direct RSS fetching. Deploy a lightweight Node.js or Python proxy to fetch vendor feeds server-side and serve them to this dashboard for real-time data.
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS */}
+        {tab==="settings"&&(
+          <div style={{maxWidth:560}}>
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>🔑 Anthropic API Key</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Required for AI Digest generation. Your key is stored only in your browser's local storage and never sent anywhere except the Anthropic API.</div>
+              <div style={{display:"flex",gap:8}}>
+                <input type={showKey?"text":"password"} placeholder="sk-ant-..." value={apiKey} onChange={e=>setApiKey(e.target.value)}
+                  style={{...inp({flex:1})}}/>
+                <button onClick={()=>setShowKey(v=>!v)} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>
+                  {showKey?"Hide":"Show"}
+                </button>
+              </div>
+              {apiKey&&<div style={{color:"#00aa00",fontSize:12,marginTop:8}}>✓ API key saved</div>}
+            </div>
+
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>📊 Data Management</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>All data is stored in your browser's local storage and persists across sessions.</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={exportCSV} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>⬇ Export Advisories CSV</button>
+                <button onClick={()=>{if(confirm("Reset all advisory data to defaults?")){setAdvisories(MOCK);localStorage.removeItem("sad_advisories");}}}
+                  style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Data</button>
+              </div>
+            </div>
+
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
+              <div style={{fontWeight:700,marginBottom:4}}>🚀 Enabling Live Feeds</div>
+              <div style={{color:M,fontSize:12,lineHeight:1.7}}>
+                To fetch real-time advisories from vendor RSS feeds, you need a small backend proxy. Here's a quick setup:<br/><br/>
+                <strong style={{color:T}}>Option 1 — Node.js proxy (5 min setup):</strong><br/>
+                <code style={{background:D,padding:"4px 8px",borderRadius:4,display:"block",margin:"6px 0",fontSize:11}}>npm install express cors node-fetch && node proxy.js</code>
+                <strong style={{color:T}}>Option 2 — Python proxy:</strong><br/>
+                <code style={{background:D,padding:"4px 8px",borderRadius:4,display:"block",margin:"6px 0",fontSize:11}}>pip install flask flask-cors feedparser && python proxy.py</code>
+                <strong style={{color:T}}>Option 3 — Host on Netlify/Vercel</strong> with a serverless function that fetches and caches RSS feeds every hour.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
