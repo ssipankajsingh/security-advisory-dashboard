@@ -140,6 +140,7 @@ const SIMULATED_NEW=[
 // Example: "https://security-advisory-proxy.onrender.com"
 // Leave empty ("") to run in demo/simulated mode.
 const PROXY_URL = "https://security-advisory-proxy.onrender.com";
+
 const INTERVALS={"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
 const INTERVAL_LABELS={"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
 const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{border:"#ff7700",badge:"#ff7700",text:"#ff8800"},Medium:{border:"#e6b800",badge:"#e6b800",text:"#ccaa00"},Low:{border:"#00aa00",badge:"#00aa00",text:"#00aa00"},Unknown:{border:"#888",badge:"#888",text:"#888"}};
@@ -221,13 +222,12 @@ function App(){
   const sendEmailNow=useCallback(async()=>{
     if(!PROXY_URL){alert("PROXY_URL not set — proxy required for email sending.");return;}
     if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
-    if(!apiKey){alert("Anthropic API key required for AI digest. Add it in Settings.");return;}
     setEmailSending(true);setEmailStatus(null);
     try{
       const res=await fetch(`${PROXY_URL}/digest/send`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName,apiKey}),
+        body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName}),
       });
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Send failed");
@@ -245,7 +245,7 @@ function App(){
       const res=await fetch(`${PROXY_URL}/digest/schedule`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName,apiKey}),
+        body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName}),
       });
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Schedule failed");
