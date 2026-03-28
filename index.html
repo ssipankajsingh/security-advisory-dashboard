@@ -28,17 +28,14 @@ a{color:#1f6feb}
 const {useState,useEffect,useCallback,useRef} = React;
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const PROXY_URL      = "https://security-advisory-proxy.onrender.com";
-const SESSION_KEY    = "sad_session";
-const SESSION_MS     = 7 * 24 * 60 * 60 * 1000; // 7 days
-const INTERVALS      = {"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
-const INTERVAL_LABELS= {"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
+const PROXY_URL   = "https://security-advisory-proxy.onrender.com";
+const SESSION_KEY = "sad_session";
+const SESSION_MS  = 7 * 24 * 60 * 60 * 1000;
+const INTERVALS   = {"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
+const INTERVAL_LABELS = {"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
 
-// ─── SESSION HELPERS ─────────────────────────────────────────────────────────
-function getSession(){
-  try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}
-  return null;
-}
+// ─── SESSION ─────────────────────────────────────────────────────────────────
+function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
 function setSession(){localStorage.setItem(SESSION_KEY,JSON.stringify({authenticated:true,expiry:Date.now()+SESSION_MS,loginTime:new Date().toISOString()}));}
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
@@ -47,13 +44,14 @@ const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{bord
 const CAT_COLORS={"Government":"#a78bfa","CVE Database":"#f87171","OS & Platform":"#60a5fa","Network":"#34d399","Endpoint":"#fb923c","Cloud":"#38bdf8","Browser/Middleware":"#fbbf24","Your Stack":"#c084fc","Threat Intel":"#f472b6","News":"#94a3b8"};
 const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
 
+// ─── SOURCE LIBRARY (50 sources) ─────────────────────────────────────────────
 const SOURCE_LIBRARY=[
   // Government
   {id:"cisa_alerts",name:"CISA Alerts & Advisories",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
   {id:"ncsc_uk",name:"NCSC UK Advisories",vendor:"NCSC UK",cat:"Government",tier:1,enabled:true,rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",url:"https://www.ncsc.gov.uk"},
   {id:"us_cert",name:"US-CERT Bulletins",vendor:"US-CERT",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/bulletins.xml",url:"https://www.cisa.gov/news-events/bulletins"},
   {id:"cert_eu",name:"CERT-EU Advisories",vendor:"CERT-EU",cat:"Government",tier:1,enabled:true,rss:"https://cert.europa.eu/publications/security-advisories/feed",url:"https://cert.europa.eu/publications/security-advisories"},
-  // CVE Databases
+  // CVE Database
   {id:"exploit_db",name:"Exploit-DB",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
   {id:"zdi_published",name:"ZDI Published Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
   {id:"zdi_upcoming",name:"ZDI Upcoming Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
@@ -64,7 +62,7 @@ const SOURCE_LIBRARY=[
   {id:"ubuntu",name:"Ubuntu Security Notices",vendor:"Ubuntu",cat:"OS & Platform",tier:1,enabled:true,rss:"https://ubuntu.com/security/notices/rss.xml",url:"https://ubuntu.com/security/notices"},
   {id:"redhat",name:"Red Hat Security CVEs",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
   {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
-  // Network & Firewall
+  // Network
   {id:"cisco",name:"Cisco PSIRT",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
   {id:"fortinet",name:"Fortinet PSIRT",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
   {id:"paloalto",name:"Palo Alto PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
@@ -73,7 +71,7 @@ const SOURCE_LIBRARY=[
   {id:"f5",name:"F5 Security Advisories",vendor:"F5",cat:"Network",tier:1,enabled:true,rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",url:"https://my.f5.com/manage/s/article/K4602"},
   {id:"checkpoint",name:"Check Point Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
   {id:"juniper",name:"Juniper Networks PSIRT",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES&rss=true",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
-  // Endpoint Security
+  // Endpoint
   {id:"crowdstrike",name:"CrowdStrike Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
   {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
   {id:"sophos",name:"Sophos Threat Research",vendor:"Sophos",cat:"Endpoint",tier:1,enabled:true,rss:"https://news.sophos.com/en-us/category/threat-research/feed/",url:"https://news.sophos.com"},
@@ -96,7 +94,7 @@ const SOURCE_LIBRARY=[
   {id:"cortex_xdr",name:"Palo Alto Cortex/XDR",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
   {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",url:"https://www.solarwinds.com/trust-center/security-advisories"},
   {id:"proofpoint",name:"Proofpoint Threat Hub",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
-  // Threat Intelligence
+  // Threat Intel
   {id:"mandiant",name:"Mandiant Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
   {id:"talos",name:"Cisco Talos Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
   {id:"unit42",name:"Palo Alto Unit 42",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
@@ -141,7 +139,6 @@ function LoginScreen({onLogin,onDenied}){
   const [error,setError]=useState("");
   const [loading,setLoading]=useState(false);
   const [show,setShow]=useState(false);
-
   const verify=async()=>{
     if(!code.trim()){setError("Please enter the access code.");return;}
     setLoading(true);setError("");
@@ -153,7 +150,6 @@ function LoginScreen({onLogin,onDenied}){
     }catch{setError("Unable to verify — check your connection and try again.");}
     setLoading(false);
   };
-
   return(
     <div style={{minHeight:"100vh",background:D,display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{width:420,background:C,border:`1px solid ${B}`,borderRadius:12,padding:40,boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
@@ -167,8 +163,7 @@ function LoginScreen({onLogin,onDenied}){
           <input type={show?"text":"password"} placeholder="Enter access code..." value={code}
             onChange={e=>{setCode(e.target.value);setError("");}}
             onKeyDown={e=>e.key==="Enter"&&verify()}
-            style={{flex:1,background:D,color:T,border:`1px solid ${error?"#ff4444":B}`,borderRadius:6,padding:"10px 14px",fontSize:14,outline:"none"}}
-            autoFocus/>
+            style={{flex:1,background:D,color:T,border:`1px solid ${error?"#ff4444":B}`,borderRadius:6,padding:"10px 14px",fontSize:14,outline:"none"}} autoFocus/>
           <button onClick={()=>setShow(v=>!v)} style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:6,padding:"0 12px",cursor:"pointer",fontSize:13}}>{show?"Hide":"Show"}</button>
         </div>
         {error&&<div style={{color:"#ff6b6b",fontSize:13,marginBottom:12,padding:"8px 12px",background:"#2d1f1f",borderRadius:6,border:"1px solid #ff444433"}}>{error}</div>}
@@ -182,7 +177,7 @@ function LoginScreen({onLogin,onDenied}){
   );
 }
 
-// ─── ACCESS DENIED SCREEN ────────────────────────────────────────────────────
+// ─── ACCESS DENIED ────────────────────────────────────────────────────────────
 function AccessDeniedScreen({onRetry}){
   return(
     <div style={{minHeight:"100vh",background:D,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -205,13 +200,12 @@ function AccessDeniedScreen({onRetry}){
   );
 }
 
-// ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
 function Dashboard({onLogout}){
   const ls=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}};
   const [tab,setTab]=useState("feed");
   const [sources,setSources]=useState(()=>ls("sad_sources")||SOURCE_LIBRARY);
   const [advisories,setAdvisories]=useState(()=>{const a=ls("sad_advisories");return a?.length?a:MOCK});
-
   const [fLoad,setFLoad]=useState(false);
   const [fSev,setFSev]=useState("All");
   const [fVen,setFVen]=useState("All");
@@ -222,7 +216,6 @@ function Dashboard({onLogout}){
   const [addOpen,setAddOpen]=useState(false);
   const [newSrc,setNewSrc]=useState({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});
   const [sel,setSel]=useState(null);
-
   const [autoRefresh,setAutoRefresh]=useState(()=>ls("sad_autorefresh")??true);
   const [refreshInterval,setRefreshInterval]=useState(()=>localStorage.getItem("sad_interval")||"1hr");
   const [lastFetched,setLastFetched]=useState(()=>localStorage.getItem("sad_lastfetched")||null);
@@ -238,7 +231,7 @@ function Dashboard({onLogout}){
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
   const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
   const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
-  const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"UTC");
+  const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"IST");
   const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
   const [emailSending,setEmailSending]=useState(false);
   const [emailStatus,setEmailStatus]=useState(null);
@@ -248,7 +241,6 @@ function Dashboard({onLogout}){
 
   useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
   useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
-
   useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
   useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
   useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
@@ -271,8 +263,7 @@ function Dashboard({onLogout}){
 
   const doRefresh=useCallback(async(manual=false)=>{
     setFLoad(true);
-    const now=new Date();
-    let injected=[];
+    const now=new Date();let injected=[];
     if(PROXY_URL){
       try{
         const enabledIds=sources.filter(s=>s.enabled&&s.rss).map(s=>s.id);
@@ -318,10 +309,16 @@ function Dashboard({onLogout}){
 
   useEffect(()=>{
     if(!PROXY_URL)return;
-    fetch(`${PROXY_URL}/health`).then(r=>r.json()).then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime,"uptime")).catch(()=>console.warn("⚠️ Proxy unreachable"));
+    fetch(`${PROXY_URL}/health`).then(r=>r.json()).then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime)).catch(()=>console.warn("⚠️ Proxy unreachable"));
   },[]);
 
-  const timeToCron=(time,tz)=>{const[h,m]=time.split(":").map(Number);const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};const offset=offsets[tz]||0;const utcH=((h+offset)%24+24)%24;return`${m} ${Math.floor(utcH)} * * *`;};
+  const timeToCron=(time,tz)=>{
+    const[h,m]=time.split(":").map(Number);
+    const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};
+    const offset=offsets[tz]||0;
+    const utcH=((h+offset)%24+24)%24;
+    return`${m} ${Math.floor(utcH)} * * *`;
+  };
 
   const sendEmailNow=useCallback(async()=>{
     if(!PROXY_URL){alert("PROXY_URL not set.");return;}
@@ -350,10 +347,13 @@ function Dashboard({onLogout}){
     }catch(e){setScheduleStatus({ok:false,msg:"❌ "+e.message});}
   },[digestTime,digestTZ,emailRecipients,senderEmail,senderName]);
 
-
-
   const requestNotifPerm=async()=>{if(typeof Notification==="undefined")return;const p=await Notification.requestPermission();setNotifPerm(p);if(p==="granted")setNotifEnabled(true);};
-  const exportCSV=()=>{const h=["ID","Vendor","Category","Title","Severity","CVSS","Date","ZeroDay","New","URL"];const rows=advisories.map(a=>[a.id,a.vendor,a.cat||"",`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.isNew?"Yes":"No",a.url]);const csv=[h,...rows].map(r=>r.join(",")).join("\n");const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();URL.revokeObjectURL(u);};
+  const exportCSV=()=>{
+    const h=["ID","Vendor","Category","Title","Severity","CVSS","Date","ZeroDay","URL"];
+    const rows=advisories.map(a=>[a.id,a.vendor,a.cat||"",`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.url]);
+    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
+    const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();URL.revokeObjectURL(u);
+  };
   const toggleSrc=id=>setSources(s=>s.map(x=>x.id===id?{...x,enabled:!x.enabled}:x));
   const removeSrc=id=>setSources(s=>s.filter(x=>x.id!==id));
   const addSrc=()=>{if(!newSrc.name||!newSrc.vendor)return;setSources(s=>[...s,{...newSrc,id:Date.now().toString(),tier:3,enabled:true}]);setNewSrc({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});setAddOpen(false);};
@@ -381,7 +381,7 @@ function Dashboard({onLogout}){
         <span style={{fontSize:22}}>🛡️</span>
         <div>
           <div style={{fontWeight:700,fontSize:15}}>Security Advisory Dashboard</div>
-          <div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources · AI-Powered</div>
+          <div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources</div>
         </div>
         <div style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:20,padding:"4px 12px",fontSize:12,display:"flex",alignItems:"center",gap:4}}>
           {autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}
@@ -391,7 +391,6 @@ function Dashboard({onLogout}){
         <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
           <button onClick={exportCSV} style={{...inp(),cursor:"pointer",fontSize:12,fontWeight:600,padding:"7px 12px"}}>⬇ CSV</button>
           <button onClick={()=>doRefresh(true)} disabled={fLoad} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>{fLoad?"⟳ Fetching...":"⟳ Refresh Now"}</button>
-
           <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444444",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>🔓 Sign Out</button>
         </div>
       </div>
@@ -429,7 +428,7 @@ function Dashboard({onLogout}){
 
       <div style={{padding:"0 20px 24px"}}>
 
-        {/* FEED TAB */}
+        {/* FEED */}
         {tab==="feed"&&(
           <div>
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
@@ -475,9 +474,7 @@ function Dashboard({onLogout}){
           </div>
         )}
 
-
-
-        {/* SOURCES TAB */}
+        {/* SOURCES */}
         {tab==="sources"&&(
           <div>
             <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
@@ -491,12 +488,13 @@ function Dashboard({onLogout}){
             <div style={{marginBottom:14}}>
               <div style={{color:M,fontSize:12,marginBottom:8}}>Toggle by Category:</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {CATEGORIES.map(cat=>{const catSrcs=sources.filter(s=>s.cat===cat);const allOn=catSrcs.every(s=>s.enabled);const cc=CAT_COLORS[cat]||"#888";return(
-                  <button key={cat} onClick={()=>setSources(s=>s.map(x=>x.cat===cat?{...x,enabled:!allOn}:x))}
+                {CATEGORIES.map(cat=>{
+                  const catSrcs=sources.filter(s=>s.cat===cat);const allOn=catSrcs.every(s=>s.enabled);const cc=CAT_COLORS[cat]||"#888";
+                  return(<button key={cat} onClick={()=>setSources(s=>s.map(x=>x.cat===cat?{...x,enabled:!allOn}:x))}
                     style={{background:allOn?cc+"33":"transparent",border:`1px solid ${allOn?cc:B}`,color:allOn?cc:M,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
                     {cat} ({catSrcs.filter(s=>s.enabled).length}/{catSrcs.length})
-                  </button>
-                );})}
+                  </button>);
+                })}
               </div>
             </div>
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
@@ -542,6 +540,7 @@ function Dashboard({onLogout}){
                           <div style={{display:"flex",alignItems:"center",gap:6}}>
                             <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
                             {s.tier===1&&<span style={{background:"#1f6feb22",color:"#58a6ff",border:"1px solid #1f6feb44",borderRadius:3,padding:"1px 5px",fontSize:10}}>T1</span>}
+                            {s.tier===2&&<span style={{background:"#88888822",color:M,border:`1px solid ${B}`,borderRadius:3,padding:"1px 5px",fontSize:10}}>T2</span>}
                           </div>
                           <div style={{color:M,fontSize:11,marginTop:1}}>{s.vendor}{s.rss?" · RSS ✓":" · Portal only"}</div>
                         </div>
@@ -557,7 +556,7 @@ function Dashboard({onLogout}){
           </div>
         )}
 
-        {/* AUTO-REFRESH TAB */}
+        {/* AUTO-REFRESH */}
         {tab==="autorefresh"&&(
           <div style={{maxWidth:580}}>
             <div style={{background:C,border:`1px solid ${autoRefresh?"#00aa00":B}`,borderRadius:8,padding:20,marginBottom:14}}>
@@ -584,8 +583,8 @@ function Dashboard({onLogout}){
             </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>🔔 Browser Notifications</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Alert on Critical/Zero-Day detections.</div>
-              {notifPerm==="granted"?(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{color:"#00aa00",fontSize:13}}>✓ Permitted</span><div style={{width:40,height:22,background:notifEnabled?"#00aa00":"#444",borderRadius:11,cursor:"pointer",position:"relative"}} onClick={()=>setNotifEnabled(v=>!v)}><div style={{width:16,height:16,background:"#fff",borderRadius:8,position:"absolute",top:3,left:notifEnabled?21:3,transition:"left 0.3s"}}/></div></div>):notifPerm==="denied"?(<div style={{background:"#2d1f1f",border:"1px solid #ff444444",borderRadius:6,padding:"10px 14px",color:"#ff8888",fontSize:12}}>⚠️ Blocked in browser settings.</div>):(<button onClick={requestNotifPerm} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔔 Enable Notifications</button>)}
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Alert on Critical/Zero-Day detections during auto-refresh.</div>
+              {notifPerm==="granted"?(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{color:"#00aa00",fontSize:13}}>✓ Notifications permitted</span><div style={{width:40,height:22,background:notifEnabled?"#00aa00":"#444",borderRadius:11,cursor:"pointer",position:"relative"}} onClick={()=>setNotifEnabled(v=>!v)}><div style={{width:16,height:16,background:"#fff",borderRadius:8,position:"absolute",top:3,left:notifEnabled?21:3,transition:"left 0.3s"}}/></div></div>):notifPerm==="denied"?(<div style={{background:"#2d1f1f",border:"1px solid #ff444444",borderRadius:6,padding:"10px 14px",color:"#ff8888",fontSize:12}}>⚠️ Notifications blocked in browser settings.</div>):(<button onClick={requestNotifPerm} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔔 Enable Notifications</button>)}
             </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:700}}>📋 Refresh Log</div><button onClick={()=>setRefreshLog([])} style={{background:"none",border:`1px solid ${B}`,color:M,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:12}}>Clear</button></div>
@@ -604,12 +603,12 @@ function Dashboard({onLogout}){
           </div>
         )}
 
-        {/* EMAIL DIGEST TAB */}
+        {/* EMAIL DIGEST */}
         {tab==="email"&&(
           <div style={{maxWidth:600}}>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>📬 Distribution List</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Team members who receive the daily digest.</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Team members who receive the daily digest email.</div>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 <input placeholder="Enter email address..." value={newRecipient} onChange={e=>setNewRecipient(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter"&&newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}}
@@ -652,7 +651,7 @@ function Dashboard({onLogout}){
               </div>
               {scheduleStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:scheduleStatus.ok?"#1f2d1f":"#2d1f1f",color:scheduleStatus.ok?"#6ea86e":"#ff8888",fontSize:12}}>{scheduleStatus.msg}</div>}
             </div>
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
               <div style={{fontWeight:700,marginBottom:4}}>📤 Send Digest Now</div>
               <div style={{color:M,fontSize:12,marginBottom:14}}>Manually trigger the digest — fetches latest advisories and emails the distribution list.</div>
               <button onClick={sendEmailNow} disabled={emailSending||!emailRecipients.length}
@@ -664,7 +663,7 @@ function Dashboard({onLogout}){
           </div>
         )}
 
-        {/* SETTINGS TAB */}
+        {/* SETTINGS */}
         {tab==="settings"&&(
           <div style={{maxWidth:560}}>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
@@ -678,13 +677,13 @@ function Dashboard({onLogout}){
               </div>
               <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444466",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔓 Sign Out</button>
             </div>
-
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
               <div style={{fontWeight:700,marginBottom:10}}>📊 Data Management</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Export or reset your local advisory data.</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button onClick={exportCSV} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>⬇ Export CSV</button>
-                <button onClick={()=>{if(confirm("Reset advisories?")){setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");}}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
-                <button onClick={()=>{if(confirm("Reset sources?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");}}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
+                <button onClick={()=>{if(confirm("Reset advisories to defaults?")){setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");}}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
+                <button onClick={()=>{if(confirm("Reset sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");}}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
               </div>
             </div>
           </div>
@@ -695,7 +694,7 @@ function Dashboard({onLogout}){
   );
 }
 
-// ─── ROOT APP ────────────────────────────────────────────────────────────────
+// ─── ROOT ─────────────────────────────────────────────────────────────────────
 function App(){
   const [authState,setAuthState]=useState(()=>getSession()?"authenticated":"login");
   if(authState==="login")  return <LoginScreen onLogin={()=>setAuthState("authenticated")} onDenied={()=>setAuthState("denied")}/>;
