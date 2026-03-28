@@ -27,133 +27,164 @@ a{color:#1f6feb}
 <script type="text/babel">
 const {useState,useEffect,useCallback,useRef} = React;
 
-// ─── COMPREHENSIVE SOURCE LIBRARY ───────────────────────────────────────────
-const SOURCE_LIBRARY = [
-  // GOVERNMENT & REGULATORY
-  {id:"cisa_kev",   name:"CISA Known Exploited Vulnerabilities (KEV)", vendor:"CISA",         cat:"Government",   tier:1, enabled:true,  rss:"https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json", url:"https://www.cisa.gov/known-exploited-vulnerabilities-catalog"},
-  {id:"cisa_alerts",name:"CISA Alerts & Advisories",                   vendor:"CISA",         cat:"Government",   tier:1, enabled:true,  rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",                                  url:"https://www.cisa.gov/cybersecurity-advisories"},
-  {id:"ncsc_uk",    name:"NCSC UK Advisories",                         vendor:"NCSC UK",      cat:"Government",   tier:1, enabled:true,  rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",                          url:"https://www.ncsc.gov.uk/section/keep-up-to-date/alerts-advisories"},
-  {id:"us_cert",    name:"US-CERT Bulletins",                          vendor:"US-CERT",      cat:"Government",   tier:1, enabled:true,  rss:"https://www.cisa.gov/sites/default/files/feeds/bulletins.xml",                          url:"https://www.cisa.gov/news-events/bulletins"},
-  {id:"cert_eu",    name:"CERT-EU Security Advisories",                vendor:"CERT-EU",      cat:"Government",   tier:1, enabled:false, rss:"https://cert.europa.eu/publications/security-advisories/feed",                          url:"https://cert.europa.eu/publications/security-advisories"},
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const PROXY_URL      = "https://security-advisory-proxy.onrender.com";
+const SESSION_KEY    = "sad_session";
+const SESSION_MS     = 7 * 24 * 60 * 60 * 1000; // 7 days
+const INTERVALS      = {"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
+const INTERVAL_LABELS= {"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
 
-  // VULNERABILITY DATABASES
-  {id:"nvd",        name:"NIST NVD — Recent CVEs",                     vendor:"NIST",         cat:"CVE Database", tier:1, enabled:true,  rss:"https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz",                    url:"https://nvd.nist.gov/vuln/search"},
-  {id:"cvedetails", name:"CVE Details Enterprise Feed",                vendor:"CVEdetails",   cat:"CVE Database", tier:1, enabled:true,  rss:"https://www.cvedetails.com/vulnerability-feed.php?vendor_id=0&product_id=0&version_id=0&hasexp=1&opec=1&opov=1&opcsrf=1&opfileinc=1&opgpriv=1&opsqli=1&opxss=1&opdirt=1&opmemc=1&ophttprs=1&opbyp=1&opginf=1&opdos=1&orderby=3&cvssscoremin=7&rss=1&feed=vulns", url:"https://www.cvedetails.com"},
-  {id:"exploit_db", name:"Exploit-DB Public Exploits",                  vendor:"Exploit-DB",   cat:"CVE Database", tier:2, enabled:true,  rss:"https://www.exploit-db.com/rss.xml",                                                    url:"https://www.exploit-db.com"},
-  {id:"vulnhub",    name:"Zero Day Initiative (ZDI) Published",         vendor:"ZDI",          cat:"CVE Database", tier:2, enabled:true,  rss:"https://www.zerodayinitiative.com/rss/published/",                                      url:"https://www.zerodayinitiative.com"},
-  {id:"zdi_upcoming",name:"Zero Day Initiative (ZDI) Upcoming",         vendor:"ZDI",          cat:"CVE Database", tier:2, enabled:false, rss:"https://www.zerodayinitiative.com/rss/upcoming/",                                       url:"https://www.zerodayinitiative.com"},
+// ─── SESSION HELPERS ─────────────────────────────────────────────────────────
+function getSession(){
+  try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}
+  return null;
+}
+function setSession(){localStorage.setItem(SESSION_KEY,JSON.stringify({authenticated:true,expiry:Date.now()+SESSION_MS,loginTime:new Date().toISOString()}));}
+function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
-  // OS & PLATFORM VENDORS
-  {id:"msrc",       name:"Microsoft Security Response Center",          vendor:"Microsoft",    cat:"OS & Platform",tier:1, enabled:true,  rss:"https://msrc.microsoft.com/blog/feed",                                                  url:"https://msrc.microsoft.com"},
-  {id:"ms_azure",   name:"Microsoft Azure Security Updates",            vendor:"Microsoft",    cat:"OS & Platform",tier:1, enabled:true,  rss:"https://azurecomcdn.azureedge.net/en-us/updates/feed/",                                 url:"https://azure.microsoft.com/en-us/updates/"},
-  {id:"apple",      name:"Apple Security Updates",                      vendor:"Apple",        cat:"OS & Platform",tier:1, enabled:true,  rss:"https://support.apple.com/en-us/security-updates/rss",                                  url:"https://support.apple.com/en-us/HT201222"},
-  {id:"redhat",     name:"Red Hat Security Advisories",                 vendor:"Red Hat",      cat:"OS & Platform",tier:1, enabled:true,  rss:"https://access.redhat.com/blogs/feed",                                                  url:"https://access.redhat.com/security/security-updates/"},
-  {id:"ubuntu",     name:"Ubuntu Security Notices",                     vendor:"Ubuntu",       cat:"OS & Platform",tier:1, enabled:true,  rss:"https://ubuntu.com/security/notices/rss.xml",                                           url:"https://ubuntu.com/security/notices"},
-  {id:"debian",     name:"Debian Security Advisories",                  vendor:"Debian",       cat:"OS & Platform",tier:2, enabled:false, rss:"https://www.debian.org/security/dsa-long",                                              url:"https://www.debian.org/security/"},
-  {id:"android",    name:"Android Security Bulletins",                  vendor:"Google",       cat:"OS & Platform",tier:1, enabled:true,  rss:"https://source.android.com/docs/security/bulletin/feed.xml",                            url:"https://source.android.com/security/bulletin"},
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{border:"#ff7700",badge:"#ff7700",text:"#ff8800"},Medium:{border:"#e6b800",badge:"#e6b800",text:"#ccaa00"},Low:{border:"#00aa00",badge:"#00aa00",text:"#00aa00"},Unknown:{border:"#888",badge:"#888",text:"#888"}};
+const CAT_COLORS={"Government":"#a78bfa","CVE Database":"#f87171","OS & Platform":"#60a5fa","Network":"#34d399","Endpoint":"#fb923c","Cloud":"#38bdf8","Browser/Middleware":"#fbbf24","Your Stack":"#c084fc","Threat Intel":"#f472b6","News":"#94a3b8"};
+const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
 
-  // NETWORK & FIREWALL
-  {id:"cisco",      name:"Cisco PSIRT Security Advisories",             vendor:"Cisco",        cat:"Network",      tier:1, enabled:true,  rss:"https://tools.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",          url:"https://tools.cisco.com/security/center/publicationListing.x"},
-  {id:"fortinet",   name:"Fortinet PSIRT Advisories",                   vendor:"Fortinet",     cat:"Network",      tier:1, enabled:true,  rss:"https://www.fortiguard.com/rss/ir.xml",                                                 url:"https://www.fortiguard.com/psirt"},
-  {id:"paloalto",   name:"Palo Alto Networks PSIRT",                    vendor:"Palo Alto",    cat:"Network",      tier:1, enabled:true,  rss:"https://security.paloaltonetworks.com/rss.xml",                                         url:"https://security.paloaltonetworks.com"},
-  {id:"juniper",    name:"Juniper Networks Security Advisories",         vendor:"Juniper",      cat:"Network",      tier:1, enabled:true,  rss:"https://supportportal.juniper.net/s/article/Juniper-SIRT-Advisories-RSS",              url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
-  {id:"sonicwall",  name:"SonicWall Security Advisories",               vendor:"SonicWall",    cat:"Network",      tier:1, enabled:true,  rss:"https://psirt.global.sonicwall.com/vuln-list",                                         url:"https://psirt.global.sonicwall.com/vuln-list"},
-  {id:"f5",         name:"F5 Security Advisories",                      vendor:"F5",           cat:"Network",      tier:1, enabled:true,  rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",                                     url:"https://my.f5.com/manage/s/article/K4602"},
-  {id:"checkpoint", name:"Check Point Security Advisories",             vendor:"Check Point",  cat:"Network",      tier:1, enabled:false, rss:"https://advisories.checkpoint.com/rss",                                                 url:"https://advisories.checkpoint.com"},
-  {id:"aruba",      name:"HPE Aruba Networking PSIRT",                  vendor:"HPE/Aruba",    cat:"Network",      tier:2, enabled:false, rss:"https://www.arubanetworks.com/security-advisories/feed",                               url:"https://www.arubanetworks.com/support-services/security-bulletins/"},
-  {id:"ivanti",     name:"Ivanti Security Advisories",                  vendor:"Ivanti",       cat:"Network",      tier:1, enabled:true,  rss:"https://forums.ivanti.com/s/feed",                                                      url:"https://forums.ivanti.com/s/topic/0TO3u000000kEVGGA2/security-advisories"},
-
-  // ENDPOINT SECURITY
-  {id:"crowdstrike",name:"CrowdStrike Threat Intelligence Blog",        vendor:"CrowdStrike",  cat:"Endpoint",     tier:1, enabled:true,  rss:"https://www.crowdstrike.com/blog/feed",                                                 url:"https://www.crowdstrike.com/blog/"},
-  {id:"sentinelone",name:"SentinelLabs Research",                       vendor:"SentinelOne",  cat:"Endpoint",     tier:1, enabled:true,  rss:"https://www.sentinelone.com/labs/feed/",                                                url:"https://www.sentinelone.com/labs/"},
-  {id:"sophos",     name:"Sophos Threat Research",                      vendor:"Sophos",       cat:"Endpoint",     tier:1, enabled:true,  rss:"https://news.sophos.com/en-us/feed/",                                                   url:"https://news.sophos.com/"},
-  {id:"trendmicro", name:"Trend Micro Research",                        vendor:"Trend Micro",  cat:"Endpoint",     tier:2, enabled:false, rss:"https://feeds.trendmicro.com/Anti-MalwareBlog/",                                        url:"https://www.trendmicro.com/en_us/research.html"},
-  {id:"malwarebytes",name:"Malwarebytes Labs",                          vendor:"Malwarebytes", cat:"Endpoint",     tier:2, enabled:false, rss:"https://www.malwarebytes.com/blog/feed/",                                               url:"https://www.malwarebytes.com/blog/"},
-  {id:"eset",       name:"ESET Threat Research",                        vendor:"ESET",         cat:"Endpoint",     tier:2, enabled:false, rss:"https://www.welivesecurity.com/feed/",                                                  url:"https://www.welivesecurity.com/"},
-
-  // CLOUD & SaaS
-  {id:"aws_security",name:"AWS Security Bulletins",                     vendor:"AWS",          cat:"Cloud",        tier:1, enabled:true,  rss:"https://aws.amazon.com/security/security-bulletins/feed/",                              url:"https://aws.amazon.com/security/security-bulletins/"},
-  {id:"gcp_security",name:"Google Cloud Security Bulletins",            vendor:"Google Cloud", cat:"Cloud",        tier:1, enabled:true,  rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",                           url:"https://cloud.google.com/support/bulletins"},
-  {id:"chrome",     name:"Google Chrome Releases",                      vendor:"Google",       cat:"Cloud",        tier:1, enabled:true,  rss:"https://chromereleases.googleblog.com/feeds/posts/default",                             url:"https://chromereleases.googleblog.com"},
-  {id:"gproject_zero",name:"Google Project Zero Research",              vendor:"Google",       cat:"Cloud",        tier:1, enabled:true,  rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",                            url:"https://googleprojectzero.blogspot.com/"},
-  {id:"cloudflare", name:"Cloudflare Security Blog",                    vendor:"Cloudflare",   cat:"Cloud",        tier:2, enabled:false, rss:"https://blog.cloudflare.com/tag/security/rss/",                                         url:"https://blog.cloudflare.com/tag/security/"},
-  {id:"okta_blog",  name:"Okta Security Blog",                          vendor:"Okta",         cat:"Cloud",        tier:2, enabled:false, rss:"https://sec.okta.com/feed",                                                             url:"https://sec.okta.com/"},
-
-  // BROWSERS & MIDDLEWARE
-  {id:"mozilla",    name:"Mozilla Security Advisories",                 vendor:"Mozilla",      cat:"Browser/Middleware", tier:1, enabled:true,  rss:"https://www.mozilla.org/en-US/security/advisories/feed/",                       url:"https://www.mozilla.org/en-US/security/advisories/"},
-  {id:"openssl",    name:"OpenSSL Security Advisories",                 vendor:"OpenSSL",      cat:"Browser/Middleware", tier:1, enabled:true,  rss:"https://www.openssl.org/news/secadv/secadv.rss",                                url:"https://www.openssl.org/news/secadv/"},
-  {id:"apache",     name:"Apache Security Advisories",                  vendor:"Apache",       cat:"Browser/Middleware", tier:1, enabled:true,  rss:"https://apache.org/security/advisories.rss",                                    url:"https://httpd.apache.org/security/vulnerabilities_24.html"},
-  {id:"nginx",      name:"NGINX Security Advisories",                   vendor:"NGINX/F5",     cat:"Browser/Middleware", tier:2, enabled:false, rss:"https://nginx.org/en/security_advisories.xml",                                  url:"https://nginx.org/en/security_advisories.html"},
-  {id:"oracle_java",name:"Oracle Java & CPU Alerts",                    vendor:"Oracle",       cat:"Browser/Middleware", tier:1, enabled:true,  rss:"https://www.oracle.com/security-alerts/rss.xml",                                url:"https://www.oracle.com/security-alerts/"},
-  {id:"sap",        name:"SAP Security Patch Day",                      vendor:"SAP",          cat:"Browser/Middleware", tier:1, enabled:false, rss:"https://support.sap.com/content/dam/support-hub/en/security/security-notes-rss.xml",url:"https://support.sap.com/en/my-support/security-notes.html"},
-  {id:"vmware",     name:"Broadcom / VMware Security Advisories",       vendor:"Broadcom/VMware",cat:"Browser/Middleware",tier:1, enabled:true, rss:"https://support.broadcom.com/web/ecx/security-advisory?segment=VS",             url:"https://support.broadcom.com/web/ecx/security-advisory"},
-
-  // YOUR SPECIFIC TOOLS
-  {id:"cortex_xdr", name:"Palo Alto Cortex / XDR PSIRT",               vendor:"Palo Alto",    cat:"Your Stack",   tier:1, enabled:true,  rss:"https://security.paloaltonetworks.com/rss.xml",                                         url:"https://security.paloaltonetworks.com"},
-  {id:"crowdstrike2",name:"CrowdStrike EDR Advisories",                 vendor:"CrowdStrike",  cat:"Your Stack",   tier:1, enabled:true,  rss:"https://www.crowdstrike.com/blog/feed",                                                 url:"https://supportportal.crowdstrike.com"},
-  {id:"netskope",   name:"Netskope Security Advisories",                vendor:"Netskope",     cat:"Your Stack",   tier:1, enabled:true,  rss:"",                                                                                       url:"https://www.netskope.com/security-advisories"},
-  {id:"proofpoint2",name:"Proofpoint Threat Intelligence",              vendor:"Proofpoint",   cat:"Your Stack",   tier:1, enabled:true,  rss:"https://www.proofpoint.com/us/rss.xml",                                                 url:"https://www.proofpoint.com/us/threat-hub"},
-  {id:"solarwinds", name:"SolarWinds Trust Center",                     vendor:"SolarWinds",   cat:"Your Stack",   tier:1, enabled:true,  rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",                     url:"https://www.solarwinds.com/trust-center/security-advisories"},
-  {id:"bigfix",     name:"HCL BigFix Security",                         vendor:"HCL/BigFix",   cat:"Your Stack",   tier:2, enabled:false, rss:"",                                                                                       url:"https://support.hcltechsw.com/csm?id=kb_article&sysparm_article=KB0095458"},
-  {id:"forescout",  name:"Forescout Security Advisories",               vendor:"Forescout",    cat:"Your Stack",   tier:1, enabled:true,  rss:"",                                                                                       url:"https://www.forescout.com/resources/?resource_type=advisory"},
-
-  // THREAT INTELLIGENCE
-  {id:"cisa_ti",    name:"CISA Threat Intelligence Feed",               vendor:"CISA",         cat:"Threat Intel", tier:1, enabled:true,  rss:"https://www.cisa.gov/sites/default/files/feeds/advisories.xml",                        url:"https://www.cisa.gov/cybersecurity-advisories"},
-  {id:"recorded_future",name:"Recorded Future Intelligence",            vendor:"Recorded Future",cat:"Threat Intel",tier:1, enabled:false,rss:"https://www.recordedfuture.com/category/research/feed/",                               url:"https://www.recordedfuture.com/research"},
-  {id:"mandiant",   name:"Mandiant / Google Threat Intel",              vendor:"Mandiant",     cat:"Threat Intel", tier:1, enabled:true,  rss:"https://www.mandiant.com/resources/blog/rss.xml",                                       url:"https://www.mandiant.com/resources/blog"},
-  {id:"secureworks",name:"Secureworks Counter Threat Unit",             vendor:"Secureworks",  cat:"Threat Intel", tier:2, enabled:false, rss:"https://www.secureworks.com/blog/rss",                                                  url:"https://www.secureworks.com/blog"},
-  {id:"talos",      name:"Cisco Talos Intelligence Blog",               vendor:"Cisco",        cat:"Threat Intel", tier:1, enabled:true,  rss:"https://blog.talosintelligence.com/feeds/posts/default",                                url:"https://blog.talosintelligence.com/"},
-  {id:"paloalto_unit42",name:"Palo Alto Unit 42 Threat Research",       vendor:"Palo Alto",    cat:"Threat Intel", tier:1, enabled:true,  rss:"https://unit42.paloaltonetworks.com/feed/",                                             url:"https://unit42.paloaltonetworks.com/"},
-  {id:"msft_ti",    name:"Microsoft Threat Intelligence Blog",          vendor:"Microsoft",    cat:"Threat Intel", tier:1, enabled:true,  rss:"https://www.microsoft.com/en-us/security/blog/feed/",                                   url:"https://www.microsoft.com/en-us/security/blog/"},
-
-  // SECURITY NEWS
-  {id:"krebs",      name:"KrebsOnSecurity",                             vendor:"Krebs",        cat:"News",         tier:1, enabled:true,  rss:"https://krebsonsecurity.com/feed/",                                                     url:"https://krebsonsecurity.com"},
-  {id:"bleeping",   name:"BleepingComputer Security",                   vendor:"BleepingComputer",cat:"News",      tier:1, enabled:true,  rss:"https://www.bleepingcomputer.com/feed/",                                                url:"https://www.bleepingcomputer.com"},
-  {id:"hackernews", name:"The Hacker News",                             vendor:"THN",          cat:"News",         tier:1, enabled:true,  rss:"https://feeds.feedburner.com/TheHackersNews",                                           url:"https://thehackernews.com"},
-  {id:"secweek",    name:"SecurityWeek",                                vendor:"SecurityWeek", cat:"News",         tier:2, enabled:false, rss:"https://feeds.feedburner.com/securityweek",                                             url:"https://www.securityweek.com"},
-  {id:"darkread",   name:"Dark Reading",                                vendor:"Dark Reading", cat:"News",         tier:2, enabled:false, rss:"https://www.darkreading.com/rss.xml",                                                   url:"https://www.darkreading.com"},
-  {id:"helpnet",    name:"Help Net Security",                           vendor:"HelpNet",      cat:"News",         tier:2, enabled:false, rss:"https://helpnetsecurity.com/feed/",                                                     url:"https://helpnetsecurity.com"},
+const SOURCE_LIBRARY=[
+  {id:"cisa_alerts",name:"CISA Alerts & Advisories",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
+  {id:"ncsc_uk",name:"NCSC UK Advisories",vendor:"NCSC UK",cat:"Government",tier:1,enabled:true,rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",url:"https://www.ncsc.gov.uk"},
+  {id:"exploit_db",name:"Exploit-DB",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
+  {id:"zdi_published",name:"ZDI Published Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
+  {id:"zdi_upcoming",name:"ZDI Upcoming Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
+  {id:"msrc",name:"Microsoft MSRC (CVE Feed)",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
+  {id:"msrc_blog",name:"Microsoft MSRC Blog",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://msrc.microsoft.com/blog/rss/",url:"https://msrc.microsoft.com/blog"},
+  {id:"ubuntu",name:"Ubuntu Security Notices",vendor:"Ubuntu",cat:"OS & Platform",tier:1,enabled:true,rss:"https://ubuntu.com/security/notices/rss.xml",url:"https://ubuntu.com/security/notices"},
+  {id:"redhat",name:"Red Hat Security CVEs",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
+  {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
+  {id:"cisco",name:"Cisco PSIRT",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
+  {id:"fortinet",name:"Fortinet PSIRT",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
+  {id:"paloalto",name:"Palo Alto PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"sonicwall",name:"SonicWall PSIRT",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
+  {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
+  {id:"crowdstrike",name:"CrowdStrike Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
+  {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
+  {id:"sophos",name:"Sophos Threat Research",vendor:"Sophos",cat:"Endpoint",tier:1,enabled:true,rss:"https://news.sophos.com/en-us/category/threat-research/feed/",url:"https://news.sophos.com"},
+  {id:"malwarebytes",name:"Malwarebytes Labs",vendor:"Malwarebytes",cat:"Endpoint",tier:2,enabled:false,rss:"https://www.malwarebytes.com/blog/feed/",url:"https://www.malwarebytes.com/blog"},
+  {id:"aws",name:"AWS Security Bulletins",vendor:"AWS",cat:"Cloud",tier:1,enabled:true,rss:"https://aws.amazon.com/security/security-bulletins/feed/",url:"https://aws.amazon.com/security/security-bulletins"},
+  {id:"gcp",name:"Google Cloud Security",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
+  {id:"chrome",name:"Chrome Releases",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default",url:"https://chromereleases.googleblog.com"},
+  {id:"project_zero",name:"Google Project Zero",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",url:"https://googleprojectzero.blogspot.com"},
+  {id:"mozilla",name:"Mozilla Security",vendor:"Mozilla",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/cve-feed.json",url:"https://www.mozilla.org/en-US/security/advisories"},
+  {id:"openssl",name:"OpenSSL Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/openssl-security.rss",url:"https://www.openssl.org/news/secadv"},
+  {id:"apache",name:"Apache HTTP Server",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://httpd.apache.org/security/vulnerabilities-httpd.xml",url:"https://httpd.apache.org/security"},
+  {id:"oracle",name:"Oracle Security Alerts",vendor:"Oracle",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.oracle.com/security-alerts/rss.xml",url:"https://www.oracle.com/security-alerts"},
+  {id:"cortex_xdr",name:"Palo Alto Cortex/XDR",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",url:"https://www.solarwinds.com/trust-center/security-advisories"},
+  {id:"proofpoint",name:"Proofpoint Threat Hub",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
+  {id:"mandiant",name:"Mandiant Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
+  {id:"talos",name:"Cisco Talos Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
+  {id:"unit42",name:"Palo Alto Unit 42",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
+  {id:"msft_ti",name:"Microsoft Security Blog",vendor:"Microsoft",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.microsoft.com/en-us/security/blog/feed/",url:"https://www.microsoft.com/en-us/security/blog"},
+  {id:"krebs",name:"KrebsOnSecurity",vendor:"Krebs",cat:"News",tier:1,enabled:true,rss:"https://krebsonsecurity.com/feed/",url:"https://krebsonsecurity.com"},
+  {id:"bleeping",name:"BleepingComputer",vendor:"BleepingComputer",cat:"News",tier:1,enabled:true,rss:"https://www.bleepingcomputer.com/feed/",url:"https://www.bleepingcomputer.com"},
+  {id:"hackernews",name:"The Hacker News",vendor:"THN",cat:"News",tier:1,enabled:true,rss:"https://feeds.feedburner.com/TheHackersNews",url:"https://thehackernews.com"},
+  {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:false,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
+  {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:false,rss:"https://www.darkreading.com/rss/vulnerabilities-threats.xml",url:"https://www.darkreading.com"},
 ];
 
-const CATEGORIES = [...new Set(SOURCE_LIBRARY.map(s => s.cat))];
+const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
 
 const MOCK=[
-  {id:"CVE-2025-21334",vendor:"Microsoft",title:"Windows Hyper-V NT Kernel Integration VSP EoP",severity:"Critical",cvss:9.8,date:"2025-03-25",zeroDay:true,summary:"Critical EoP in Windows Hyper-V — SYSTEM privilege escalation. Actively exploited in the wild.",products:["Windows 11","Windows Server 2022"],url:"https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21334",isNew:false,cat:"OS & Platform"},
-  {id:"CVE-2025-20188",vendor:"Cisco",title:"Cisco IOS XE Web UI Remote Code Execution",severity:"Critical",cvss:10.0,date:"2025-03-24",zeroDay:true,summary:"Unauthenticated RCE in Cisco IOS XE Web UI. Public exploit available. Patch immediately.",products:["IOS XE 17.x","Catalyst 9000"],url:"https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-iosxe-webui-rce",isNew:false,cat:"Network"},
-  {id:"FG-IR-25-019",vendor:"Fortinet",title:"FortiOS SSL-VPN Authentication Bypass",severity:"Critical",cvss:9.6,date:"2025-03-24",zeroDay:false,summary:"Authentication bypass in FortiOS SSL-VPN allows unauthorized management interface access.",products:["FortiOS 7.4.x","FortiOS 7.2.x"],url:"https://www.fortiguard.com/psirt/FG-IR-25-019",isNew:false,cat:"Network"},
-  {id:"CVE-2025-2783",vendor:"Google",title:"Chrome Sandbox Escape via IPC",severity:"High",cvss:8.8,date:"2025-03-23",zeroDay:true,summary:"Zero-day sandbox escape in Chrome. Emergency patch: 123.0.6312.122.",products:["Chrome < 123.0.6312.122"],url:"https://chromereleases.googleblog.com",isNew:false,cat:"Browser/Middleware"},
-  {id:"MFSA-2025-18",vendor:"Mozilla",title:"Firefox Use-After-Free in DOM Event Handling",severity:"High",cvss:8.1,date:"2025-03-22",zeroDay:false,summary:"Use-after-free may allow RCE via crafted web content.",products:["Firefox < 124.0","Firefox ESR < 115.9"],url:"https://www.mozilla.org/security/advisories/mfsa2025-18/",isNew:false,cat:"Browser/Middleware"},
-  {id:"PAN-SA-2025-0008",vendor:"Palo Alto",title:"PAN-OS GlobalProtect Gateway Buffer Overflow",severity:"High",cvss:8.7,date:"2025-03-21",zeroDay:false,summary:"Unauthenticated buffer overflow in GlobalProtect enables RCE.",products:["PAN-OS 11.1.x","PAN-OS 10.2.x"],url:"https://security.paloaltonetworks.com/PAN-SA-2025-0008",isNew:false,cat:"Your Stack"},
-  {id:"CVE-2025-1891",vendor:"Microsoft",title:"Azure AD OAuth Token Forgery",severity:"High",cvss:7.9,date:"2025-03-20",zeroDay:false,summary:"Token forgery in Azure AD may allow account takeover under specific configurations.",products:["Azure AD","Entra ID"],url:"https://msrc.microsoft.com",isNew:false,cat:"Cloud"},
-  {id:"IVANTI-2025-0047",vendor:"Ivanti",title:"Ivanti Connect Secure Pre-Auth RCE",severity:"Critical",cvss:9.9,date:"2025-03-19",zeroDay:true,summary:"Pre-authentication RCE in Ivanti Connect Secure VPN. Ransomware groups actively exploiting.",products:["Connect Secure 22.x","Policy Secure 22.x"],url:"https://forums.ivanti.com/s/article/Security-Advisory-Ivanti-Connect-Secure",isNew:false,cat:"Network"},
-  {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-18",zeroDay:false,summary:"SNMP vulnerability causes device reload under high-volume attack.",products:["Cisco Secure Firewall 3100","ASA 5500-X"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
-  {id:"GHSA-2025-openssl",vendor:"OpenSSL",title:"OpenSSL X.509 Certificate Parsing OOB Read",severity:"Medium",cvss:5.9,date:"2025-03-17",zeroDay:false,summary:"Out-of-bounds read in OpenSSL X.509 parsing — impacts many enterprise middleware stacks.",products:["OpenSSL 3.0.x","OpenSSL 1.1.1x"],url:"https://www.openssl.org/news/secadv/",isNew:false,cat:"Browser/Middleware"},
+  {id:"CVE-2025-21334",vendor:"Microsoft",title:"Windows Hyper-V NT Kernel EoP",severity:"Critical",cvss:9.8,date:"2025-03-25",zeroDay:true,summary:"Critical EoP in Windows Hyper-V — SYSTEM privilege escalation. Actively exploited.",products:["Windows 11","Windows Server 2022"],url:"https://msrc.microsoft.com",isNew:false,cat:"OS & Platform"},
+  {id:"CVE-2025-20188",vendor:"Cisco",title:"Cisco IOS XE Web UI RCE",severity:"Critical",cvss:10.0,date:"2025-03-24",zeroDay:true,summary:"Unauthenticated RCE in Cisco IOS XE Web UI. Public exploit available.",products:["IOS XE 17.x","Catalyst 9000"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
+  {id:"FG-IR-25-019",vendor:"Fortinet",title:"FortiOS SSL-VPN Auth Bypass",severity:"Critical",cvss:9.6,date:"2025-03-24",zeroDay:false,summary:"Authentication bypass in FortiOS SSL-VPN.",products:["FortiOS 7.4.x","FortiOS 7.2.x"],url:"https://www.fortiguard.com/psirt",isNew:false,cat:"Network"},
+  {id:"CVE-2025-2783",vendor:"Google",title:"Chrome Sandbox Escape via IPC",severity:"High",cvss:8.8,date:"2025-03-23",zeroDay:true,summary:"Zero-day sandbox escape in Chrome IPC.",products:["Chrome < 123.0.6312.122"],url:"https://chromereleases.googleblog.com",isNew:false,cat:"Cloud"},
+  {id:"MFSA-2025-18",vendor:"Mozilla",title:"Firefox Use-After-Free in DOM",severity:"High",cvss:8.1,date:"2025-03-22",zeroDay:false,summary:"Use-after-free may allow RCE via crafted web content.",products:["Firefox < 124.0"],url:"https://www.mozilla.org/security/advisories",isNew:false,cat:"Browser/Middleware"},
+  {id:"PAN-SA-2025-0008",vendor:"Palo Alto",title:"PAN-OS GlobalProtect Buffer Overflow",severity:"High",cvss:8.7,date:"2025-03-21",zeroDay:false,summary:"Buffer overflow in GlobalProtect enables RCE.",products:["PAN-OS 11.1.x"],url:"https://security.paloaltonetworks.com",isNew:false,cat:"Your Stack"},
+  {id:"IVANTI-2025-0047",vendor:"Ivanti",title:"Ivanti Connect Secure Pre-Auth RCE",severity:"Critical",cvss:9.9,date:"2025-03-19",zeroDay:true,summary:"Pre-auth RCE in Ivanti Connect Secure. Ransomware exploitation confirmed.",products:["Connect Secure 22.x"],url:"https://forums.ivanti.com",isNew:false,cat:"Network"},
+  {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-18",zeroDay:false,summary:"SNMP vulnerability causes device reload.",products:["Cisco Secure Firewall 3100"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
 ];
 
 const SIMULATED_NEW=[
-  {id:"CVE-2025-29824",vendor:"Microsoft",title:"CLFS Driver Zero-Day Privilege Escalation",severity:"Critical",cvss:9.9,date:new Date().toISOString().split("T")[0],zeroDay:true,summary:"Actively exploited zero-day in Windows CLFS driver. Emergency out-of-band patch issued by Microsoft.",products:["Windows 10","Windows 11","Windows Server 2019/2022"],url:"https://msrc.microsoft.com",isNew:true,cat:"OS & Platform"},
-  {id:"CVE-2025-28231",vendor:"Cisco",title:"Cisco ASA VPN Pre-Auth RCE",severity:"Critical",cvss:10.0,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"Pre-auth RCE in Cisco ASA VPN. PoC publicly released, ransomware exploitation confirmed.",products:["Cisco ASA 9.x","Cisco FTD"],url:"https://tools.cisco.com/security/center",isNew:true,cat:"Network"},
+  {id:"CVE-2025-29824",vendor:"Microsoft",title:"CLFS Driver Zero-Day Privilege Escalation",severity:"Critical",cvss:9.9,date:new Date().toISOString().split("T")[0],zeroDay:true,summary:"Actively exploited zero-day in Windows CLFS driver.",products:["Windows 10","Windows 11","Windows Server 2019/2022"],url:"https://msrc.microsoft.com",isNew:true,cat:"OS & Platform"},
+  {id:"CVE-2025-28231",vendor:"Cisco",title:"Cisco ASA VPN Pre-Auth RCE",severity:"Critical",cvss:10.0,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"Pre-auth RCE in Cisco ASA VPN. Public PoC released.",products:["Cisco ASA 9.x"],url:"https://tools.cisco.com/security/center",isNew:true,cat:"Network"},
 ];
 
-// ─── PROXY URL ───────────────────────────────────────────────────────────────
-// Paste your Render.com proxy URL here after deploying the backend.
-// Example: "https://security-advisory-proxy.onrender.com"
-// Leave empty ("") to run in demo/simulated mode.
-const PROXY_URL = "https://security-advisory-proxy.onrender.com";
-
-const INTERVALS={"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
-const INTERVAL_LABELS={"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
-const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{border:"#ff7700",badge:"#ff7700",text:"#ff8800"},Medium:{border:"#e6b800",badge:"#e6b800",text:"#ccaa00"},Low:{border:"#00aa00",badge:"#00aa00",text:"#00aa00"},Unknown:{border:"#888",badge:"#888",text:"#888"}};
-const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
-const CAT_COLORS={"Government":"#a78bfa","CVE Database":"#f87171","OS & Platform":"#60a5fa","Network":"#34d399","Endpoint":"#fb923c","Cloud":"#38bdf8","Browser/Middleware":"#fbbf24","Your Stack":"#c084fc","Threat Intel":"#f472b6","News":"#94a3b8"};
-
-const Badge=({sev})=>{const c=SEV[sev]||SEV.Unknown;return <span style={{background:c.badge,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,letterSpacing:1}}>{sev?.toUpperCase()}</span>};
-const ZD=()=><span style={{background:"#cc00cc",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>0-DAY</span>;
+// ─── SMALL COMPONENTS ────────────────────────────────────────────────────────
+const SevBadge=({sev})=>{const c=SEV[sev]||SEV.Unknown;return <span style={{background:c.badge,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,letterSpacing:1}}>{sev?.toUpperCase()}</span>};
+const ZDBadge=()=><span style={{background:"#cc00cc",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>0-DAY</span>;
 const NewBadge=()=><span className="new-badge" style={{background:"#1f6feb",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>NEW</span>;
+function countdown(ms){const d=Math.max(0,ms-Date.now());const h=Math.floor(d/3600000);const m=Math.floor((d%3600000)/60000);const s=Math.floor((d%60000)/1000);return`${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;}
 
-function countdown(ms){const d=Math.max(0,ms-Date.now());const h=Math.floor(d/3600000);const m=Math.floor((d%3600000)/60000);const s=Math.floor((d%60000)/1000);return `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;}
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen({onLogin,onDenied}){
+  const [code,setCode]=useState("");
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [show,setShow]=useState(false);
 
-function App(){
+  const verify=async()=>{
+    if(!code.trim()){setError("Please enter the access code.");return;}
+    setLoading(true);setError("");
+    try{
+      const res=await fetch(`${PROXY_URL}/auth/verify`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:code.trim()})});
+      const data=await res.json();
+      if(data.valid){setSession();onLogin();}
+      else{setError("Invalid access code. Please try again.");setCode("");onDenied();}
+    }catch{setError("Unable to verify — check your connection and try again.");}
+    setLoading(false);
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:D,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:420,background:C,border:`1px solid ${B}`,borderRadius:12,padding:40,boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:48,marginBottom:12}}>🛡️</div>
+          <div style={{fontSize:22,fontWeight:700,color:T}}>Security Advisory Dashboard</div>
+          <div style={{fontSize:13,color:M,marginTop:6}}>Concentrix Endpoint Security</div>
+        </div>
+        <div style={{marginBottom:8,fontSize:13,color:M,fontWeight:600}}>Team Access Code</div>
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          <input type={show?"text":"password"} placeholder="Enter access code..." value={code}
+            onChange={e=>{setCode(e.target.value);setError("");}}
+            onKeyDown={e=>e.key==="Enter"&&verify()}
+            style={{flex:1,background:D,color:T,border:`1px solid ${error?"#ff4444":B}`,borderRadius:6,padding:"10px 14px",fontSize:14,outline:"none"}}
+            autoFocus/>
+          <button onClick={()=>setShow(v=>!v)} style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:6,padding:"0 12px",cursor:"pointer",fontSize:13}}>{show?"Hide":"Show"}</button>
+        </div>
+        {error&&<div style={{color:"#ff6b6b",fontSize:13,marginBottom:12,padding:"8px 12px",background:"#2d1f1f",borderRadius:6,border:"1px solid #ff444433"}}>{error}</div>}
+        <button onClick={verify} disabled={loading}
+          style={{width:"100%",background:loading?"#333":A,color:"#fff",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:600,cursor:loading?"not-allowed":"pointer"}}>
+          {loading?"Verifying...":"🔓 Access Dashboard"}
+        </button>
+        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#6b7280"}}>Contact your SOC administrator if you don't have the access code.</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ACCESS DENIED SCREEN ────────────────────────────────────────────────────
+function AccessDeniedScreen({onRetry}){
+  return(
+    <div style={{minHeight:"100vh",background:D,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:460,background:C,border:"1px solid #ff444466",borderRadius:12,padding:40,textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
+        <div style={{fontSize:56,marginBottom:16}}>🚫</div>
+        <div style={{fontSize:22,fontWeight:700,color:"#ff6b6b",marginBottom:8}}>Access Denied</div>
+        <div style={{fontSize:14,color:M,lineHeight:1.7,marginBottom:24}}>
+          The access code you entered is incorrect.<br/>
+          This dashboard is restricted to authorised<br/>
+          <strong style={{color:T}}>Concentrix Endpoint Security</strong> team members only.
+        </div>
+        <div style={{background:"#1a1a2e",border:"1px solid #ff444433",borderRadius:8,padding:16,marginBottom:24,fontSize:12,color:M,lineHeight:1.6}}>
+          🔒 This access attempt has been logged.<br/>
+          If you believe you should have access, contact:<br/>
+          <strong style={{color:"#58a6ff"}}>Pankaj Singh — Concentrix Endpoint Security</strong>
+        </div>
+        <button onClick={onRetry} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>← Try Again</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
+function Dashboard({onLogout}){
   const ls=k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}};
   const [tab,setTab]=useState("feed");
   const [sources,setSources]=useState(()=>ls("sad_sources")||SOURCE_LIBRARY);
@@ -172,7 +203,16 @@ function App(){
   const [sel,setSel]=useState(null);
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("sad_apikey")||"");
   const [showKey,setShowKey]=useState(false);
-  // Email digest state
+  const [autoRefresh,setAutoRefresh]=useState(()=>ls("sad_autorefresh")??true);
+  const [refreshInterval,setRefreshInterval]=useState(()=>localStorage.getItem("sad_interval")||"1hr");
+  const [lastFetched,setLastFetched]=useState(()=>localStorage.getItem("sad_lastfetched")||null);
+  const [nextRefresh,setNextRefresh]=useState(null);
+  const [notifEnabled,setNotifEnabled]=useState(()=>ls("sad_notif")??false);
+  const [notifPerm,setNotifPerm]=useState(()=>typeof Notification!=="undefined"?Notification.permission:"denied");
+  const [newCount,setNewCount]=useState(0);
+  const [refreshLog,setRefreshLog]=useState(()=>ls("sad_log")||[]);
+  const [srcSearch,setSrcSearch]=useState("");
+  const [srcCat,setSrcCat]=useState("All");
   const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
   const [newRecipient,setNewRecipient]=useState("");
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
@@ -183,18 +223,6 @@ function App(){
   const [emailSending,setEmailSending]=useState(false);
   const [emailStatus,setEmailStatus]=useState(null);
   const [scheduleStatus,setScheduleStatus]=useState(null);
-  const [autoRefresh,setAutoRefresh]=useState(()=>ls("sad_autorefresh")??true);
-  const [refreshInterval,setRefreshInterval]=useState(()=>localStorage.getItem("sad_interval")||"1hr");
-  const [lastFetched,setLastFetched]=useState(()=>localStorage.getItem("sad_lastfetched")||null);
-  const [nextRefresh,setNextRefresh]=useState(null);
-  const [notifEnabled,setNotifEnabled]=useState(()=>ls("sad_notif")??false);
-  const [notifPerm,setNotifPerm]=useState(()=>typeof Notification!=="undefined"?Notification.permission:"denied");
-  const [newCount,setNewCount]=useState(0);
-  const [ticker,setTicker]=useState(0);
-  const [refreshLog,setRefreshLog]=useState(()=>ls("sad_log")||[]);
-  const [srcSearch,setSrcSearch]=useState("");
-  const [srcCat,setSrcCat]=useState("All");
-  const [srcTier,setSrcTier]=useState("All");
   const timerRef=useRef(null);
   const refreshedOnce=useRef(false);
 
@@ -202,63 +230,18 @@ function App(){
   useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
   useEffect(()=>{if(digest)localStorage.setItem("sad_digest",digest)},[digest]);
   useEffect(()=>{localStorage.setItem("sad_apikey",apiKey)},[apiKey]);
+  useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
+  useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
+  useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
+  useEffect(()=>{if(lastFetched)localStorage.setItem("sad_lastfetched",lastFetched)},[lastFetched]);
+  useEffect(()=>{localStorage.setItem("sad_log",JSON.stringify(refreshLog))},[refreshLog]);
   useEffect(()=>{localStorage.setItem("sad_recipients",JSON.stringify(emailRecipients))},[emailRecipients]);
   useEffect(()=>{localStorage.setItem("sad_sender",senderEmail)},[senderEmail]);
   useEffect(()=>{localStorage.setItem("sad_sendername",senderName)},[senderName]);
   useEffect(()=>{localStorage.setItem("sad_digesttime",digestTime)},[digestTime]);
   useEffect(()=>{localStorage.setItem("sad_digesttz",digestTZ)},[digestTZ]);
   useEffect(()=>{localStorage.setItem("sad_scheduleenabled",JSON.stringify(scheduleEnabled))},[scheduleEnabled]);
-
-  // Convert HH:MM + TZ to cron expression
-  const timeToCron=(time,tz)=>{
-    const[h,m]=time.split(":").map(Number);
-    // Convert to UTC offset for common zones
-    const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};
-    const offset=offsets[tz]||0;
-    let utcH=((h+offset)%24+24)%24;
-    return `${m} ${utcH} * * *`;
-  };
-
-  const sendEmailNow=useCallback(async()=>{
-    if(!PROXY_URL){alert("PROXY_URL not set — proxy required for email sending.");return;}
-    if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
-    setEmailSending(true);setEmailStatus(null);
-    try{
-      const res=await fetch(`${PROXY_URL}/digest/send`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName}),
-      });
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Send failed");
-      setEmailStatus({ok:true,msg:`✅ Digest sent to ${data.recipients} recipients (${data.criticalCount} critical, ${data.zeroDayCount} zero-day advisories included)`});
-    }catch(e){setEmailStatus({ok:false,msg:"❌ "+e.message});}
-    setEmailSending(false);
-  },[emailRecipients,senderEmail,senderName,apiKey]);
-
-  const saveSchedule=useCallback(async(enabled)=>{
-    if(!PROXY_URL){alert("PROXY_URL not set.");return;}
-    if(enabled&&!emailRecipients.length){alert("Add at least one recipient first.");return;}
-    setScheduleStatus(null);
-    try{
-      const cronExpr=timeToCron(digestTime,digestTZ);
-      const res=await fetch(`${PROXY_URL}/digest/schedule`,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName}),
-      });
-      const data=await res.json();
-      if(!res.ok)throw new Error(data.error||"Schedule failed");
-      setScheduleEnabled(enabled);
-      setScheduleStatus({ok:true,msg:enabled?`✅ Scheduled daily at ${digestTime} ${digestTZ} (cron: ${cronExpr})`:"✅ Schedule disabled"});
-    }catch(e){setScheduleStatus({ok:false,msg:"❌ "+e.message});}
-  },[digestTime,digestTZ,emailRecipients,senderEmail,senderName,apiKey]);
-  useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
-  useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
-  useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
-  useEffect(()=>{if(lastFetched)localStorage.setItem("sad_lastfetched",lastFetched)},[lastFetched]);
-  useEffect(()=>{localStorage.setItem("sad_log",JSON.stringify(refreshLog))},[refreshLog]);
-  useEffect(()=>{const t=setInterval(()=>setTicker(v=>v+1),1000);return()=>clearInterval(t)},[]);
+  useEffect(()=>{const t=setInterval(()=>{if(nextRefresh)setNextRefresh(p=>p)},1000);return()=>clearInterval(t)},[nextRefresh]);
 
   const sendNotification=useCallback((items)=>{
     if(!notifEnabled||notifPerm!=="granted"||!items.length)return;
@@ -271,16 +254,10 @@ function App(){
     setFLoad(true);
     const now=new Date();
     let injected=[];
-
     if(PROXY_URL){
-      // ── LIVE MODE ─────────────────────────────────────────────────────────
       try{
         const enabledIds=sources.filter(s=>s.enabled&&s.rss).map(s=>s.id);
-        const res=await fetch(`${PROXY_URL}/feeds/all`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({sources:enabledIds}),
-        });
+        const res=await fetch(`${PROXY_URL}/feeds/all`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sources:enabledIds})});
         if(!res.ok)throw new Error("Proxy returned "+res.status);
         const data=await res.json();
         if(data.items?.length){
@@ -288,16 +265,11 @@ function App(){
             const existingIds=new Set(prev.map(a=>a.id));
             injected=data.items.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
             if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
-            const merged=[...injected,...prev.filter(a=>!data.items.find(x=>x.id===a.id))];
-            return merged.slice(0,500);
+            return [...injected,...prev.filter(a=>!data.items.find(x=>x.id===a.id))].slice(0,500);
           });
         }
-      }catch(err){
-        console.error("Proxy error:",err.message);
-        alert("⚠️ Proxy fetch failed: "+err.message+"\n\nCheck your PROXY_URL in the dashboard.");
-      }
+      }catch(err){console.error("Proxy error:",err.message);}
     }else{
-      // ── DEMO MODE ─────────────────────────────────────────────────────────
       await new Promise(r=>setTimeout(r,1400));
       if(manual&&!refreshedOnce.current){
         refreshedOnce.current=true;
@@ -309,22 +281,12 @@ function App(){
         });
       }
     }
-
     const ts=now.toLocaleString();
     setLastFetched(ts);
     setNextRefresh(Date.now()+INTERVALS[refreshInterval]);
     setRefreshLog(prev=>[{time:ts,count:injected.length,manual,live:!!PROXY_URL},...prev].slice(0,20));
     setFLoad(false);
   },[sources,refreshInterval,sendNotification]);
-
-  // Proxy health check on load
-  useEffect(()=>{
-    if(!PROXY_URL)return;
-    fetch(`${PROXY_URL}/health`)
-      .then(r=>r.json())
-      .then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime,"uptime"))
-      .catch(()=>console.warn("⚠️ Proxy unreachable — check PROXY_URL"));
-  },[]);
 
   useEffect(()=>{
     if(timerRef.current)clearInterval(timerRef.current);
@@ -335,40 +297,45 @@ function App(){
     return()=>clearInterval(timerRef.current);
   },[autoRefresh,refreshInterval]);
 
-  const vendors=["All",...Array.from(new Set(advisories.map(a=>a.vendor)))];
-  const cats=["All",...Array.from(new Set(advisories.map(a=>a.cat).filter(Boolean)))];
-  const filtered=advisories.filter(a=>
-    (fSev==="All"||a.severity===fSev)&&(fVen==="All"||a.vendor===fVen)&&
-    (fCat==="All"||a.cat===fCat)&&(!fZD||a.zeroDay)&&(!fNew||a.isNew)&&
-    (!search||[a.title,a.id,a.vendor,a.summary].some(f=>f?.toLowerCase().includes(search.toLowerCase())))
-  );
+  useEffect(()=>{
+    if(!PROXY_URL)return;
+    fetch(`${PROXY_URL}/health`).then(r=>r.json()).then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime,"uptime")).catch(()=>console.warn("⚠️ Proxy unreachable"));
+  },[]);
 
-  const stats={critical:advisories.filter(a=>a.severity==="Critical").length,high:advisories.filter(a=>a.severity==="High").length,medium:advisories.filter(a=>a.severity==="Medium").length,low:advisories.filter(a=>a.severity==="Low").length,zeroDay:advisories.filter(a=>a.zeroDay).length,total:advisories.length,newItems:advisories.filter(a=>a.isNew).length};
-  const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
+  const timeToCron=(time,tz)=>{const[h,m]=time.split(":").map(Number);const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};const offset=offsets[tz]||0;const utcH=((h+offset)%24+24)%24;return`${m} ${Math.floor(utcH)} * * *`;};
 
-  const filteredSources=sources.filter(s=>
-    (srcCat==="All"||s.cat===srcCat)&&(srcTier==="All"||String(s.tier)===srcTier)&&
-    (!srcSearch||[s.name,s.vendor,s.cat].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase())))
-  );
+  const sendEmailNow=useCallback(async()=>{
+    if(!PROXY_URL){alert("PROXY_URL not set.");return;}
+    if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
+    setEmailSending(true);setEmailStatus(null);
+    try{
+      const res=await fetch(`${PROXY_URL}/digest/send`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Send failed");
+      setEmailStatus({ok:true,msg:`✅ Digest sent to ${data.recipients} recipients (${data.criticalCount} critical, ${data.zeroDayCount} zero-day advisories included)`});
+    }catch(e){setEmailStatus({ok:false,msg:"❌ "+e.message});}
+    setEmailSending(false);
+  },[emailRecipients,senderEmail,senderName]);
 
-  const toggleSrc=id=>setSources(s=>s.map(x=>x.id===id?{...x,enabled:!x.enabled}:x));
-  const toggleCat=cat=>setSources(s=>s.map(x=>x.cat===cat?{...x,enabled:!s.find(y=>y.cat===cat)?.enabled}:x));
-  const addSrc=()=>{if(!newSrc.name||!newSrc.vendor)return;setSources(s=>[...s,{...newSrc,id:Date.now().toString(),tier:3,enabled:true}]);setNewSrc({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});setAddOpen(false);};
-  const removeSrc=id=>setSources(s=>s.filter(x=>x.id!==id));
-  const clearNew=()=>{setAdvisories(p=>p.map(a=>({...a,isNew:false})));setNewCount(0);};
-
-  const exportCSV=()=>{
-    const h=["ID","Vendor","Category","Title","Severity","CVSS","Date","ZeroDay","New","URL"];
-    const rows=advisories.map(a=>[a.id,a.vendor,a.cat||"",`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.isNew?"Yes":"No",a.url]);
-    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
-    const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();URL.revokeObjectURL(u);
-  };
+  const saveSchedule=useCallback(async(enabled)=>{
+    if(!PROXY_URL){alert("PROXY_URL not set.");return;}
+    if(enabled&&!emailRecipients.length){alert("Add at least one recipient first.");return;}
+    setScheduleStatus(null);
+    try{
+      const cronExpr=timeToCron(digestTime,digestTZ);
+      const res=await fetch(`${PROXY_URL}/digest/schedule`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Schedule failed");
+      setScheduleEnabled(enabled);
+      setScheduleStatus({ok:true,msg:enabled?`✅ Scheduled daily at ${digestTime} ${digestTZ}`:"✅ Schedule disabled"});
+    }catch(e){setScheduleStatus({ok:false,msg:"❌ "+e.message});}
+  },[digestTime,digestTZ,emailRecipients,senderEmail,senderName]);
 
   const genDigest=useCallback(async()=>{
     if(!apiKey){alert("Enter your Anthropic API key in Settings first.");setTab("settings");return;}
     setDLoad(true);
     const top=[...advisories].sort((a,b)=>(b.cvss||0)-(a.cvss||0)).slice(0,12);
-    const prompt=`You are a senior SOC analyst. Generate a concise daily security advisory digest:\n1. Executive Summary (2-3 sentences)\n2. Critical/Zero-Day Alerts (must-act-today)\n3. High Priority Items by Category\n4. Notable Trends & Patterns\n5. Recommended Actions\n\nAdvisories:\n${top.map(a=>`[${a.severity}][${a.cat||"General"}] ${a.id} - ${a.title} (${a.vendor}, CVSS:${a.cvss||"N/A"}) ${a.zeroDay?"[ZERO-DAY]":""}: ${a.summary}`).join("\n")}\n\nBe concise, bullet-pointed, actionable. Today: ${new Date().toDateString()}.`;
+    const prompt=`You are a senior SOC analyst. Generate a concise daily security advisory digest:\n1. Executive Summary\n2. Critical/Zero-Day Alerts\n3. High Priority Items\n4. Recommended Actions\n\nAdvisories:\n${top.map(a=>`[${a.severity}] ${a.id} - ${a.title} (${a.vendor}) ${a.zeroDay?"[ZERO-DAY]":""}: ${a.summary}`).join("\n")}\n\nToday: ${new Date().toDateString()}`;
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
       const data=await res.json();
@@ -379,17 +346,36 @@ function App(){
   },[advisories,apiKey]);
 
   const requestNotifPerm=async()=>{if(typeof Notification==="undefined")return;const p=await Notification.requestPermission();setNotifPerm(p);if(p==="granted")setNotifEnabled(true);};
+  const exportCSV=()=>{const h=["ID","Vendor","Category","Title","Severity","CVSS","Date","ZeroDay","New","URL"];const rows=advisories.map(a=>[a.id,a.vendor,a.cat||"",`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.isNew?"Yes":"No",a.url]);const csv=[h,...rows].map(r=>r.join(",")).join("\n");const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();URL.revokeObjectURL(u);};
+  const toggleSrc=id=>setSources(s=>s.map(x=>x.id===id?{...x,enabled:!x.enabled}:x));
+  const removeSrc=id=>setSources(s=>s.filter(x=>x.id!==id));
+  const addSrc=()=>{if(!newSrc.name||!newSrc.vendor)return;setSources(s=>[...s,{...newSrc,id:Date.now().toString(),tier:3,enabled:true}]);setNewSrc({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});setAddOpen(false);};
+  const clearNew=()=>{setAdvisories(p=>p.map(a=>({...a,isNew:false})));setNewCount(0);};
+
+  const vendors=["All",...Array.from(new Set(advisories.map(a=>a.vendor)))];
+  const cats=["All",...Array.from(new Set(advisories.map(a=>a.cat).filter(Boolean)))];
+  const filtered=advisories.filter(a=>(fSev==="All"||a.severity===fSev)&&(fVen==="All"||a.vendor===fVen)&&(fCat==="All"||a.cat===fCat)&&(!fZD||a.zeroDay)&&(!fNew||a.isNew)&&(!search||[a.title,a.id,a.vendor,a.summary].some(f=>f?.toLowerCase().includes(search.toLowerCase()))));
+  const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
+  const stats={critical:advisories.filter(a=>a.severity==="Critical").length,high:advisories.filter(a=>a.severity==="High").length,medium:advisories.filter(a=>a.severity==="Medium").length,low:advisories.filter(a=>a.severity==="Low").length,zeroDay:advisories.filter(a=>a.zeroDay).length,total:advisories.length,newItems:advisories.filter(a=>a.isNew).length};
+  const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
+
   const inp=ex=>({background:D,color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 10px",...ex});
-  const tabBtn=(t,label,badge)=>(<button onClick={()=>setTab(t)} style={{padding:"8px 16px",border:"none",borderRadius:6,cursor:"pointer",fontWeight:600,fontSize:13,background:tab===t?A:"transparent",color:tab===t?"#fff":M,position:"relative"}}>
-    {label}{badge>0&&<span style={{position:"absolute",top:2,right:2,background:"#ff4444",color:"#fff",borderRadius:8,fontSize:10,padding:"1px 5px",fontWeight:700}}>{badge}</span>}
-  </button>);
+  const tabBtn=(t,label,badge)=>(
+    <button onClick={()=>setTab(t)} style={{padding:"8px 16px",border:"none",borderRadius:6,cursor:"pointer",fontWeight:600,fontSize:13,background:tab===t?A:"transparent",color:tab===t?"#fff":M,position:"relative"}}>
+      {label}{badge>0&&<span style={{position:"absolute",top:2,right:2,background:"#ff4444",color:"#fff",borderRadius:8,fontSize:10,padding:"1px 5px",fontWeight:700}}>{badge}</span>}
+    </button>
+  );
 
   return(
     <div style={{background:D,color:T,minHeight:"100vh"}}>
-      {/* Header */}
+
+      {/* HEADER */}
       <div style={{background:C,borderBottom:`1px solid ${B}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span style={{fontSize:22}}>🛡️</span>
-        <div><div style={{fontWeight:700,fontSize:15}}>Security Advisory Dashboard</div><div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources · AI-Powered</div></div>
+        <div>
+          <div style={{fontWeight:700,fontSize:15}}>Security Advisory Dashboard</div>
+          <div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources · AI-Powered</div>
+        </div>
         <div style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:20,padding:"4px 12px",fontSize:12,display:"flex",alignItems:"center",gap:4}}>
           {autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}
           <span style={{color:autoRefresh?"#00aa00":M}}>{autoRefresh?"Live":"Paused"}</span>
@@ -399,10 +385,11 @@ function App(){
           <button onClick={exportCSV} style={{...inp(),cursor:"pointer",fontSize:12,fontWeight:600,padding:"7px 12px"}}>⬇ CSV</button>
           <button onClick={()=>doRefresh(true)} disabled={fLoad} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>{fLoad?"⟳ Fetching...":"⟳ Refresh Now"}</button>
           <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>{dLoad?"✦ Generating...":"✦ AI Digest"}</button>
+          <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444444",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>🔓 Sign Out</button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* STATS */}
       <div style={{display:"flex",gap:8,padding:"10px 20px",flexWrap:"wrap"}}>
         {[["Total",stats.total,M],["Critical",stats.critical,"#ff4444"],["High",stats.high,"#ff7700"],["Medium",stats.medium,"#e6b800"],["Low",stats.low,"#00aa00"],["Zero-Days",stats.zeroDay,"#cc00cc"],["New",stats.newItems,"#1f6feb"],["Sources",srcStats.enabled,"#8b949e"]].map(([l,v,c])=>(
           <div key={l} onClick={l==="New"&&v>0?()=>{setFNew(true);setTab("feed");clearNew()}:undefined}
@@ -424,7 +411,7 @@ function App(){
         </div>
       )}
 
-      {/* Tabs */}
+      {/* TABS */}
       <div style={{padding:"0 20px 10px",display:"flex",gap:4,flexWrap:"wrap"}}>
         {tabBtn("feed","📋 Advisory Feed",stats.newItems)}
         {tabBtn("digest","✦ AI Digest",0)}
@@ -436,7 +423,7 @@ function App(){
 
       <div style={{padding:"0 20px 24px"}}>
 
-        {/* FEED */}
+        {/* FEED TAB */}
         {tab==="feed"&&(
           <div>
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
@@ -451,109 +438,98 @@ function App(){
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {filtered.map(a=>{
                 const c=SEV[a.severity]||SEV.Unknown;const open=sel===a.id;const cc=CAT_COLORS[a.cat]||"#888";
-                return(<div key={a.id} onClick={()=>setSel(open?null:a.id)}
-                  style={{background:a.isNew?"#0d1f3c":C,border:`1px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.border}`,borderLeft:`4px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.badge}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}>
-                  <div style={{display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
-                        <Badge sev={a.severity}/>{a.zeroDay&&<ZD/>}{a.isNew&&<NewBadge/>}
-                        {a.cat&&<span style={{background:cc+"22",color:cc,border:`1px solid ${cc}44`,borderRadius:4,padding:"1px 7px",fontSize:11}}>{a.cat}</span>}
-                        <span style={{color:M,fontSize:12}}>{a.vendor}</span><span style={{color:B}}>·</span>
-                        <span style={{color:M,fontSize:12}}>{a.date}</span>
-                        {a.cvss&&<span style={{color:c.text,fontSize:12,fontWeight:700}}>CVSS {a.cvss}</span>}
+                return(
+                  <div key={a.id} onClick={()=>setSel(open?null:a.id)}
+                    style={{background:a.isNew?"#0d1f3c":C,border:`1px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.border}`,borderLeft:`4px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.badge}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                          <SevBadge sev={a.severity}/>{a.zeroDay&&<ZDBadge/>}{a.isNew&&<NewBadge/>}
+                          {a.cat&&<span style={{background:cc+"22",color:cc,border:`1px solid ${cc}44`,borderRadius:4,padding:"1px 7px",fontSize:11}}>{a.cat}</span>}
+                          <span style={{color:M,fontSize:12}}>{a.vendor}</span><span style={{color:B}}>·</span>
+                          <span style={{color:M,fontSize:12}}>{a.date}</span>
+                          {a.cvss&&<span style={{color:c.text,fontSize:12,fontWeight:700}}>CVSS {a.cvss}</span>}
+                        </div>
+                        <div style={{fontWeight:600,marginBottom:3}}>{a.id} — {a.title}</div>
+                        <div style={{color:M,fontSize:13}}>{a.summary}</div>
                       </div>
-                      <div style={{fontWeight:600,marginBottom:3}}>{a.id} — {a.title}</div>
-                      <div style={{color:M,fontSize:13}}>{a.summary}</div>
+                      <span style={{color:M}}>{open?"▲":"▼"}</span>
                     </div>
-                    <span style={{color:M}}>{open?"▲":"▼"}</span>
+                    {open&&(
+                      <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}}>
+                        <div style={{marginBottom:8}}><span style={{color:M,fontSize:12}}>Affected: </span>{a.products?.map(p=><span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12,marginRight:6}}>{p}</span>)}</div>
+                        <a href={a.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
+                      </div>
+                    )}
                   </div>
-                  {open&&(<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}}>
-                    <div style={{marginBottom:8}}><span style={{color:M,fontSize:12}}>Affected: </span>{a.products?.map(p=><span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12,marginRight:6}}>{p}</span>)}</div>
-                    <a href={a.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
-                  </div>)}
-                </div>);
+                );
               })}
               {filtered.length===0&&<div style={{color:M,textAlign:"center",padding:40}}>No advisories match current filters.</div>}
             </div>
           </div>
         )}
 
-        {/* DIGEST */}
+        {/* DIGEST TAB */}
         {tab==="digest"&&(
-          <div>{digest?(
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                <div style={{fontWeight:700,fontSize:15}}>✦ AI Daily Security Digest</div>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{const b=new Blob([digest],{type:"text/plain"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_digest.txt";l.click();}} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>⬇ Export</button>
-                  <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>{dLoad?"Regenerating...":"↺ Regenerate"}</button>
+          <div>
+            {digest?(
+              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                  <div style={{fontWeight:700,fontSize:15}}>✦ AI Daily Security Digest</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>{const b=new Blob([digest],{type:"text/plain"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_digest.txt";l.click();}} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>⬇ Export</button>
+                    <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>{dLoad?"Regenerating...":"↺ Regenerate"}</button>
+                  </div>
                 </div>
+                <div style={{color:T,lineHeight:1.75,whiteSpace:"pre-wrap",fontSize:13}}>{digest}</div>
               </div>
-              <div style={{color:T,lineHeight:1.75,whiteSpace:"pre-wrap",fontSize:13}}>{digest}</div>
-            </div>
-          ):(
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:48,textAlign:"center"}}>
-              <div style={{fontSize:40,marginBottom:12}}>✦</div>
-              <div style={{fontWeight:600,marginBottom:8}}>No Digest Yet</div>
-              <div style={{color:M,marginBottom:20}}>Generate an AI-powered SOC briefing across all {stats.total} advisories from {srcStats.enabled} sources.</div>
-              <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>{dLoad?"✦ Generating...":"✦ Generate AI Daily Digest"}</button>
-            </div>
-          )}</div>
+            ):(
+              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:48,textAlign:"center"}}>
+                <div style={{fontSize:40,marginBottom:12}}>✦</div>
+                <div style={{fontWeight:600,marginBottom:8}}>No Digest Yet</div>
+                <div style={{color:M,marginBottom:20}}>Generate an AI-powered SOC briefing. Requires Anthropic API key in Settings.</div>
+                <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>{dLoad?"✦ Generating...":"✦ Generate AI Daily Digest"}</button>
+              </div>
+            )}
+          </div>
         )}
 
-        {/* SOURCES */}
+        {/* SOURCES TAB */}
         {tab==="sources"&&(
           <div>
-            {/* Source Stats */}
             <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-              {[["Total Sources",srcStats.total,"#8b949e"],["Active",srcStats.enabled,"#00aa00"],["With RSS",srcStats.withRSS,"#1f6feb"],["Manual/Portal",srcStats.enabled-srcStats.withRSS,"#ff7700"]].map(([l,v,c])=>(
+              {[["Total",srcStats.total,"#8b949e"],["Active",srcStats.enabled,"#00aa00"],["With RSS",srcStats.withRSS,"#1f6feb"]].map(([l,v,c])=>(
                 <div key={l} style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:"8px 16px",textAlign:"center",minWidth:90}}>
                   <div style={{fontSize:18,fontWeight:700,color:c}}>{v}</div><div style={{fontSize:11,color:M}}>{l}</div>
                 </div>
               ))}
-              <div style={{marginLeft:"auto",display:"flex",gap:8}}>
-                <button onClick={()=>setAddOpen(true)} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Custom</button>
-              </div>
+              <div style={{marginLeft:"auto"}}><button onClick={()=>setAddOpen(true)} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Custom</button></div>
             </div>
-
-            {/* Category Quick Toggles */}
             <div style={{marginBottom:14}}>
               <div style={{color:M,fontSize:12,marginBottom:8}}>Toggle by Category:</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {CATEGORIES.map(cat=>{
-                  const catSrcs=sources.filter(s=>s.cat===cat);
-                  const allOn=catSrcs.every(s=>s.enabled);
-                  const cc=CAT_COLORS[cat]||"#888";
-                  return(<button key={cat} onClick={()=>setSources(s=>s.map(x=>x.cat===cat?{...x,enabled:!allOn}:x))}
+                {CATEGORIES.map(cat=>{const catSrcs=sources.filter(s=>s.cat===cat);const allOn=catSrcs.every(s=>s.enabled);const cc=CAT_COLORS[cat]||"#888";return(
+                  <button key={cat} onClick={()=>setSources(s=>s.map(x=>x.cat===cat?{...x,enabled:!allOn}:x))}
                     style={{background:allOn?cc+"33":"transparent",border:`1px solid ${allOn?cc:B}`,color:allOn?cc:M,borderRadius:20,padding:"4px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
                     {cat} ({catSrcs.filter(s=>s.enabled).length}/{catSrcs.length})
-                  </button>);
-                })}
+                  </button>
+                );})}
               </div>
             </div>
-
-            {/* Filters */}
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <input placeholder="🔍 Search sources..." value={srcSearch} onChange={e=>setSrcSearch(e.target.value)} style={{...inp({flex:1,minWidth:140})}}/>
               <select value={srcCat} onChange={e=>setSrcCat(e.target.value)} style={inp()}>
                 <option value="All">All Categories</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}
               </select>
-              <select value={srcTier} onChange={e=>setSrcTier(e.target.value)} style={inp()}>
-                <option value="All">All Tiers</option><option value="1">Tier 1 — Primary</option><option value="2">Tier 2 — Secondary</option>
-              </select>
-              <span style={{color:M,fontSize:12,alignSelf:"center"}}>{filteredSources.length} shown</span>
             </div>
-
             {addOpen&&(
               <div style={{background:C,border:`1px solid ${A}`,borderRadius:8,padding:14,marginBottom:12}}>
                 <div style={{fontWeight:600,marginBottom:10}}>Add Custom Source</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <input placeholder="Source name" value={newSrc.name} onChange={e=>setNewSrc(s=>({...s,name:e.target.value}))} style={{...inp({flex:1,minWidth:130})}}/>
                   <input placeholder="Vendor" value={newSrc.vendor} onChange={e=>setNewSrc(s=>({...s,vendor:e.target.value}))} style={{...inp({width:120})}}/>
-                  <select value={newSrc.cat} onChange={e=>setNewSrc(s=>({...s,cat:e.target.value}))} style={inp()}>
-                    {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                  <input placeholder="RSS/Atom URL (optional)" value={newSrc.rss} onChange={e=>setNewSrc(s=>({...s,rss:e.target.value}))} style={{...inp({flex:2,minWidth:180})}}/>
+                  <select value={newSrc.cat} onChange={e=>setNewSrc(s=>({...s,cat:e.target.value}))} style={inp()}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
+                  <input placeholder="RSS URL" value={newSrc.rss} onChange={e=>setNewSrc(s=>({...s,rss:e.target.value}))} style={{...inp({flex:2,minWidth:180})}}/>
                   <input placeholder="Portal URL" value={newSrc.url} onChange={e=>setNewSrc(s=>({...s,url:e.target.value}))} style={{...inp({flex:1,minWidth:140})}}/>
                 </div>
                 <div style={{display:"flex",gap:8,marginTop:10}}>
@@ -562,8 +538,6 @@ function App(){
                 </div>
               </div>
             )}
-
-            {/* Source Cards grouped by category */}
             {CATEGORIES.filter(cat=>srcCat==="All"||cat===srcCat).map(cat=>{
               const catSrcs=filteredSources.filter(s=>s.cat===cat);
               if(!catSrcs.length)return null;
@@ -585,33 +559,29 @@ function App(){
                           <div style={{display:"flex",alignItems:"center",gap:6}}>
                             <span style={{fontWeight:600,fontSize:13}}>{s.name}</span>
                             {s.tier===1&&<span style={{background:"#1f6feb22",color:"#58a6ff",border:"1px solid #1f6feb44",borderRadius:3,padding:"1px 5px",fontSize:10}}>T1</span>}
-                            {s.tier===2&&<span style={{background:"#88888822",color:M,border:`1px solid ${B}`,borderRadius:3,padding:"1px 5px",fontSize:10}}>T2</span>}
                           </div>
                           <div style={{color:M,fontSize:11,marginTop:1}}>{s.vendor}{s.rss?" · RSS ✓":" · Portal only"}</div>
                         </div>
                         {s.url&&<a href={s.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:M,fontSize:12,flexShrink:0}}>↗</a>}
                         <span style={{background:s.rss?"#00aa0022":"#88888822",color:s.rss?"#00aa00":M,border:`1px solid ${s.rss?"#00aa00":B}`,borderRadius:4,padding:"2px 6px",fontSize:10,flexShrink:0}}>{s.rss?"RSS":"Portal"}</span>
-                        {(!SOURCE_LIBRARY.find(x=>x.id===s.id))&&<button onClick={()=>removeSrc(s.id)} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:16,flexShrink:0}}>✕</button>}
+                        {!SOURCE_LIBRARY.find(x=>x.id===s.id)&&<button onClick={()=>removeSrc(s.id)} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:16,flexShrink:0}}>✕</button>}
                       </div>
                     ))}
                   </div>
                 </div>
               );
             })}
-            <div style={{marginTop:14,background:"#1f2d1f",border:"1px solid #2a4a2a",borderRadius:8,padding:12,color:"#6ea86e",fontSize:12}}>
-              <strong>ℹ️ Tier 1</strong> = Primary OEM/government sources (highest trust). <strong>Tier 2</strong> = Trusted secondary sources. Portal-only sources require a backend proxy or manual check — RSS sources can be fully automated once a proxy is configured.
-            </div>
           </div>
         )}
 
-        {/* AUTO-REFRESH */}
+        {/* AUTO-REFRESH TAB */}
         {tab==="autorefresh"&&(
           <div style={{maxWidth:580}}>
             <div style={{background:C,border:`1px solid ${autoRefresh?"#00aa00":B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                 <div>
-                  <div style={{fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:8}}>{autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}Auto-Refresh is {autoRefresh?"Active":"Paused"}</div>
-                  <div style={{color:M,fontSize:12,marginTop:2}}>Monitors {srcStats.withRSS} RSS-enabled sources automatically</div>
+                  <div style={{fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:8}}>{autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}Auto-Refresh {autoRefresh?"Active":"Paused"}</div>
+                  <div style={{color:M,fontSize:12,marginTop:2}}>Monitors {srcStats.withRSS} RSS-enabled sources</div>
                 </div>
                 <div style={{width:48,height:26,background:autoRefresh?"#00aa00":"#444",borderRadius:13,cursor:"pointer",position:"relative"}} onClick={()=>setAutoRefresh(v=>!v)}>
                   <div style={{width:20,height:20,background:"#fff",borderRadius:10,position:"absolute",top:3,left:autoRefresh?25:3,transition:"left 0.3s"}}/>
@@ -631,7 +601,7 @@ function App(){
             </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>🔔 Browser Notifications</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Alert on Critical/Zero-Day detections during auto-refresh.</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Alert on Critical/Zero-Day detections.</div>
               {notifPerm==="granted"?(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{color:"#00aa00",fontSize:13}}>✓ Permitted</span><div style={{width:40,height:22,background:notifEnabled?"#00aa00":"#444",borderRadius:11,cursor:"pointer",position:"relative"}} onClick={()=>setNotifEnabled(v=>!v)}><div style={{width:16,height:16,background:"#fff",borderRadius:8,position:"absolute",top:3,left:notifEnabled?21:3,transition:"left 0.3s"}}/></div></div>):notifPerm==="denied"?(<div style={{background:"#2d1f1f",border:"1px solid #ff444444",borderRadius:6,padding:"10px 14px",color:"#ff8888",fontSize:12}}>⚠️ Blocked in browser settings.</div>):(<button onClick={requestNotifPerm} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"8px 18px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔔 Enable Notifications</button>)}
             </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
@@ -642,7 +612,7 @@ function App(){
                     <div style={{fontSize:12}}>{l.time}</div>
                     <div style={{display:"flex",gap:8,alignItems:"center"}}>
                       {l.count>0&&<span style={{background:"#1f6feb",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700}}>{l.count} new</span>}
-                      <span style={{color:M,fontSize:11}}>{l.manual?"Manual":"Auto"}</span>
+                      <span style={{color:M,fontSize:11}}>{l.manual?"Manual":"Auto"} · {l.live?"Live":"Demo"}</span>
                     </div>
                   </div>))}
                 </div>
@@ -651,162 +621,113 @@ function App(){
           </div>
         )}
 
-        {/* EMAIL DIGEST */}
+        {/* EMAIL DIGEST TAB */}
         {tab==="email"&&(
           <div style={{maxWidth:600}}>
-
-            {/* Recipients */}
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>📬 Distribution List</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Team members who will receive the daily digest email.</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Team members who receive the daily digest.</div>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
                 <input placeholder="Enter email address..." value={newRecipient} onChange={e=>setNewRecipient(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter"&&newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}}
                   style={{...inp({flex:1})}}/>
-                <button onClick={()=>{if(newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}}
-                  style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add</button>
+                <button onClick={()=>{if(newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add</button>
               </div>
-              {emailRecipients.length===0?(
-                <div style={{color:M,fontSize:12,padding:"10px 0"}}>No recipients added yet.</div>
-              ):(
+              {emailRecipients.length===0?<div style={{color:M,fontSize:12,padding:"10px 0"}}>No recipients yet.</div>:(
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {emailRecipients.map(r=>(
-                    <div key={r} style={{background:D,border:`1px solid ${B}`,borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <span style={{fontSize:13}}>✉️ {r}</span>
-                      <button onClick={()=>setEmailRecipients(prev=>prev.filter(x=>x!==r))} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:14}}>✕</button>
-                    </div>
-                  ))}
+                  {emailRecipients.map(r=>(<div key={r} style={{background:D,border:`1px solid ${B}`,borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <span style={{fontSize:13}}>✉️ {r}</span>
+                    <button onClick={()=>setEmailRecipients(prev=>prev.filter(x=>x!==r))} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:14}}>✕</button>
+                  </div>))}
                 </div>
               )}
             </div>
-
-            {/* Sender config */}
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:12}}>✉️ Sender Details</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:200}}>
-                  <div style={{color:M,fontSize:11,marginBottom:4}}>Sender Name</div>
-                  <input value={senderName} onChange={e=>setSenderName(e.target.value)} style={{...inp({width:"100%"})}}/>
-                </div>
-                <div style={{flex:1,minWidth:200}}>
-                  <div style={{color:M,fontSize:11,marginBottom:4}}>Sender Email (must be verified in SendGrid)</div>
-                  <input placeholder="security@yourdomain.com" value={senderEmail} onChange={e=>setSenderEmail(e.target.value)} style={{...inp({width:"100%"})}}/>
-                </div>
-              </div>
-              <div style={{marginTop:10,background:"#1f2a1f",border:"1px solid #2a4a2a",borderRadius:6,padding:"8px 12px",color:"#6ea86e",fontSize:12}}>
-                💡 The sender email must be verified in your SendGrid account (Settings → Sender Authentication). Use a domain your org controls to avoid Concentrix gateway blocks.
+                <div style={{flex:1,minWidth:200}}><div style={{color:M,fontSize:11,marginBottom:4}}>Sender Name</div><input value={senderName} onChange={e=>setSenderName(e.target.value)} style={{...inp({width:"100%"})}}/></div>
+                <div style={{flex:1,minWidth:200}}><div style={{color:M,fontSize:11,marginBottom:4}}>Sender Email (verified in SendGrid)</div><input placeholder="security@yourdomain.com" value={senderEmail} onChange={e=>setSenderEmail(e.target.value)} style={{...inp({width:"100%"})}}/></div>
               </div>
             </div>
-
-            {/* Schedule */}
             <div style={{background:C,border:`1px solid ${scheduleEnabled?"#00aa00":B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                <div>
-                  <div style={{fontWeight:700}}>⏰ Scheduled Daily Digest</div>
-                  <div style={{color:M,fontSize:12,marginTop:2}}>Auto-sends every day at your chosen time</div>
-                </div>
-                <div style={{width:48,height:26,background:scheduleEnabled?"#00aa00":"#444",borderRadius:13,cursor:"pointer",position:"relative"}}
-                  onClick={()=>saveSchedule(!scheduleEnabled)}>
+                <div><div style={{fontWeight:700}}>⏰ Scheduled Daily Digest</div><div style={{color:M,fontSize:12,marginTop:2}}>Auto-sends every day at your chosen time</div></div>
+                <div style={{width:48,height:26,background:scheduleEnabled?"#00aa00":"#444",borderRadius:13,cursor:"pointer",position:"relative"}} onClick={()=>saveSchedule(!scheduleEnabled)}>
                   <div style={{width:20,height:20,background:"#fff",borderRadius:10,position:"absolute",top:3,left:scheduleEnabled?25:3,transition:"left 0.3s"}}/>
                 </div>
               </div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:120}}>
-                  <div style={{color:M,fontSize:11,marginBottom:4}}>Send Time</div>
-                  <input type="time" value={digestTime} onChange={e=>setDigestTime(e.target.value)} style={{...inp({width:"100%"})}}/>
-                </div>
-                <div style={{flex:1,minWidth:120}}>
-                  <div style={{color:M,fontSize:11,marginBottom:4}}>Timezone</div>
+                <div style={{flex:1,minWidth:120}}><div style={{color:M,fontSize:11,marginBottom:4}}>Send Time</div><input type="time" value={digestTime} onChange={e=>setDigestTime(e.target.value)} style={{...inp({width:"100%"})}}/></div>
+                <div style={{flex:1,minWidth:120}}><div style={{color:M,fontSize:11,marginBottom:4}}>Timezone</div>
                   <select value={digestTZ} onChange={e=>setDigestTZ(e.target.value)} style={{...inp({width:"100%"})}}>
                     {["UTC","IST","EST","CST","MST","PST","CET","AEST"].map(tz=><option key={tz}>{tz}</option>)}
                   </select>
                 </div>
                 <div style={{display:"flex",alignItems:"flex-end"}}>
-                  <button onClick={()=>saveSchedule(scheduleEnabled)}
-                    style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>
-                    💾 Save Schedule
-                  </button>
+                  <button onClick={()=>saveSchedule(scheduleEnabled)} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>💾 Save Schedule</button>
                 </div>
               </div>
-              {scheduleStatus&&(
-                <div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:scheduleStatus.ok?"#1f2d1f":"#2d1f1f",color:scheduleStatus.ok?"#6ea86e":"#ff8888",fontSize:12}}>
-                  {scheduleStatus.msg}
-                </div>
-              )}
+              {scheduleStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:scheduleStatus.ok?"#1f2d1f":"#2d1f1f",color:scheduleStatus.ok?"#6ea86e":"#ff8888",fontSize:12}}>{scheduleStatus.msg}</div>}
             </div>
-
-            {/* Manual send */}
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>📤 Send Digest Now</div>
-              <div style={{color:M,fontSize:12,marginBottom:14}}>Manually trigger the digest immediately — fetches latest advisories, generates AI summary, and emails the distribution list.</div>
+              <div style={{color:M,fontSize:12,marginBottom:14}}>Manually trigger the digest — fetches latest advisories and emails the distribution list.</div>
               <button onClick={sendEmailNow} disabled={emailSending||!emailRecipients.length}
                 style={{background:emailRecipients.length?A:"#333",color:"#fff",border:"none",borderRadius:6,padding:"10px 24px",cursor:emailRecipients.length?"pointer":"not-allowed",fontSize:14,fontWeight:600,width:"100%"}}>
-                {emailSending?"⟳ Generating & Sending...":"📧 Send Digest Now"}
+                {emailSending?"⟳ Sending...":"📧 Send Digest Now"}
               </button>
-              {emailStatus&&(
-                <div style={{marginTop:12,padding:"10px 14px",borderRadius:6,background:emailStatus.ok?"#1f2d1f":"#2d1f1f",color:emailStatus.ok?"#6ea86e":"#ff8888",fontSize:13}}>
-                  {emailStatus.msg}
-                </div>
-              )}
-            </div>
-
-            {/* Email preview info */}
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
-              <div style={{fontWeight:700,marginBottom:8}}>📋 What the email contains</div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {[
-                  ["✦ AI Executive Summary","2-3 sentence overview of today's threat landscape"],
-                  ["⚠️ Critical & Zero-Day Alerts","Full table of all critical advisories with links"],
-                  ["✅ Recommended Actions","Specific steps for your security team"],
-                  ["📊 Stats Header","Count of Critical, Zero-Day, High, Total advisories"],
-                  ["🔗 Dashboard Link","Direct link back to the full dashboard"],
-                ].map(([title,desc])=>(
-                  <div key={title} style={{display:"flex",gap:10,background:D,borderRadius:6,padding:"8px 12px"}}>
-                    <span style={{fontSize:13,fontWeight:600,minWidth:200}}>{title}</span>
-                    <span style={{color:M,fontSize:12}}>{desc}</span>
-                  </div>
-                ))}
-              </div>
+              {emailStatus&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:6,background:emailStatus.ok?"#1f2d1f":"#2d1f1f",color:emailStatus.ok?"#6ea86e":"#ff8888",fontSize:13}}>{emailStatus.msg}</div>}
             </div>
           </div>
         )}
 
-        {/* SETTINGS */}
+        {/* SETTINGS TAB */}
         {tab==="settings"&&(
           <div style={{maxWidth:560}}>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>🔐 Session</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Your login session lasts 7 days before re-authentication is required.</div>
+              <div style={{background:D,borderRadius:6,padding:"10px 14px",marginBottom:12}}>
+                {(()=>{const s=getSession();return s?
+                  <div style={{fontSize:12}}><span style={{color:"#00aa00"}}>✅ Authenticated</span> · Expires: <strong>{new Date(s.expiry).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</strong></div>:
+                  <div style={{color:"#ff6b6b",fontSize:12}}>⚠️ No active session</div>;
+                })()}
+              </div>
+              <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444466",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔓 Sign Out</button>
+            </div>
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>🔑 Anthropic API Key</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Required for AI Digest. Stored only in your browser's local storage.</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Optional — required only for AI Digest feature. Stored in browser only.</div>
               <div style={{display:"flex",gap:8}}>
                 <input type={showKey?"text":"password"} placeholder="sk-ant-..." value={apiKey} onChange={e=>setApiKey(e.target.value)} style={{...inp({flex:1})}}/>
                 <button onClick={()=>setShowKey(v=>!v)} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>{showKey?"Hide":"Show"}</button>
               </div>
               {apiKey&&<div style={{color:"#00aa00",fontSize:12,marginTop:8}}>✓ API key saved</div>}
             </div>
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
               <div style={{fontWeight:700,marginBottom:10}}>📊 Data Management</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button onClick={exportCSV} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>⬇ Export CSV</button>
-                <button onClick={()=>{if(confirm("Reset advisories to defaults?")){setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");}}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
-                <button onClick={()=>{if(confirm("Reset all sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");}}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
-              </div>
-            </div>
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
-              <div style={{fontWeight:700,marginBottom:8}}>🚀 Enabling Live RSS Feeds</div>
-              <div style={{color:M,fontSize:12,lineHeight:1.75}}>
-                {srcStats.withRSS} of your active sources have RSS feeds configured. To fetch them live, deploy a small proxy:<br/><br/>
-                <strong style={{color:T}}>Node.js:</strong> <code style={{background:D,padding:"2px 6px",borderRadius:3,fontSize:11}}>npm install express cors axios</code><br/>
-                <strong style={{color:T}}>Python:</strong> <code style={{background:D,padding:"2px 6px",borderRadius:3,fontSize:11}}>pip install flask flask-cors feedparser</code><br/>
-                <strong style={{color:T}}>Serverless:</strong> Netlify or Vercel function that fetches and caches feeds hourly.<br/><br/>
-                Sources without RSS marked as "Portal" require manual check or a scraper pointed at the vendor portal.
+                <button onClick={()=>{if(confirm("Reset advisories?")){setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");}}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
+                <button onClick={()=>{if(confirm("Reset sources?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");}}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
 }
+
+// ─── ROOT APP ────────────────────────────────────────────────────────────────
+function App(){
+  const [authState,setAuthState]=useState(()=>getSession()?"authenticated":"login");
+  if(authState==="login")  return <LoginScreen onLogin={()=>setAuthState("authenticated")} onDenied={()=>setAuthState("denied")}/>;
+  if(authState==="denied") return <AccessDeniedScreen onRetry={()=>setAuthState("login")}/>;
+  return <Dashboard onLogout={()=>{clearSession();setAuthState("login");}}/>;
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
