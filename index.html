@@ -135,6 +135,12 @@ const SIMULATED_NEW=[
   {id:"CVE-2025-28231",vendor:"Cisco",title:"Cisco ASA VPN Pre-Auth RCE",severity:"Critical",cvss:10.0,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"Pre-auth RCE in Cisco ASA VPN. PoC publicly released, ransomware exploitation confirmed.",products:["Cisco ASA 9.x","Cisco FTD"],url:"https://tools.cisco.com/security/center",isNew:true,cat:"Network"},
 ];
 
+// ─── PROXY URL ───────────────────────────────────────────────────────────────
+// Paste your Render.com proxy URL here after deploying the backend.
+// Example: "https://security-advisory-proxy.onrender.com"
+// Leave empty ("") to run in demo/simulated mode.
+const PROXY_URL = "https://security-advisory-proxy.onrender.com"; // ← PASTE YOUR RENDER URL HERE
+
 const INTERVALS={"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
 const INTERVAL_LABELS={"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
 const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{border:"#ff7700",badge:"#ff7700",text:"#ff8800"},Medium:{border:"#e6b800",badge:"#e6b800",text:"#ccaa00"},Low:{border:"#00aa00",badge:"#00aa00",text:"#00aa00"},Unknown:{border:"#888",badge:"#888",text:"#888"}};
@@ -199,11 +205,38 @@ function App(){
     try{new Notification(`🛡️ ${crit.length} Critical/Zero-Day Alert${crit.length>1?"s":""}`,{body:crit.slice(0,3).map(a=>`${a.zeroDay?"[0-DAY] ":""}${a.id}: ${a.title}`).join("\n")});}catch(e){}
   },[notifEnabled,notifPerm]);
 
-  const doRefresh=useCallback((manual=false)=>{
+  const doRefresh=useCallback(async(manual=false)=>{
     setFLoad(true);
     const now=new Date();
-    setTimeout(()=>{
-      let injected=[];
+    let injected=[];
+
+    if(PROXY_URL){
+      // ── LIVE MODE ─────────────────────────────────────────────────────────
+      try{
+        const enabledIds=sources.filter(s=>s.enabled&&s.rss).map(s=>s.id);
+        const res=await fetch(`${PROXY_URL}/feeds/all`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({sources:enabledIds}),
+        });
+        if(!res.ok)throw new Error("Proxy returned "+res.status);
+        const data=await res.json();
+        if(data.items?.length){
+          setAdvisories(prev=>{
+            const existingIds=new Set(prev.map(a=>a.id));
+            injected=data.items.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
+            if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
+            const merged=[...injected,...prev.filter(a=>!data.items.find(x=>x.id===a.id))];
+            return merged.slice(0,500);
+          });
+        }
+      }catch(err){
+        console.error("Proxy error:",err.message);
+        alert("⚠️ Proxy fetch failed: "+err.message+"\n\nCheck your PROXY_URL in the dashboard.");
+      }
+    }else{
+      // ── DEMO MODE ─────────────────────────────────────────────────────────
+      await new Promise(r=>setTimeout(r,1400));
       if(manual&&!refreshedOnce.current){
         refreshedOnce.current=true;
         setAdvisories(prev=>{
@@ -213,14 +246,23 @@ function App(){
           return injected.length?[...injected,...prev]:prev;
         });
       }
-      const ts=now.toLocaleString();
-      setLastFetched(ts);
-      const next=Date.now()+INTERVALS[refreshInterval];
-      setNextRefresh(next);
-      setRefreshLog(prev=>[{time:ts,count:injected.length,manual},...prev].slice(0,20));
-      setFLoad(false);
-    },1400);
-  },[refreshInterval,sendNotification]);
+    }
+
+    const ts=now.toLocaleString();
+    setLastFetched(ts);
+    setNextRefresh(Date.now()+INTERVALS[refreshInterval]);
+    setRefreshLog(prev=>[{time:ts,count:injected.length,manual,live:!!PROXY_URL},...prev].slice(0,20));
+    setFLoad(false);
+  },[sources,refreshInterval,sendNotification]);
+
+  // Proxy health check on load
+  useEffect(()=>{
+    if(!PROXY_URL)return;
+    fetch(`${PROXY_URL}/health`)
+      .then(r=>r.json())
+      .then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime,"uptime"))
+      .catch(()=>console.warn("⚠️ Proxy unreachable — check PROXY_URL"));
+  },[]);
 
   useEffect(()=>{
     if(timerRef.current)clearInterval(timerRef.current);
