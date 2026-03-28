@@ -139,7 +139,7 @@ const SIMULATED_NEW=[
 // Paste your Render.com proxy URL here after deploying the backend.
 // Example: "https://security-advisory-proxy.onrender.com"
 // Leave empty ("") to run in demo/simulated mode.
-const PROXY_URL = "https://security-advisory-proxy.onrender.com";
+const PROXY_URL = ""; // ← PASTE YOUR RENDER URL HERE
 
 const INTERVALS={"1hr":3600000,"6hr":21600000,"12hr":43200000,"24hr":86400000};
 const INTERVAL_LABELS={"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Every 12 Hours","24hr":"Every 24 Hours"};
@@ -172,6 +172,17 @@ function App(){
   const [sel,setSel]=useState(null);
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("sad_apikey")||"");
   const [showKey,setShowKey]=useState(false);
+  // Email digest state
+  const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
+  const [newRecipient,setNewRecipient]=useState("");
+  const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
+  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
+  const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
+  const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"UTC");
+  const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
+  const [emailSending,setEmailSending]=useState(false);
+  const [emailStatus,setEmailStatus]=useState(null);
+  const [scheduleStatus,setScheduleStatus]=useState(null);
   const [autoRefresh,setAutoRefresh]=useState(()=>ls("sad_autorefresh")??true);
   const [refreshInterval,setRefreshInterval]=useState(()=>localStorage.getItem("sad_interval")||"1hr");
   const [lastFetched,setLastFetched]=useState(()=>localStorage.getItem("sad_lastfetched")||null);
@@ -191,6 +202,58 @@ function App(){
   useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
   useEffect(()=>{if(digest)localStorage.setItem("sad_digest",digest)},[digest]);
   useEffect(()=>{localStorage.setItem("sad_apikey",apiKey)},[apiKey]);
+  useEffect(()=>{localStorage.setItem("sad_recipients",JSON.stringify(emailRecipients))},[emailRecipients]);
+  useEffect(()=>{localStorage.setItem("sad_sender",senderEmail)},[senderEmail]);
+  useEffect(()=>{localStorage.setItem("sad_sendername",senderName)},[senderName]);
+  useEffect(()=>{localStorage.setItem("sad_digesttime",digestTime)},[digestTime]);
+  useEffect(()=>{localStorage.setItem("sad_digesttz",digestTZ)},[digestTZ]);
+  useEffect(()=>{localStorage.setItem("sad_scheduleenabled",JSON.stringify(scheduleEnabled))},[scheduleEnabled]);
+
+  // Convert HH:MM + TZ to cron expression
+  const timeToCron=(time,tz)=>{
+    const[h,m]=time.split(":").map(Number);
+    // Convert to UTC offset for common zones
+    const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};
+    const offset=offsets[tz]||0;
+    let utcH=((h+offset)%24+24)%24;
+    return `${m} ${utcH} * * *`;
+  };
+
+  const sendEmailNow=useCallback(async()=>{
+    if(!PROXY_URL){alert("PROXY_URL not set — proxy required for email sending.");return;}
+    if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
+    if(!apiKey){alert("Anthropic API key required for AI digest. Add it in Settings.");return;}
+    setEmailSending(true);setEmailStatus(null);
+    try{
+      const res=await fetch(`${PROXY_URL}/digest/send`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName,apiKey}),
+      });
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Send failed");
+      setEmailStatus({ok:true,msg:`✅ Digest sent to ${data.recipients} recipients (${data.criticalCount} critical, ${data.zeroDayCount} zero-day advisories included)`});
+    }catch(e){setEmailStatus({ok:false,msg:"❌ "+e.message});}
+    setEmailSending(false);
+  },[emailRecipients,senderEmail,senderName,apiKey]);
+
+  const saveSchedule=useCallback(async(enabled)=>{
+    if(!PROXY_URL){alert("PROXY_URL not set.");return;}
+    if(enabled&&!emailRecipients.length){alert("Add at least one recipient first.");return;}
+    setScheduleStatus(null);
+    try{
+      const cronExpr=timeToCron(digestTime,digestTZ);
+      const res=await fetch(`${PROXY_URL}/digest/schedule`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName,apiKey}),
+      });
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Schedule failed");
+      setScheduleEnabled(enabled);
+      setScheduleStatus({ok:true,msg:enabled?`✅ Scheduled daily at ${digestTime} ${digestTZ} (cron: ${cronExpr})`:"✅ Schedule disabled"});
+    }catch(e){setScheduleStatus({ok:false,msg:"❌ "+e.message});}
+  },[digestTime,digestTZ,emailRecipients,senderEmail,senderName,apiKey]);
   useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
   useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
   useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
@@ -368,6 +431,7 @@ function App(){
         {tabBtn("digest","✦ AI Digest",0)}
         {tabBtn("sources","📡 Sources ("+srcStats.enabled+")",0)}
         {tabBtn("autorefresh","🔄 Auto-Refresh",0)}
+        {tabBtn("email","📧 Email Digest",0)}
         {tabBtn("settings","🔑 Settings",0)}
       </div>
 
@@ -584,6 +648,126 @@ function App(){
                   </div>))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* EMAIL DIGEST */}
+        {tab==="email"&&(
+          <div style={{maxWidth:600}}>
+
+            {/* Recipients */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>📬 Distribution List</div>
+              <div style={{color:M,fontSize:12,marginBottom:12}}>Team members who will receive the daily digest email.</div>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <input placeholder="Enter email address..." value={newRecipient} onChange={e=>setNewRecipient(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter"&&newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}}
+                  style={{...inp({flex:1})}}/>
+                <button onClick={()=>{if(newRecipient.includes("@")){setEmailRecipients(r=>[...new Set([...r,newRecipient.trim()])]);setNewRecipient("");}}}
+                  style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add</button>
+              </div>
+              {emailRecipients.length===0?(
+                <div style={{color:M,fontSize:12,padding:"10px 0"}}>No recipients added yet.</div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {emailRecipients.map(r=>(
+                    <div key={r} style={{background:D,border:`1px solid ${B}`,borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontSize:13}}>✉️ {r}</span>
+                      <button onClick={()=>setEmailRecipients(prev=>prev.filter(x=>x!==r))} style={{background:"none",border:"none",color:"#ff4444",cursor:"pointer",fontSize:14}}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sender config */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:12}}>✉️ Sender Details</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:200}}>
+                  <div style={{color:M,fontSize:11,marginBottom:4}}>Sender Name</div>
+                  <input value={senderName} onChange={e=>setSenderName(e.target.value)} style={{...inp({width:"100%"})}}/>
+                </div>
+                <div style={{flex:1,minWidth:200}}>
+                  <div style={{color:M,fontSize:11,marginBottom:4}}>Sender Email (must be verified in SendGrid)</div>
+                  <input placeholder="security@yourdomain.com" value={senderEmail} onChange={e=>setSenderEmail(e.target.value)} style={{...inp({width:"100%"})}}/>
+                </div>
+              </div>
+              <div style={{marginTop:10,background:"#1f2a1f",border:"1px solid #2a4a2a",borderRadius:6,padding:"8px 12px",color:"#6ea86e",fontSize:12}}>
+                💡 The sender email must be verified in your SendGrid account (Settings → Sender Authentication). Use a domain your org controls to avoid Concentrix gateway blocks.
+              </div>
+            </div>
+
+            {/* Schedule */}
+            <div style={{background:C,border:`1px solid ${scheduleEnabled?"#00aa00":B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div>
+                  <div style={{fontWeight:700}}>⏰ Scheduled Daily Digest</div>
+                  <div style={{color:M,fontSize:12,marginTop:2}}>Auto-sends every day at your chosen time</div>
+                </div>
+                <div style={{width:48,height:26,background:scheduleEnabled?"#00aa00":"#444",borderRadius:13,cursor:"pointer",position:"relative"}}
+                  onClick={()=>saveSchedule(!scheduleEnabled)}>
+                  <div style={{width:20,height:20,background:"#fff",borderRadius:10,position:"absolute",top:3,left:scheduleEnabled?25:3,transition:"left 0.3s"}}/>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:120}}>
+                  <div style={{color:M,fontSize:11,marginBottom:4}}>Send Time</div>
+                  <input type="time" value={digestTime} onChange={e=>setDigestTime(e.target.value)} style={{...inp({width:"100%"})}}/>
+                </div>
+                <div style={{flex:1,minWidth:120}}>
+                  <div style={{color:M,fontSize:11,marginBottom:4}}>Timezone</div>
+                  <select value={digestTZ} onChange={e=>setDigestTZ(e.target.value)} style={{...inp({width:"100%"})}}>
+                    {["UTC","IST","EST","CST","MST","PST","CET","AEST"].map(tz=><option key={tz}>{tz}</option>)}
+                  </select>
+                </div>
+                <div style={{display:"flex",alignItems:"flex-end"}}>
+                  <button onClick={()=>saveSchedule(scheduleEnabled)}
+                    style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>
+                    💾 Save Schedule
+                  </button>
+                </div>
+              </div>
+              {scheduleStatus&&(
+                <div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:scheduleStatus.ok?"#1f2d1f":"#2d1f1f",color:scheduleStatus.ok?"#6ea86e":"#ff8888",fontSize:12}}>
+                  {scheduleStatus.msg}
+                </div>
+              )}
+            </div>
+
+            {/* Manual send */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>📤 Send Digest Now</div>
+              <div style={{color:M,fontSize:12,marginBottom:14}}>Manually trigger the digest immediately — fetches latest advisories, generates AI summary, and emails the distribution list.</div>
+              <button onClick={sendEmailNow} disabled={emailSending||!emailRecipients.length}
+                style={{background:emailRecipients.length?A:"#333",color:"#fff",border:"none",borderRadius:6,padding:"10px 24px",cursor:emailRecipients.length?"pointer":"not-allowed",fontSize:14,fontWeight:600,width:"100%"}}>
+                {emailSending?"⟳ Generating & Sending...":"📧 Send Digest Now"}
+              </button>
+              {emailStatus&&(
+                <div style={{marginTop:12,padding:"10px 14px",borderRadius:6,background:emailStatus.ok?"#1f2d1f":"#2d1f1f",color:emailStatus.ok?"#6ea86e":"#ff8888",fontSize:13}}>
+                  {emailStatus.msg}
+                </div>
+              )}
+            </div>
+
+            {/* Email preview info */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
+              <div style={{fontWeight:700,marginBottom:8}}>📋 What the email contains</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  ["✦ AI Executive Summary","2-3 sentence overview of today's threat landscape"],
+                  ["⚠️ Critical & Zero-Day Alerts","Full table of all critical advisories with links"],
+                  ["✅ Recommended Actions","Specific steps for your security team"],
+                  ["📊 Stats Header","Count of Critical, Zero-Day, High, Total advisories"],
+                  ["🔗 Dashboard Link","Direct link back to the full dashboard"],
+                ].map(([title,desc])=>(
+                  <div key={title} style={{display:"flex",gap:10,background:D,borderRadius:6,padding:"8px 12px"}}>
+                    <span style={{fontSize:13,fontWeight:600,minWidth:200}}>{title}</span>
+                    <span style={{color:M,fontSize:12}}>{desc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
