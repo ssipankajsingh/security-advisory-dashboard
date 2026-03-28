@@ -48,45 +48,67 @@ const CAT_COLORS={"Government":"#a78bfa","CVE Database":"#f87171","OS & Platform
 const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
 
 const SOURCE_LIBRARY=[
+  // Government
   {id:"cisa_alerts",name:"CISA Alerts & Advisories",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
   {id:"ncsc_uk",name:"NCSC UK Advisories",vendor:"NCSC UK",cat:"Government",tier:1,enabled:true,rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",url:"https://www.ncsc.gov.uk"},
+  {id:"us_cert",name:"US-CERT Bulletins",vendor:"US-CERT",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/bulletins.xml",url:"https://www.cisa.gov/news-events/bulletins"},
+  {id:"cert_eu",name:"CERT-EU Advisories",vendor:"CERT-EU",cat:"Government",tier:1,enabled:true,rss:"https://cert.europa.eu/publications/security-advisories/feed",url:"https://cert.europa.eu/publications/security-advisories"},
+  // CVE Databases
   {id:"exploit_db",name:"Exploit-DB",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
   {id:"zdi_published",name:"ZDI Published Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
   {id:"zdi_upcoming",name:"ZDI Upcoming Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
+  // OS & Platform
   {id:"msrc",name:"Microsoft MSRC (CVE Feed)",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
   {id:"msrc_blog",name:"Microsoft MSRC Blog",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://msrc.microsoft.com/blog/rss/",url:"https://msrc.microsoft.com/blog"},
+  {id:"ms_azure",name:"Microsoft Azure Updates",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://azurecomcdn.azureedge.net/en-us/updates/feed/",url:"https://azure.microsoft.com/en-us/updates/"},
   {id:"ubuntu",name:"Ubuntu Security Notices",vendor:"Ubuntu",cat:"OS & Platform",tier:1,enabled:true,rss:"https://ubuntu.com/security/notices/rss.xml",url:"https://ubuntu.com/security/notices"},
   {id:"redhat",name:"Red Hat Security CVEs",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
   {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
+  // Network & Firewall
   {id:"cisco",name:"Cisco PSIRT",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
   {id:"fortinet",name:"Fortinet PSIRT",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
   {id:"paloalto",name:"Palo Alto PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
   {id:"sonicwall",name:"SonicWall PSIRT",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
   {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
+  {id:"f5",name:"F5 Security Advisories",vendor:"F5",cat:"Network",tier:1,enabled:true,rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",url:"https://my.f5.com/manage/s/article/K4602"},
+  {id:"checkpoint",name:"Check Point Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
+  {id:"juniper",name:"Juniper Networks PSIRT",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES&rss=true",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
+  // Endpoint Security
   {id:"crowdstrike",name:"CrowdStrike Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
   {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
   {id:"sophos",name:"Sophos Threat Research",vendor:"Sophos",cat:"Endpoint",tier:1,enabled:true,rss:"https://news.sophos.com/en-us/category/threat-research/feed/",url:"https://news.sophos.com"},
   {id:"malwarebytes",name:"Malwarebytes Labs",vendor:"Malwarebytes",cat:"Endpoint",tier:2,enabled:false,rss:"https://www.malwarebytes.com/blog/feed/",url:"https://www.malwarebytes.com/blog"},
+  {id:"trendmicro",name:"Trend Micro Research",vendor:"Trend Micro",cat:"Endpoint",tier:2,enabled:true,rss:"https://feeds.trendmicro.com/Anti-MalwareBlog/",url:"https://www.trendmicro.com/en_us/research.html"},
+  {id:"eset",name:"ESET WeLiveSecurity",vendor:"ESET",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.welivesecurity.com/feed/",url:"https://www.welivesecurity.com"},
+  // Cloud
   {id:"aws",name:"AWS Security Bulletins",vendor:"AWS",cat:"Cloud",tier:1,enabled:true,rss:"https://aws.amazon.com/security/security-bulletins/feed/",url:"https://aws.amazon.com/security/security-bulletins"},
   {id:"gcp",name:"Google Cloud Security",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
   {id:"chrome",name:"Chrome Releases",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default",url:"https://chromereleases.googleblog.com"},
   {id:"project_zero",name:"Google Project Zero",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",url:"https://googleprojectzero.blogspot.com"},
+  {id:"cloudflare",name:"Cloudflare Security Blog",vendor:"Cloudflare",cat:"Cloud",tier:2,enabled:true,rss:"https://blog.cloudflare.com/tag/security/rss/",url:"https://blog.cloudflare.com/tag/security/"},
+  // Browser / Middleware
   {id:"mozilla",name:"Mozilla Security",vendor:"Mozilla",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/cve-feed.json",url:"https://www.mozilla.org/en-US/security/advisories"},
   {id:"openssl",name:"OpenSSL Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/openssl-security.rss",url:"https://www.openssl.org/news/secadv"},
   {id:"apache",name:"Apache HTTP Server",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://httpd.apache.org/security/vulnerabilities-httpd.xml",url:"https://httpd.apache.org/security"},
   {id:"oracle",name:"Oracle Security Alerts",vendor:"Oracle",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.oracle.com/security-alerts/rss.xml",url:"https://www.oracle.com/security-alerts"},
+  {id:"vmware",name:"Broadcom/VMware Security",vendor:"Broadcom/VMware",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://blogs.vmware.com/security/feed",url:"https://www.broadcom.com/support/vmware-security-advisories"},
+  // Your Stack
   {id:"cortex_xdr",name:"Palo Alto Cortex/XDR",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
   {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",url:"https://www.solarwinds.com/trust-center/security-advisories"},
   {id:"proofpoint",name:"Proofpoint Threat Hub",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
+  // Threat Intelligence
   {id:"mandiant",name:"Mandiant Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
   {id:"talos",name:"Cisco Talos Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
   {id:"unit42",name:"Palo Alto Unit 42",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
   {id:"msft_ti",name:"Microsoft Security Blog",vendor:"Microsoft",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.microsoft.com/en-us/security/blog/feed/",url:"https://www.microsoft.com/en-us/security/blog"},
+  {id:"secureworks",name:"Secureworks CTU Research",vendor:"Secureworks",cat:"Threat Intel",tier:2,enabled:true,rss:"https://www.secureworks.com/blog/rss",url:"https://www.secureworks.com/blog"},
+  // News
   {id:"krebs",name:"KrebsOnSecurity",vendor:"Krebs",cat:"News",tier:1,enabled:true,rss:"https://krebsonsecurity.com/feed/",url:"https://krebsonsecurity.com"},
   {id:"bleeping",name:"BleepingComputer",vendor:"BleepingComputer",cat:"News",tier:1,enabled:true,rss:"https://www.bleepingcomputer.com/feed/",url:"https://www.bleepingcomputer.com"},
   {id:"hackernews",name:"The Hacker News",vendor:"THN",cat:"News",tier:1,enabled:true,rss:"https://feeds.feedburner.com/TheHackersNews",url:"https://thehackernews.com"},
-  {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:false,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
-  {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:false,rss:"https://www.darkreading.com/rss/vulnerabilities-threats.xml",url:"https://www.darkreading.com"},
+  {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:true,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
+  {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:true,rss:"https://www.darkreading.com/rss/vulnerabilities-threats.xml",url:"https://www.darkreading.com"},
+  {id:"helpnet",name:"Help Net Security",vendor:"HelpNet",cat:"News",tier:2,enabled:true,rss:"https://helpnetsecurity.com/feed/",url:"https://helpnetsecurity.com"},
 ];
 
 const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
@@ -189,8 +211,7 @@ function Dashboard({onLogout}){
   const [tab,setTab]=useState("feed");
   const [sources,setSources]=useState(()=>ls("sad_sources")||SOURCE_LIBRARY);
   const [advisories,setAdvisories]=useState(()=>{const a=ls("sad_advisories");return a?.length?a:MOCK});
-  const [digest,setDigest]=useState(()=>localStorage.getItem("sad_digest")||"");
-  const [dLoad,setDLoad]=useState(false);
+
   const [fLoad,setFLoad]=useState(false);
   const [fSev,setFSev]=useState("All");
   const [fVen,setFVen]=useState("All");
@@ -201,8 +222,7 @@ function Dashboard({onLogout}){
   const [addOpen,setAddOpen]=useState(false);
   const [newSrc,setNewSrc]=useState({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});
   const [sel,setSel]=useState(null);
-  const [apiKey,setApiKey]=useState(()=>localStorage.getItem("sad_apikey")||"");
-  const [showKey,setShowKey]=useState(false);
+
   const [autoRefresh,setAutoRefresh]=useState(()=>ls("sad_autorefresh")??true);
   const [refreshInterval,setRefreshInterval]=useState(()=>localStorage.getItem("sad_interval")||"1hr");
   const [lastFetched,setLastFetched]=useState(()=>localStorage.getItem("sad_lastfetched")||null);
@@ -228,8 +248,7 @@ function Dashboard({onLogout}){
 
   useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
   useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
-  useEffect(()=>{if(digest)localStorage.setItem("sad_digest",digest)},[digest]);
-  useEffect(()=>{localStorage.setItem("sad_apikey",apiKey)},[apiKey]);
+
   useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
   useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
   useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
@@ -331,19 +350,7 @@ function Dashboard({onLogout}){
     }catch(e){setScheduleStatus({ok:false,msg:"❌ "+e.message});}
   },[digestTime,digestTZ,emailRecipients,senderEmail,senderName]);
 
-  const genDigest=useCallback(async()=>{
-    if(!apiKey){alert("Enter your Anthropic API key in Settings first.");setTab("settings");return;}
-    setDLoad(true);
-    const top=[...advisories].sort((a,b)=>(b.cvss||0)-(a.cvss||0)).slice(0,12);
-    const prompt=`You are a senior SOC analyst. Generate a concise daily security advisory digest:\n1. Executive Summary\n2. Critical/Zero-Day Alerts\n3. High Priority Items\n4. Recommended Actions\n\nAdvisories:\n${top.map(a=>`[${a.severity}] ${a.id} - ${a.title} (${a.vendor}) ${a.zeroDay?"[ZERO-DAY]":""}: ${a.summary}`).join("\n")}\n\nToday: ${new Date().toDateString()}`;
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
-      const data=await res.json();
-      if(data.error)setDigest("API Error: "+data.error.message);
-      else setDigest(data.content?.map(b=>b.text||"").join("")||"No response.");
-    }catch(e){setDigest("Error: "+e.message);}
-    setDLoad(false);
-  },[advisories,apiKey]);
+
 
   const requestNotifPerm=async()=>{if(typeof Notification==="undefined")return;const p=await Notification.requestPermission();setNotifPerm(p);if(p==="granted")setNotifEnabled(true);};
   const exportCSV=()=>{const h=["ID","Vendor","Category","Title","Severity","CVSS","Date","ZeroDay","New","URL"];const rows=advisories.map(a=>[a.id,a.vendor,a.cat||"",`"${a.title}"`,a.severity,a.cvss||"",a.date,a.zeroDay?"Yes":"No",a.isNew?"Yes":"No",a.url]);const csv=[h,...rows].map(r=>r.join(",")).join("\n");const b=new Blob([csv],{type:"text/csv"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_advisories.csv";l.click();URL.revokeObjectURL(u);};
@@ -384,7 +391,7 @@ function Dashboard({onLogout}){
         <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
           <button onClick={exportCSV} style={{...inp(),cursor:"pointer",fontSize:12,fontWeight:600,padding:"7px 12px"}}>⬇ CSV</button>
           <button onClick={()=>doRefresh(true)} disabled={fLoad} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>{fLoad?"⟳ Fetching...":"⟳ Refresh Now"}</button>
-          <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>{dLoad?"✦ Generating...":"✦ AI Digest"}</button>
+
           <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444444",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>🔓 Sign Out</button>
         </div>
       </div>
@@ -414,7 +421,6 @@ function Dashboard({onLogout}){
       {/* TABS */}
       <div style={{padding:"0 20px 10px",display:"flex",gap:4,flexWrap:"wrap"}}>
         {tabBtn("feed","📋 Advisory Feed",stats.newItems)}
-        {tabBtn("digest","✦ AI Digest",0)}
         {tabBtn("sources","📡 Sources ("+srcStats.enabled+")",0)}
         {tabBtn("autorefresh","🔄 Auto-Refresh",0)}
         {tabBtn("email","📧 Email Digest",0)}
@@ -469,30 +475,7 @@ function Dashboard({onLogout}){
           </div>
         )}
 
-        {/* DIGEST TAB */}
-        {tab==="digest"&&(
-          <div>
-            {digest?(
-              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                  <div style={{fontWeight:700,fontSize:15}}>✦ AI Daily Security Digest</div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>{const b=new Blob([digest],{type:"text/plain"});const u=URL.createObjectURL(b);const l=document.createElement("a");l.href=u;l.download="security_digest.txt";l.click();}} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>⬇ Export</button>
-                    <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>{dLoad?"Regenerating...":"↺ Regenerate"}</button>
-                  </div>
-                </div>
-                <div style={{color:T,lineHeight:1.75,whiteSpace:"pre-wrap",fontSize:13}}>{digest}</div>
-              </div>
-            ):(
-              <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:48,textAlign:"center"}}>
-                <div style={{fontSize:40,marginBottom:12}}>✦</div>
-                <div style={{fontWeight:600,marginBottom:8}}>No Digest Yet</div>
-                <div style={{color:M,marginBottom:20}}>Generate an AI-powered SOC briefing. Requires Anthropic API key in Settings.</div>
-                <button onClick={genDigest} disabled={dLoad} style={{background:A,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>{dLoad?"✦ Generating...":"✦ Generate AI Daily Digest"}</button>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* SOURCES TAB */}
         {tab==="sources"&&(
@@ -695,15 +678,7 @@ function Dashboard({onLogout}){
               </div>
               <button onClick={onLogout} style={{background:"#21262d",color:"#ff6b6b",border:"1px solid #ff444466",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>🔓 Sign Out</button>
             </div>
-            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
-              <div style={{fontWeight:700,marginBottom:4}}>🔑 Anthropic API Key</div>
-              <div style={{color:M,fontSize:12,marginBottom:12}}>Optional — required only for AI Digest feature. Stored in browser only.</div>
-              <div style={{display:"flex",gap:8}}>
-                <input type={showKey?"text":"password"} placeholder="sk-ant-..." value={apiKey} onChange={e=>setApiKey(e.target.value)} style={{...inp({flex:1})}}/>
-                <button onClick={()=>setShowKey(v=>!v)} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>{showKey?"Hide":"Show"}</button>
-              </div>
-              {apiKey&&<div style={{color:"#00aa00",fontSize:12,marginTop:8}}>✓ API key saved</div>}
-            </div>
+
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20}}>
               <div style={{fontWeight:700,marginBottom:10}}>📊 Data Management</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
