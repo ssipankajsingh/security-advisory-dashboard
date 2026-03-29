@@ -341,7 +341,7 @@ function Dashboard({onLogout}){
     if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
     setEmailSending(true);setEmailStatus(null);
     try{
-      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName})});
+      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Send failed");
       setEmailStatus({ok:true,msg:`✅ Digest sent successfully to ${emailRecipients.join(", ")}`});
@@ -355,7 +355,7 @@ function Dashboard({onLogout}){
     setScheduleStatus(null);
     try{
       const cronExpr=timeToCron(digestTime,digestTZ);
-      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName,schedule:enabled,cronExpr})});
+      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName,schedule:enabled,cronExpr})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Schedule failed");
       setScheduleEnabled(enabled);
