@@ -44,65 +44,79 @@ const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{bord
 const CAT_COLORS={"Government":"#a78bfa","CVE Database":"#f87171","OS & Platform":"#60a5fa","Network":"#34d399","Endpoint":"#fb923c","Cloud":"#38bdf8","Browser/Middleware":"#fbbf24","Your Stack":"#c084fc","Threat Intel":"#f472b6","News":"#94a3b8"};
 const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
 
-// ─── SOURCE LIBRARY (50 sources) ─────────────────────────────────────────────
+// ─── SOURCE LIBRARY (65 sources) ─────────────────────────────────────────────
 const SOURCE_LIBRARY=[
-  // Government
+  // Government (5)
+  {id:"cisa_kev",name:"CISA Known Exploited Vulnerabilities (KEV)",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",url:"https://www.cisa.gov/known-exploited-vulnerabilities-catalog"},
   {id:"cisa_alerts",name:"CISA Alerts & Advisories",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
   {id:"ncsc_uk",name:"NCSC UK Advisories",vendor:"NCSC UK",cat:"Government",tier:1,enabled:true,rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",url:"https://www.ncsc.gov.uk"},
   {id:"us_cert",name:"US-CERT Bulletins",vendor:"US-CERT",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/bulletins.xml",url:"https://www.cisa.gov/news-events/bulletins"},
-  {id:"cert_eu",name:"CERT-EU Advisories",vendor:"CERT-EU",cat:"Government",tier:1,enabled:true,rss:"https://cert.europa.eu/publications/security-advisories/feed",url:"https://cert.europa.eu/publications/security-advisories"},
-  // CVE Database
-  {id:"exploit_db",name:"Exploit-DB",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
-  {id:"zdi_published",name:"ZDI Published Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
-  {id:"zdi_upcoming",name:"ZDI Upcoming Advisories",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
-  // OS & Platform
-  {id:"msrc",name:"Microsoft MSRC (CVE Feed)",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
-  {id:"msrc_blog",name:"Microsoft MSRC Blog",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://msrc.microsoft.com/blog/rss/",url:"https://msrc.microsoft.com/blog"},
-  {id:"ms_azure",name:"Microsoft Azure Updates",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://azurecomcdn.azureedge.net/en-us/updates/feed/",url:"https://azure.microsoft.com/en-us/updates/"},
+  {id:"cert_eu",name:"CERT-EU Security Advisories",vendor:"CERT-EU",cat:"Government",tier:1,enabled:true,rss:"https://cert.europa.eu/publications/security-advisories/feed",url:"https://cert.europa.eu/publications/security-advisories"},
+  // CVE Database (5)
+  {id:"nvd",name:"NIST NVD — Recent CVEs",vendor:"NIST",cat:"CVE Database",tier:1,enabled:true,rss:"https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz",url:"https://nvd.nist.gov/vuln/search"},
+  {id:"cvedetails",name:"CVE Details Enterprise Feed",vendor:"CVEdetails",cat:"CVE Database",tier:1,enabled:true,rss:"https://www.cvedetails.com/vulnerability-feed.php?vendor_id=0&product_id=0&version_id=0&hasexp=1&opec=1&opov=1&cvssscoremin=7&rss=1&feed=vulns",url:"https://www.cvedetails.com"},
+  {id:"exploit_db",name:"Exploit-DB Public Exploits",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
+  {id:"zdi_published",name:"Zero Day Initiative (ZDI) Published",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
+  {id:"zdi_upcoming",name:"Zero Day Initiative (ZDI) Upcoming",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
+  // OS & Platform (7)
+  {id:"msrc",name:"Microsoft Security Response Center",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
+  {id:"ms_azure",name:"Microsoft Azure Security Updates",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://azurecomcdn.azureedge.net/en-us/updates/feed/",url:"https://azure.microsoft.com/en-us/updates/"},
+  {id:"apple",name:"Apple Security Updates",vendor:"Apple",cat:"OS & Platform",tier:1,enabled:true,rss:"https://support.apple.com/en-us/security-updates/rss",url:"https://support.apple.com/en-us/HT201222"},
+  {id:"redhat",name:"Red Hat Security Advisories",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
   {id:"ubuntu",name:"Ubuntu Security Notices",vendor:"Ubuntu",cat:"OS & Platform",tier:1,enabled:true,rss:"https://ubuntu.com/security/notices/rss.xml",url:"https://ubuntu.com/security/notices"},
-  {id:"redhat",name:"Red Hat Security CVEs",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
+  {id:"debian",name:"Debian Security Advisories",vendor:"Debian",cat:"OS & Platform",tier:2,enabled:false,rss:"https://www.debian.org/security/dsa-long",url:"https://www.debian.org/security/"},
   {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
-  // Network
-  {id:"cisco",name:"Cisco PSIRT",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
-  {id:"fortinet",name:"Fortinet PSIRT",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
-  {id:"paloalto",name:"Palo Alto PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
-  {id:"sonicwall",name:"SonicWall PSIRT",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
-  {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
+  // Network (9)
+  {id:"cisco",name:"Cisco PSIRT Security Advisories",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
+  {id:"fortinet",name:"Fortinet PSIRT Advisories",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
+  {id:"paloalto",name:"Palo Alto Networks PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"juniper",name:"Juniper Networks Security Advisories",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES&rss=true",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
+  {id:"sonicwall",name:"SonicWall Security Advisories",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
   {id:"f5",name:"F5 Security Advisories",vendor:"F5",cat:"Network",tier:1,enabled:true,rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",url:"https://my.f5.com/manage/s/article/K4602"},
-  {id:"checkpoint",name:"Check Point Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
-  {id:"juniper",name:"Juniper Networks PSIRT",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES&rss=true",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
-  // Endpoint
-  {id:"crowdstrike",name:"CrowdStrike Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
+  {id:"checkpoint",name:"Check Point Security Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
+  {id:"aruba",name:"HPE Aruba Networking PSIRT",vendor:"HPE/Aruba",cat:"Network",tier:2,enabled:false,rss:"https://www.arubanetworks.com/security-advisories/feed",url:"https://www.arubanetworks.com/support-services/security-bulletins/"},
+  {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
+  // Endpoint (6)
+  {id:"crowdstrike",name:"CrowdStrike Threat Intelligence Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
   {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
   {id:"sophos",name:"Sophos Threat Research",vendor:"Sophos",cat:"Endpoint",tier:1,enabled:true,rss:"https://news.sophos.com/en-us/category/threat-research/feed/",url:"https://news.sophos.com"},
-  {id:"malwarebytes",name:"Malwarebytes Labs",vendor:"Malwarebytes",cat:"Endpoint",tier:2,enabled:false,rss:"https://www.malwarebytes.com/blog/feed/",url:"https://www.malwarebytes.com/blog"},
   {id:"trendmicro",name:"Trend Micro Research",vendor:"Trend Micro",cat:"Endpoint",tier:2,enabled:true,rss:"https://feeds.trendmicro.com/Anti-MalwareBlog/",url:"https://www.trendmicro.com/en_us/research.html"},
-  {id:"eset",name:"ESET WeLiveSecurity",vendor:"ESET",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.welivesecurity.com/feed/",url:"https://www.welivesecurity.com"},
-  // Cloud
+  {id:"malwarebytes",name:"Malwarebytes Labs",vendor:"Malwarebytes",cat:"Endpoint",tier:2,enabled:false,rss:"https://www.malwarebytes.com/blog/feed/",url:"https://www.malwarebytes.com/blog"},
+  {id:"eset",name:"ESET Threat Research",vendor:"ESET",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.welivesecurity.com/feed/",url:"https://www.welivesecurity.com"},
+  // Cloud (6)
   {id:"aws",name:"AWS Security Bulletins",vendor:"AWS",cat:"Cloud",tier:1,enabled:true,rss:"https://aws.amazon.com/security/security-bulletins/feed/",url:"https://aws.amazon.com/security/security-bulletins"},
-  {id:"gcp",name:"Google Cloud Security",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
-  {id:"chrome",name:"Chrome Releases",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default",url:"https://chromereleases.googleblog.com"},
-  {id:"project_zero",name:"Google Project Zero",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",url:"https://googleprojectzero.blogspot.com"},
+  {id:"gcp",name:"Google Cloud Security Bulletins",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
+  {id:"chrome",name:"Google Chrome Releases",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default",url:"https://chromereleases.googleblog.com"},
+  {id:"project_zero",name:"Google Project Zero Research",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",url:"https://googleprojectzero.blogspot.com"},
   {id:"cloudflare",name:"Cloudflare Security Blog",vendor:"Cloudflare",cat:"Cloud",tier:2,enabled:true,rss:"https://blog.cloudflare.com/tag/security/rss/",url:"https://blog.cloudflare.com/tag/security/"},
-  // Browser / Middleware
-  {id:"mozilla",name:"Mozilla Security",vendor:"Mozilla",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/cve-feed.json",url:"https://www.mozilla.org/en-US/security/advisories"},
-  {id:"openssl",name:"OpenSSL Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/openssl-security.rss",url:"https://www.openssl.org/news/secadv"},
-  {id:"apache",name:"Apache HTTP Server",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://httpd.apache.org/security/vulnerabilities-httpd.xml",url:"https://httpd.apache.org/security"},
-  {id:"oracle",name:"Oracle Security Alerts",vendor:"Oracle",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.oracle.com/security-alerts/rss.xml",url:"https://www.oracle.com/security-alerts"},
-  {id:"vmware",name:"Broadcom/VMware Security",vendor:"Broadcom/VMware",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://blogs.vmware.com/security/feed",url:"https://www.broadcom.com/support/vmware-security-advisories"},
-  // Your Stack
-  {id:"cortex_xdr",name:"Palo Alto Cortex/XDR",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"okta",name:"Okta Security Blog",vendor:"Okta",cat:"Cloud",tier:2,enabled:false,rss:"https://sec.okta.com/feed",url:"https://sec.okta.com/"},
+  // Browser / Middleware (7)
+  {id:"mozilla",name:"Mozilla Security Advisories",vendor:"Mozilla",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/cve-feed.json",url:"https://www.mozilla.org/en-US/security/advisories"},
+  {id:"openssl",name:"OpenSSL Security Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/openssl-security.rss",url:"https://www.openssl.org/news/secadv"},
+  {id:"apache",name:"Apache Security Advisories",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://httpd.apache.org/security/vulnerabilities-httpd.xml",url:"https://httpd.apache.org/security"},
+  {id:"nginx",name:"NGINX Security Advisories",vendor:"NGINX/F5",cat:"Browser/Middleware",tier:2,enabled:false,rss:"https://nginx.org/en/security_advisories.xml",url:"https://nginx.org/en/security_advisories.html"},
+  {id:"oracle",name:"Oracle Java & CPU Alerts",vendor:"Oracle",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.oracle.com/security-alerts/rss.xml",url:"https://www.oracle.com/security-alerts/"},
+  {id:"sap",name:"SAP Security Patch Day",vendor:"SAP",cat:"Browser/Middleware",tier:1,enabled:false,rss:"",url:"https://support.sap.com/en/my-support/security-notes.html"},
+  {id:"vmware",name:"Broadcom / VMware Security Advisories",vendor:"Broadcom/VMware",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://blogs.vmware.com/security/feed",url:"https://www.broadcom.com/support/vmware-security-advisories"},
+  // Your Stack (7)
+  {id:"cortex_xdr",name:"Palo Alto Cortex / XDR PSIRT",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"crowdstrike_edr",name:"CrowdStrike EDR Advisories",vendor:"CrowdStrike",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://supportportal.crowdstrike.com"},
+  {id:"netskope",name:"Netskope Security Advisories",vendor:"Netskope",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.netskope.com/security-advisories"},
+  {id:"proofpoint",name:"Proofpoint Threat Intelligence",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
   {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",url:"https://www.solarwinds.com/trust-center/security-advisories"},
-  {id:"proofpoint",name:"Proofpoint Threat Hub",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
-  // Threat Intel
-  {id:"mandiant",name:"Mandiant Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
-  {id:"talos",name:"Cisco Talos Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
-  {id:"unit42",name:"Palo Alto Unit 42",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
-  {id:"msft_ti",name:"Microsoft Security Blog",vendor:"Microsoft",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.microsoft.com/en-us/security/blog/feed/",url:"https://www.microsoft.com/en-us/security/blog"},
-  {id:"secureworks",name:"Secureworks CTU Research",vendor:"Secureworks",cat:"Threat Intel",tier:2,enabled:true,rss:"https://www.secureworks.com/blog/rss",url:"https://www.secureworks.com/blog"},
-  // News
+  {id:"bigfix",name:"HCL BigFix Security",vendor:"HCL/BigFix",cat:"Your Stack",tier:2,enabled:false,rss:"",url:"https://support.hcltechsw.com/csm?id=kb_article&sysparm_article=KB0095458"},
+  {id:"forescout",name:"Forescout Security Advisories",vendor:"Forescout",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.forescout.com/resources/?resource_type=advisory"},
+  // Threat Intel (7)
+  {id:"cisa_ti",name:"CISA Threat Intelligence Feed",vendor:"CISA",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/advisories.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
+  {id:"recorded_future",name:"Recorded Future Intelligence",vendor:"Recorded Future",cat:"Threat Intel",tier:1,enabled:false,rss:"https://www.recordedfuture.com/category/research/feed/",url:"https://www.recordedfuture.com/research"},
+  {id:"mandiant",name:"Mandiant / Google Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
+  {id:"secureworks",name:"Secureworks Counter Threat Unit",vendor:"Secureworks",cat:"Threat Intel",tier:2,enabled:true,rss:"https://www.secureworks.com/blog/rss",url:"https://www.secureworks.com/blog"},
+  {id:"talos",name:"Cisco Talos Intelligence Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
+  {id:"unit42",name:"Palo Alto Unit 42 Threat Research",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
+  {id:"msft_ti",name:"Microsoft Threat Intelligence Blog",vendor:"Microsoft",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.microsoft.com/en-us/security/blog/feed/",url:"https://www.microsoft.com/en-us/security/blog"},
+  // News (6)
   {id:"krebs",name:"KrebsOnSecurity",vendor:"Krebs",cat:"News",tier:1,enabled:true,rss:"https://krebsonsecurity.com/feed/",url:"https://krebsonsecurity.com"},
-  {id:"bleeping",name:"BleepingComputer",vendor:"BleepingComputer",cat:"News",tier:1,enabled:true,rss:"https://www.bleepingcomputer.com/feed/",url:"https://www.bleepingcomputer.com"},
+  {id:"bleeping",name:"BleepingComputer Security",vendor:"BleepingComputer",cat:"News",tier:1,enabled:true,rss:"https://www.bleepingcomputer.com/feed/",url:"https://www.bleepingcomputer.com"},
   {id:"hackernews",name:"The Hacker News",vendor:"THN",cat:"News",tier:1,enabled:true,rss:"https://feeds.feedburner.com/TheHackersNews",url:"https://thehackernews.com"},
   {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:true,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
   {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:true,rss:"https://www.darkreading.com/rss/vulnerabilities-threats.xml",url:"https://www.darkreading.com"},
@@ -171,7 +185,7 @@ function LoginScreen({onLogin,onDenied}){
           style={{width:"100%",background:loading?"#333":A,color:"#fff",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:600,cursor:loading?"not-allowed":"pointer"}}>
           {loading?"Verifying...":"🔓 Access Dashboard"}
         </button>
-        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#6b7280"}}>Contact your SOC administrator if you don't have the access code.</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#6b7280"}}>Contact GSE team if you don't have the access code.</div>
       </div>
     </div>
   );
