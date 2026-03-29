@@ -69,16 +69,19 @@ const SOURCE_LIBRARY=[
   {id:"redhat",name:"Red Hat Security Advisories",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2025-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
   {id:"debian",name:"Debian Security Advisories",vendor:"Debian",cat:"OS & Platform",tier:2,enabled:false,rss:"https://www.debian.org/security/dsa",url:"https://www.debian.org/security/"},
   {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
-  // ══ NETWORK & FIREWALL (9) ══════════════════════════════════════════════════
+  // ══ NETWORK & FIREWALL (12) ═════════════════════════════════════════════════
   {id:"cisco",name:"Cisco PSIRT Security Advisories",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
   {id:"fortinet",name:"Fortinet PSIRT Advisories",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
   {id:"paloalto",name:"Palo Alto Networks PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
+  {id:"citrix",name:"Citrix / NetScaler Security Bulletins",vendor:"Citrix",cat:"Network",tier:1,enabled:true,rss:"https://support.citrix.com/feed/products/all/securitybulletins.rss",url:"https://support.citrix.com/support-home/topic-article-list?trendingCategory=20&trendingTopicName=Security+Bulletin"},
   {id:"juniper",name:"Juniper Networks Security Advisories",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://supportportal.juniper.net/s/article/Juniper-SIRT-Advisories-RSS",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
   {id:"sonicwall",name:"SonicWall Security Advisories",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
   {id:"f5",name:"F5 Security Advisories",vendor:"F5",cat:"Network",tier:1,enabled:true,rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",url:"https://my.f5.com/manage/s/article/K4602"},
   {id:"checkpoint",name:"Check Point Security Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
   {id:"aruba",name:"HPE Aruba Networking PSIRT",vendor:"HPE/Aruba",cat:"Network",tier:2,enabled:false,rss:"https://www.arubanetworks.com/security-advisories/feed",url:"https://www.arubanetworks.com/support-services/security-bulletins/"},
   {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
+  {id:"netgear",name:"NETGEAR Security Advisories",vendor:"NETGEAR",cat:"Network",tier:2,enabled:true,rss:"https://kb.netgear.com/app/answers/detail/a_id/62001",url:"https://kb.netgear.com/000065801/NETGEAR-Security-Advisories"},
+  {id:"zyxel",name:"Zyxel Security Advisories",vendor:"Zyxel",cat:"Network",tier:2,enabled:true,rss:"https://www.zyxel.com/global/en/support/security-advisories.shtml",url:"https://www.zyxel.com/global/en/support/security-advisories.shtml"},
   // ══ ENDPOINT SECURITY (6) ═══════════════════════════════════════════════════
   {id:"crowdstrike",name:"CrowdStrike Threat Intelligence Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
   {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
