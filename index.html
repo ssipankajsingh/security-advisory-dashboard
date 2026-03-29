@@ -36,7 +36,8 @@ const INTERVAL_LABELS = {"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Ever
 
 // ─── SESSION ─────────────────────────────────────────────────────────────────
 function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
-function setSession(){localStorage.setItem(SESSION_KEY,JSON.stringify({authenticated:true,expiry:Date.now()+SESSION_MS,loginTime:new Date().toISOString()}));}
+function setSession(code){localStorage.setItem(SESSION_KEY,JSON.stringify({authenticated:true,expiry:Date.now()+SESSION_MS,loginTime:new Date().toISOString(),code}));}
+function getAuthHeader(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));return s?.code?{"x-access-code":s.code}:{}}catch{return{}}}
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
@@ -164,7 +165,7 @@ function LoginScreen({onLogin,onDenied}){
     try{
       const res=await fetch(`${PROXY_URL}/auth/verify`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:code.trim()})});
       const data=await res.json();
-      if(data.valid){setSession();onLogin();}
+      if(data.valid){setSession(code.trim());onLogin();}
       else{setError("Invalid access code. Please try again.");setCode("");onDenied();}
     }catch{setError("Unable to verify — check your connection and try again.");}
     setLoading(false);
@@ -285,14 +286,14 @@ function Dashboard({onLogout}){
     const now=new Date();let injected=[];
     if(PROXY_URL){
       try{
-        const enabledIds=sources.filter(s=>s.enabled&&s.rss).map(s=>s.id);
-        const res=await fetch(`${PROXY_URL}/feeds/all`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sources:enabledIds})});
+        const session=getSession();
+        const res=await fetch(`${PROXY_URL}/advisories`,{headers:{"Content-Type":"application/json",...getAuthHeader()}});
         if(!res.ok)throw new Error("Proxy returned "+res.status);
         const data=await res.json();
-        if(data.items?.length){
+        if(data.advisories?.length){
           setAdvisories(prev=>{
             const existingIds=new Set(prev.map(a=>a.id));
-            injected=data.items.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
+            injected=data.advisories.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
             if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
             return [...injected,...prev.filter(a=>!data.items.find(x=>x.id===a.id))].slice(0,500);
           });
@@ -338,10 +339,10 @@ function Dashboard({onLogout}){
     if(!emailRecipients.length){alert("Add at least one recipient email first.");return;}
     setEmailSending(true);setEmailStatus(null);
     try{
-      const res=await fetch(`${PROXY_URL}/digest/send`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({recipients:emailRecipients,senderEmail,senderName})});
+      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Send failed");
-      setEmailStatus({ok:true,msg:`✅ Digest sent to ${data.recipients} recipients (${data.criticalCount} critical, ${data.zeroDayCount} zero-day advisories included)`});
+      setEmailStatus({ok:true,msg:`✅ Digest sent successfully to ${emailRecipients.join(", ")}`});
     }catch(e){setEmailStatus({ok:false,msg:"❌ "+e.message});}
     setEmailSending(false);
   },[emailRecipients,senderEmail,senderName]);
@@ -352,7 +353,7 @@ function Dashboard({onLogout}){
     setScheduleStatus(null);
     try{
       const cronExpr=timeToCron(digestTime,digestTZ);
-      const res=await fetch(`${PROXY_URL}/digest/schedule`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled,cronExpr,recipients:emailRecipients,senderEmail,senderName})});
+      const res=await fetch(`${PROXY_URL}/email-digest`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName,schedule:enabled,cronExpr})});
       const data=await res.json();
       if(!res.ok)throw new Error(data.error||"Schedule failed");
       setScheduleEnabled(enabled);
