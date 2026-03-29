@@ -297,7 +297,7 @@ function Dashboard({onLogout}){
             const existingIds=new Set(prev.map(a=>a.id));
             injected=incoming.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
             if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
-            return [...injected,...prev.filter(a=>!incomingIds.has(a.id))].slice(0,500);
+            return [...injected,...prev.filter(a=>!incomingIds.has(a.id))].slice(0,1000);
           });
         }
       }catch(err){console.error("Proxy error:",err.message);}
@@ -426,7 +426,7 @@ function Dashboard({onLogout}){
       {newCount>0&&(
         <div style={{margin:"0 20px 10px",background:"#0d1f3c",border:"1px solid #1f6feb",borderRadius:8,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}} className="new-badge">
           <span style={{fontSize:18}}>🔔</span>
-          <span style={{flex:1}}><strong style={{color:"#58a6ff"}}>{newCount} new advisory{newCount>1?"ies":""}</strong> detected</span>
+          <span style={{flex:1}}><strong style={{color:"#58a6ff"}}>{newCount} new {newCount>1?"advisories":"advisory"}</strong> detected</span>
           <button onClick={()=>{setFNew(true);setTab("feed");}} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>View New</button>
           <button onClick={clearNew} style={{background:"none",border:`1px solid ${B}`,color:M,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:12}}>Dismiss</button>
         </div>
