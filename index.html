@@ -44,82 +44,85 @@ const SEV={Critical:{border:"#ff4444",badge:"#ff4444",text:"#ff4444"},High:{bord
 const CAT_COLORS={"Aggregator":"#ff6b35","Government":"#a78bfa","CVE Database":"#f87171","OS & Platform":"#60a5fa","Network":"#34d399","Endpoint":"#fb923c","Cloud":"#38bdf8","Browser/Middleware":"#fbbf24","Your Stack":"#c084fc","Threat Intel":"#f472b6","News":"#94a3b8"};
 const D="#0d1117",C="#161b22",B="#30363d",T="#e6edf3",M="#8b949e",A="#1f6feb";
 
-// ─── SOURCE LIBRARY (65 sources) ─────────────────────────────────────────────
+// ─── SOURCE LIBRARY (68 sources: 3 aggregators + 65 vendor feeds) ────────────
 const SOURCE_LIBRARY=[
-  // Government (5)
+  // ══ MASTER AGGREGATORS — cover 100s of vendors in one feed ══════════════════
+  {id:"cvefeed_all",name:"CVEFeed.io — All Vendors (100+ sources, updates every 15 min)",vendor:"CVEFeed.io",cat:"Aggregator",tier:1,enabled:true,rss:"https://cvefeed.io/rssfeed/latest.xml",url:"https://cvefeed.io"},
+  {id:"cvefeed_critical",name:"CVEFeed.io — Critical Severity Only",vendor:"CVEFeed.io",cat:"Aggregator",tier:1,enabled:true,rss:"https://cvefeed.io/rssfeed/severity/critical.xml",url:"https://cvefeed.io"},
+  {id:"github_advisories",name:"GitHub Security Advisory Database (all open source)",vendor:"GitHub",cat:"Aggregator",tier:1,enabled:true,rss:"https://github.com/advisories.atom",url:"https://github.com/advisories"},
+  // ══ GOVERNMENT (5) ══════════════════════════════════════════════════════════
   {id:"cisa_kev",name:"CISA Known Exploited Vulnerabilities (KEV)",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",url:"https://www.cisa.gov/known-exploited-vulnerabilities-catalog"},
   {id:"cisa_alerts",name:"CISA Alerts & Advisories",vendor:"CISA",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
   {id:"ncsc_uk",name:"NCSC UK Advisories",vendor:"NCSC UK",cat:"Government",tier:1,enabled:true,rss:"https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",url:"https://www.ncsc.gov.uk"},
-  {id:"us_cert",name:"US-CERT Bulletins",vendor:"US-CERT",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/bulletins.xml",url:"https://www.cisa.gov/news-events/bulletins"},
+  {id:"us_cert",name:"US-CERT Bulletins",vendor:"US-CERT",cat:"Government",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/news-events/bulletins"},
   {id:"cert_eu",name:"CERT-EU Security Advisories",vendor:"CERT-EU",cat:"Government",tier:1,enabled:true,rss:"https://cert.europa.eu/publications/security-advisories/feed",url:"https://cert.europa.eu/publications/security-advisories"},
-  // CVE Database (5)
+  // ══ CVE DATABASE (4) ════════════════════════════════════════════════════════
   {id:"nvd",name:"NIST NVD — Recent CVEs",vendor:"NIST",cat:"CVE Database",tier:1,enabled:true,rss:"https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-recent.json.gz",url:"https://nvd.nist.gov/vuln/search"},
-  {id:"cvedetails",name:"CVE Details Enterprise Feed",vendor:"CVEdetails",cat:"CVE Database",tier:1,enabled:true,rss:"https://www.cvedetails.com/vulnerability-feed.php?vendor_id=0&product_id=0&version_id=0&hasexp=1&opec=1&opov=1&cvssscoremin=7&rss=1&feed=vulns",url:"https://www.cvedetails.com"},
   {id:"exploit_db",name:"Exploit-DB Public Exploits",vendor:"Exploit-DB",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
   {id:"zdi_published",name:"Zero Day Initiative (ZDI) Published",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
   {id:"zdi_upcoming",name:"Zero Day Initiative (ZDI) Upcoming",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
-  // OS & Platform (7)
+  // ══ OS & PLATFORM (7) ═══════════════════════════════════════════════════════
   {id:"msrc",name:"Microsoft Security Response Center",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
+  {id:"msrc_blog",name:"Microsoft MSRC Blog",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://msrc.microsoft.com/blog/rss/",url:"https://msrc.microsoft.com/blog"},
   {id:"ms_azure",name:"Microsoft Azure Security Updates",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://azurecomcdn.azureedge.net/en-us/updates/feed/",url:"https://azure.microsoft.com/en-us/updates/"},
-  {id:"apple",name:"Apple Security Updates",vendor:"Apple",cat:"OS & Platform",tier:1,enabled:true,rss:"https://support.apple.com/en-us/security-updates/rss",url:"https://support.apple.com/en-us/HT201222"},
-  {id:"redhat",name:"Red Hat Security Advisories",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2024-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
   {id:"ubuntu",name:"Ubuntu Security Notices",vendor:"Ubuntu",cat:"OS & Platform",tier:1,enabled:true,rss:"https://ubuntu.com/security/notices/rss.xml",url:"https://ubuntu.com/security/notices"},
-  {id:"debian",name:"Debian Security Advisories",vendor:"Debian",cat:"OS & Platform",tier:2,enabled:false,rss:"https://www.debian.org/security/dsa-long",url:"https://www.debian.org/security/"},
+  {id:"redhat",name:"Red Hat Security Advisories",vendor:"Red Hat",cat:"OS & Platform",tier:1,enabled:true,rss:"https://access.redhat.com/hydra/rest/securitydata/cve.json?after=2025-01-01&severity=critical&limit=20",url:"https://access.redhat.com/security"},
+  {id:"debian",name:"Debian Security Advisories",vendor:"Debian",cat:"OS & Platform",tier:2,enabled:false,rss:"https://www.debian.org/security/dsa",url:"https://www.debian.org/security/"},
   {id:"android",name:"Android Security Bulletins",vendor:"Google",cat:"OS & Platform",tier:1,enabled:true,rss:"https://source.android.com/docs/security/bulletin/feed.xml",url:"https://source.android.com/security/bulletin"},
-  // Network (9)
+  // ══ NETWORK & FIREWALL (9) ══════════════════════════════════════════════════
   {id:"cisco",name:"Cisco PSIRT Security Advisories",vendor:"Cisco",cat:"Network",tier:1,enabled:true,rss:"https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",url:"https://tools.cisco.com/security/center"},
   {id:"fortinet",name:"Fortinet PSIRT Advisories",vendor:"Fortinet",cat:"Network",tier:1,enabled:true,rss:"https://www.fortiguard.com/rss/ir.xml",url:"https://www.fortiguard.com/psirt"},
   {id:"paloalto",name:"Palo Alto Networks PSIRT",vendor:"Palo Alto",cat:"Network",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
-  {id:"juniper",name:"Juniper Networks Security Advisories",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES&rss=true",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
+  {id:"juniper",name:"Juniper Networks Security Advisories",vendor:"Juniper",cat:"Network",tier:1,enabled:true,rss:"https://supportportal.juniper.net/s/article/Juniper-SIRT-Advisories-RSS",url:"https://kb.juniper.net/InfoCenter/index?page=content&channel=SECURITY_ADVISORIES"},
   {id:"sonicwall",name:"SonicWall Security Advisories",vendor:"SonicWall",cat:"Network",tier:1,enabled:true,rss:"https://psirt.global.sonicwall.com/vuln-list/rss",url:"https://psirt.global.sonicwall.com"},
   {id:"f5",name:"F5 Security Advisories",vendor:"F5",cat:"Network",tier:1,enabled:true,rss:"https://my.f5.com/manage/s/article/K4602?rss=yes",url:"https://my.f5.com/manage/s/article/K4602"},
   {id:"checkpoint",name:"Check Point Security Advisories",vendor:"Check Point",cat:"Network",tier:1,enabled:true,rss:"https://advisories.checkpoint.com/rss",url:"https://advisories.checkpoint.com"},
   {id:"aruba",name:"HPE Aruba Networking PSIRT",vendor:"HPE/Aruba",cat:"Network",tier:2,enabled:false,rss:"https://www.arubanetworks.com/security-advisories/feed",url:"https://www.arubanetworks.com/support-services/security-bulletins/"},
   {id:"ivanti",name:"Ivanti Security Advisories",vendor:"Ivanti",cat:"Network",tier:1,enabled:true,rss:"https://forums.ivanti.com/servlet/JiveServlet/download/8399-3-18160/IvantiSecurityAdvisories.rss",url:"https://forums.ivanti.com"},
-  // Endpoint (6)
+  // ══ ENDPOINT SECURITY (6) ═══════════════════════════════════════════════════
   {id:"crowdstrike",name:"CrowdStrike Threat Intelligence Blog",vendor:"CrowdStrike",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://www.crowdstrike.com/blog"},
   {id:"sentinelone",name:"SentinelLabs Research",vendor:"SentinelOne",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.sentinelone.com/labs/feed/",url:"https://www.sentinelone.com/labs"},
   {id:"sophos",name:"Sophos Threat Research",vendor:"Sophos",cat:"Endpoint",tier:1,enabled:true,rss:"https://news.sophos.com/en-us/category/threat-research/feed/",url:"https://news.sophos.com"},
   {id:"trendmicro",name:"Trend Micro Research",vendor:"Trend Micro",cat:"Endpoint",tier:2,enabled:true,rss:"https://feeds.trendmicro.com/Anti-MalwareBlog/",url:"https://www.trendmicro.com/en_us/research.html"},
   {id:"malwarebytes",name:"Malwarebytes Labs",vendor:"Malwarebytes",cat:"Endpoint",tier:2,enabled:false,rss:"https://www.malwarebytes.com/blog/feed/",url:"https://www.malwarebytes.com/blog"},
   {id:"eset",name:"ESET Threat Research",vendor:"ESET",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.welivesecurity.com/feed/",url:"https://www.welivesecurity.com"},
-  // Cloud (6)
+  // ══ CLOUD (6) ═══════════════════════════════════════════════════════════════
   {id:"aws",name:"AWS Security Bulletins",vendor:"AWS",cat:"Cloud",tier:1,enabled:true,rss:"https://aws.amazon.com/security/security-bulletins/feed/",url:"https://aws.amazon.com/security/security-bulletins"},
-  {id:"gcp",name:"Google Cloud Security Bulletins",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/cloud-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
+  {id:"gcp",name:"Google Cloud Security Bulletins",vendor:"Google Cloud",cat:"Cloud",tier:1,enabled:true,rss:"https://cloud.google.com/feeds/gke-security-bulletins.xml",url:"https://cloud.google.com/support/bulletins"},
   {id:"chrome",name:"Google Chrome Releases",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://chromereleases.googleblog.com/feeds/posts/default",url:"https://chromereleases.googleblog.com"},
   {id:"project_zero",name:"Google Project Zero Research",vendor:"Google",cat:"Cloud",tier:1,enabled:true,rss:"https://googleprojectzero.blogspot.com/feeds/posts/default",url:"https://googleprojectzero.blogspot.com"},
   {id:"cloudflare",name:"Cloudflare Security Blog",vendor:"Cloudflare",cat:"Cloud",tier:2,enabled:true,rss:"https://blog.cloudflare.com/tag/security/rss/",url:"https://blog.cloudflare.com/tag/security/"},
-  {id:"okta",name:"Okta Security Blog",vendor:"Okta",cat:"Cloud",tier:2,enabled:false,rss:"https://sec.okta.com/feed",url:"https://sec.okta.com/"},
-  // Browser / Middleware (7)
+  {id:"okta",name:"Okta Security",vendor:"Okta",cat:"Cloud",tier:2,enabled:true,rss:"https://trust.okta.com/rss",url:"https://sec.okta.com/"},
+  // ══ BROWSER / MIDDLEWARE (7) ════════════════════════════════════════════════
   {id:"mozilla",name:"Mozilla Security Advisories",vendor:"Mozilla",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.mozilla.org/en-US/security/advisories/cve-feed.json",url:"https://www.mozilla.org/en-US/security/advisories"},
-  {id:"openssl",name:"OpenSSL Security Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/openssl-security.rss",url:"https://www.openssl.org/news/secadv"},
-  {id:"apache",name:"Apache Security Advisories",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://httpd.apache.org/security/vulnerabilities-httpd.xml",url:"https://httpd.apache.org/security"},
+  {id:"openssl",name:"OpenSSL Security Advisories",vendor:"OpenSSL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.openssl.org/news/secadv/secadv.rss",url:"https://www.openssl.org/news/secadv"},
+  {id:"apache",name:"Apache Security Advisories",vendor:"Apache",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.apache.org/foundation/feed.rss",url:"https://httpd.apache.org/security"},
   {id:"nginx",name:"NGINX Security Advisories",vendor:"NGINX/F5",cat:"Browser/Middleware",tier:2,enabled:false,rss:"https://nginx.org/en/security_advisories.xml",url:"https://nginx.org/en/security_advisories.html"},
   {id:"oracle",name:"Oracle Java & CPU Alerts",vendor:"Oracle",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.oracle.com/security-alerts/rss.xml",url:"https://www.oracle.com/security-alerts/"},
-  {id:"sap",name:"SAP Security Patch Day",vendor:"SAP",cat:"Browser/Middleware",tier:1,enabled:false,rss:"",url:"https://support.sap.com/en/my-support/security-notes.html"},
+  {id:"sap",name:"SAP Security Patch Day",vendor:"SAP",cat:"Browser/Middleware",tier:1,enabled:false,rss:"https://support.sap.com/content/dam/support-hub/en/security/security-notes-rss.xml",url:"https://support.sap.com/en/my-support/security-notes.html"},
   {id:"vmware",name:"Broadcom / VMware Security Advisories",vendor:"Broadcom/VMware",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://blogs.vmware.com/security/feed",url:"https://www.broadcom.com/support/vmware-security-advisories"},
-  // Your Stack (7)
+  // ══ YOUR STACK (7) ══════════════════════════════════════════════════════════
   {id:"cortex_xdr",name:"Palo Alto Cortex / XDR PSIRT",vendor:"Palo Alto",cat:"Your Stack",tier:1,enabled:true,rss:"https://security.paloaltonetworks.com/rss.xml",url:"https://security.paloaltonetworks.com"},
   {id:"crowdstrike_edr",name:"CrowdStrike EDR Advisories",vendor:"CrowdStrike",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.crowdstrike.com/blog/feed/",url:"https://supportportal.crowdstrike.com"},
-  {id:"netskope",name:"Netskope Security Advisories",vendor:"Netskope",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.netskope.com/security-advisories"},
+  {id:"netskope",name:"Netskope Security Advisories",vendor:"Netskope",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.netskope.com/blog/feed",url:"https://www.netskope.com/security-advisories"},
   {id:"proofpoint",name:"Proofpoint Threat Intelligence",vendor:"Proofpoint",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.proofpoint.com/us/rss.xml",url:"https://www.proofpoint.com/us/threat-hub"},
-  {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/trust-center/security-advisories/feed",url:"https://www.solarwinds.com/trust-center/security-advisories"},
+  {id:"solarwinds",name:"SolarWinds Trust Center",vendor:"SolarWinds",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.solarwinds.com/shared-content/rss-feed/solarwinds-cve-rss-feed.xml",url:"https://www.solarwinds.com/trust-center/security-advisories"},
   {id:"bigfix",name:"HCL BigFix Security",vendor:"HCL/BigFix",cat:"Your Stack",tier:2,enabled:false,rss:"",url:"https://support.hcltechsw.com/csm?id=kb_article&sysparm_article=KB0095458"},
-  {id:"forescout",name:"Forescout Security Advisories",vendor:"Forescout",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.forescout.com/resources/?resource_type=advisory"},
-  // Threat Intel (7)
-  {id:"cisa_ti",name:"CISA Threat Intelligence Feed",vendor:"CISA",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.cisa.gov/sites/default/files/feeds/advisories.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
-  {id:"recorded_future",name:"Recorded Future Intelligence",vendor:"Recorded Future",cat:"Threat Intel",tier:1,enabled:false,rss:"https://www.recordedfuture.com/category/research/feed/",url:"https://www.recordedfuture.com/research"},
+  {id:"forescout",name:"Forescout Security Advisories",vendor:"Forescout",cat:"Your Stack",tier:1,enabled:true,rss:"https://www.forescout.com/resources/feed/?type=advisory",url:"https://www.forescout.com/resources/?resource_type=advisory"},
+  // ══ THREAT INTELLIGENCE (7) ═════════════════════════════════════════════════
+  {id:"cisa_ti",name:"CISA Threat Intelligence Feed",vendor:"CISA",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.cisa.gov/cybersecurity-advisories/all.xml",url:"https://www.cisa.gov/cybersecurity-advisories"},
+  {id:"recorded_future",name:"Recorded Future Intelligence",vendor:"Recorded Future",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.recordedfuture.com/category/research/feed/",url:"https://www.recordedfuture.com/research"},
   {id:"mandiant",name:"Mandiant / Google Threat Intel",vendor:"Mandiant",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.mandiant.com/resources/blog/rss.xml",url:"https://www.mandiant.com/resources/blog"},
   {id:"secureworks",name:"Secureworks Counter Threat Unit",vendor:"Secureworks",cat:"Threat Intel",tier:2,enabled:true,rss:"https://www.secureworks.com/blog/rss",url:"https://www.secureworks.com/blog"},
-  {id:"talos",name:"Cisco Talos Intelligence Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://blog.talosintelligence.com/feeds/posts/default",url:"https://blog.talosintelligence.com"},
+  {id:"talos",name:"Cisco Talos Intelligence Blog",vendor:"Cisco Talos",cat:"Threat Intel",tier:1,enabled:true,rss:"https://feeds.feedburner.com/feedburner/Talos",url:"https://blog.talosintelligence.com"},
   {id:"unit42",name:"Palo Alto Unit 42 Threat Research",vendor:"Palo Alto",cat:"Threat Intel",tier:1,enabled:true,rss:"https://unit42.paloaltonetworks.com/feed/",url:"https://unit42.paloaltonetworks.com"},
   {id:"msft_ti",name:"Microsoft Threat Intelligence Blog",vendor:"Microsoft",cat:"Threat Intel",tier:1,enabled:true,rss:"https://www.microsoft.com/en-us/security/blog/feed/",url:"https://www.microsoft.com/en-us/security/blog"},
-  // News (6)
+  // ══ NEWS (6) ════════════════════════════════════════════════════════════════
   {id:"krebs",name:"KrebsOnSecurity",vendor:"Krebs",cat:"News",tier:1,enabled:true,rss:"https://krebsonsecurity.com/feed/",url:"https://krebsonsecurity.com"},
   {id:"bleeping",name:"BleepingComputer Security",vendor:"BleepingComputer",cat:"News",tier:1,enabled:true,rss:"https://www.bleepingcomputer.com/feed/",url:"https://www.bleepingcomputer.com"},
   {id:"hackernews",name:"The Hacker News",vendor:"THN",cat:"News",tier:1,enabled:true,rss:"https://feeds.feedburner.com/TheHackersNews",url:"https://thehackernews.com"},
   {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:true,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
-  {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:true,rss:"https://www.darkreading.com/rss/vulnerabilities-threats.xml",url:"https://www.darkreading.com"},
+  {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:true,rss:"https://www.darkreading.com/rss.xml",url:"https://www.darkreading.com"},
   {id:"helpnet",name:"Help Net Security",vendor:"HelpNet",cat:"News",tier:2,enabled:true,rss:"https://helpnetsecurity.com/feed/",url:"https://helpnetsecurity.com"},
 ];
 
@@ -127,18 +130,17 @@ const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
 
 const MOCK=[
   {id:"CVE-2025-21334",vendor:"Microsoft",title:"Windows Hyper-V NT Kernel EoP",severity:"Critical",cvss:9.8,date:"2025-03-25",zeroDay:true,summary:"Critical EoP in Windows Hyper-V — SYSTEM privilege escalation. Actively exploited.",products:["Windows 11","Windows Server 2022"],url:"https://msrc.microsoft.com",isNew:false,cat:"OS & Platform"},
-  {id:"CVE-2025-20188",vendor:"Cisco",title:"Cisco IOS XE Web UI RCE",severity:"Critical",cvss:10.0,date:"2025-03-24",zeroDay:true,summary:"Unauthenticated RCE in Cisco IOS XE Web UI. Public exploit available.",products:["IOS XE 17.x","Catalyst 9000"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
-  {id:"FG-IR-25-019",vendor:"Fortinet",title:"FortiOS SSL-VPN Auth Bypass",severity:"Critical",cvss:9.6,date:"2025-03-24",zeroDay:false,summary:"Authentication bypass in FortiOS SSL-VPN.",products:["FortiOS 7.4.x","FortiOS 7.2.x"],url:"https://www.fortiguard.com/psirt",isNew:false,cat:"Network"},
+  {id:"CVE-2025-20188",vendor:"Cisco",title:"Cisco IOS XE Web UI RCE",severity:"Critical",cvss:10.0,date:"2025-03-24",zeroDay:true,summary:"Unauthenticated RCE in Cisco IOS XE Web UI. Public exploit available.",products:["IOS XE 17.x"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
+  {id:"FG-IR-25-019",vendor:"Fortinet",title:"FortiOS SSL-VPN Auth Bypass",severity:"Critical",cvss:9.6,date:"2025-03-24",zeroDay:false,summary:"Authentication bypass in FortiOS SSL-VPN.",products:["FortiOS 7.4.x"],url:"https://www.fortiguard.com/psirt",isNew:false,cat:"Network"},
   {id:"CVE-2025-2783",vendor:"Google",title:"Chrome Sandbox Escape via IPC",severity:"High",cvss:8.8,date:"2025-03-23",zeroDay:true,summary:"Zero-day sandbox escape in Chrome IPC.",products:["Chrome < 123.0.6312.122"],url:"https://chromereleases.googleblog.com",isNew:false,cat:"Cloud"},
   {id:"MFSA-2025-18",vendor:"Mozilla",title:"Firefox Use-After-Free in DOM",severity:"High",cvss:8.1,date:"2025-03-22",zeroDay:false,summary:"Use-after-free may allow RCE via crafted web content.",products:["Firefox < 124.0"],url:"https://www.mozilla.org/security/advisories",isNew:false,cat:"Browser/Middleware"},
-  {id:"PAN-SA-2025-0008",vendor:"Palo Alto",title:"PAN-OS GlobalProtect Buffer Overflow",severity:"High",cvss:8.7,date:"2025-03-21",zeroDay:false,summary:"Buffer overflow in GlobalProtect enables RCE.",products:["PAN-OS 11.1.x"],url:"https://security.paloaltonetworks.com",isNew:false,cat:"Your Stack"},
   {id:"IVANTI-2025-0047",vendor:"Ivanti",title:"Ivanti Connect Secure Pre-Auth RCE",severity:"Critical",cvss:9.9,date:"2025-03-19",zeroDay:true,summary:"Pre-auth RCE in Ivanti Connect Secure. Ransomware exploitation confirmed.",products:["Connect Secure 22.x"],url:"https://forums.ivanti.com",isNew:false,cat:"Network"},
   {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-18",zeroDay:false,summary:"SNMP vulnerability causes device reload.",products:["Cisco Secure Firewall 3100"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
+  {id:"CVEFeed-001",vendor:"CVEFeed.io",title:"CVEFeed.io aggregating 100+ vendor advisories",severity:"Unknown",cvss:null,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"CVEFeed.io is now connected — real advisories will load on Refresh Now.",products:[],url:"https://cvefeed.io",isNew:false,cat:"Aggregator"},
 ];
 
 const SIMULATED_NEW=[
-  {id:"CVE-2025-29824",vendor:"Microsoft",title:"CLFS Driver Zero-Day Privilege Escalation",severity:"Critical",cvss:9.9,date:new Date().toISOString().split("T")[0],zeroDay:true,summary:"Actively exploited zero-day in Windows CLFS driver.",products:["Windows 10","Windows 11","Windows Server 2019/2022"],url:"https://msrc.microsoft.com",isNew:true,cat:"OS & Platform"},
-  {id:"CVE-2025-28231",vendor:"Cisco",title:"Cisco ASA VPN Pre-Auth RCE",severity:"Critical",cvss:10.0,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"Pre-auth RCE in Cisco ASA VPN. Public PoC released.",products:["Cisco ASA 9.x"],url:"https://tools.cisco.com/security/center",isNew:true,cat:"Network"},
+  {id:"CVE-2025-29824",vendor:"Microsoft",title:"CLFS Driver Zero-Day Privilege Escalation",severity:"Critical",cvss:9.9,date:new Date().toISOString().split("T")[0],zeroDay:true,summary:"Actively exploited zero-day in Windows CLFS driver.",products:["Windows 10","Windows 11"],url:"https://msrc.microsoft.com",isNew:true,cat:"OS & Platform"},
 ];
 
 // ─── SMALL COMPONENTS ────────────────────────────────────────────────────────
@@ -326,13 +328,7 @@ function Dashboard({onLogout}){
     fetch(`${PROXY_URL}/health`).then(r=>r.json()).then(d=>console.log("✅ Proxy connected:",d.sources,"sources,",d.uptime)).catch(()=>console.warn("⚠️ Proxy unreachable"));
   },[]);
 
-  const timeToCron=(time,tz)=>{
-    const[h,m]=time.split(":").map(Number);
-    const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};
-    const offset=offsets[tz]||0;
-    const utcH=((h+offset)%24+24)%24;
-    return`${m} ${Math.floor(utcH)} * * *`;
-  };
+  const timeToCron=(time,tz)=>{const[h,m]=time.split(":").map(Number);const offsets={"UTC":0,"IST":-5.5,"EST":5,"CST":6,"MST":7,"PST":8,"CET":-1,"AEST":-10};const offset=offsets[tz]||0;const utcH=((h+offset)%24+24)%24;return`${m} ${Math.floor(utcH)} * * *`;};
 
   const sendEmailNow=useCallback(async()=>{
     if(!PROXY_URL){alert("PROXY_URL not set.");return;}
@@ -389,13 +385,12 @@ function Dashboard({onLogout}){
 
   return(
     <div style={{background:D,color:T,minHeight:"100vh"}}>
-
       {/* HEADER */}
       <div style={{background:C,borderBottom:`1px solid ${B}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span style={{fontSize:22}}>🛡️</span>
         <div>
           <div style={{fontWeight:700,fontSize:15}}>Security Advisory Dashboard</div>
-          <div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources</div>
+          <div style={{color:M,fontSize:11}}>SOC Intelligence · {srcStats.enabled} Active Sources · CVEFeed.io (100+ vendors)</div>
         </div>
         <div style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:20,padding:"4px 12px",fontSize:12,display:"flex",alignItems:"center",gap:4}}>
           {autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}
@@ -499,6 +494,16 @@ function Dashboard({onLogout}){
               ))}
               <div style={{marginLeft:"auto"}}><button onClick={()=>setAddOpen(true)} style={{background:A,color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Custom</button></div>
             </div>
+
+            {/* Aggregator highlight banner */}
+            <div style={{background:"#1a1208",border:"1px solid #ff6b35",borderRadius:8,padding:"12px 16px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
+              <span style={{fontSize:24}}>🌐</span>
+              <div>
+                <div style={{fontWeight:700,color:"#ff6b35",fontSize:13}}>Master Aggregators Active</div>
+                <div style={{color:M,fontSize:12,marginTop:2}}>CVEFeed.io covers 100+ vendor sources in a single feed, updated every 15 min — ensuring no advisory is ever missed from any vendor.</div>
+              </div>
+            </div>
+
             <div style={{marginBottom:14}}>
               <div style={{color:M,fontSize:12,marginBottom:8}}>Toggle by Category:</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -511,12 +516,14 @@ function Dashboard({onLogout}){
                 })}
               </div>
             </div>
+
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <input placeholder="🔍 Search sources..." value={srcSearch} onChange={e=>setSrcSearch(e.target.value)} style={{...inp({flex:1,minWidth:140})}}/>
               <select value={srcCat} onChange={e=>setSrcCat(e.target.value)} style={inp()}>
                 <option value="All">All Categories</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
+
             {addOpen&&(
               <div style={{background:C,border:`1px solid ${A}`,borderRadius:8,padding:14,marginBottom:12}}>
                 <div style={{fontWeight:600,marginBottom:10}}>Add Custom Source</div>
@@ -533,6 +540,7 @@ function Dashboard({onLogout}){
                 </div>
               </div>
             )}
+
             {CATEGORIES.filter(cat=>srcCat==="All"||cat===srcCat).map(cat=>{
               const catSrcs=filteredSources.filter(s=>s.cat===cat);
               if(!catSrcs.length)return null;
@@ -543,6 +551,7 @@ function Dashboard({onLogout}){
                     <div style={{width:10,height:10,borderRadius:2,background:cc}}/>
                     <span style={{fontWeight:700,color:cc,fontSize:13}}>{cat}</span>
                     <span style={{color:M,fontSize:12}}>({catSrcs.filter(s=>s.enabled).length}/{catSrcs.length} enabled)</span>
+                    {cat==="Aggregator"&&<span style={{background:"#ff6b3522",color:"#ff6b35",border:"1px solid #ff6b3544",borderRadius:4,padding:"1px 8px",fontSize:11}}>covers 100+ vendors</span>}
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {catSrcs.map(s=>(
@@ -577,7 +586,7 @@ function Dashboard({onLogout}){
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:8}}>{autoRefresh?<span className="live-dot"/>:<span className="paused-dot"/>}Auto-Refresh {autoRefresh?"Active":"Paused"}</div>
-                  <div style={{color:M,fontSize:12,marginTop:2}}>Monitors {srcStats.withRSS} RSS-enabled sources</div>
+                  <div style={{color:M,fontSize:12,marginTop:2}}>Monitors {srcStats.withRSS} RSS-enabled sources including CVEFeed.io aggregator</div>
                 </div>
                 <div style={{width:48,height:26,background:autoRefresh?"#00aa00":"#444",borderRadius:13,cursor:"pointer",position:"relative"}} onClick={()=>setAutoRefresh(v=>!v)}>
                   <div style={{width:20,height:20,background:"#fff",borderRadius:10,position:"absolute",top:3,left:autoRefresh?25:3,transition:"left 0.3s"}}/>
@@ -702,7 +711,6 @@ function Dashboard({onLogout}){
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
