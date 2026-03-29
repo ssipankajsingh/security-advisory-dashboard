@@ -291,11 +291,13 @@ function Dashboard({onLogout}){
         if(!res.ok)throw new Error("Proxy returned "+res.status);
         const data=await res.json();
         if(data.advisories?.length){
+          const incoming=data.advisories.filter(a=>a&&a.id);
           setAdvisories(prev=>{
+            const incomingIds=new Set(incoming.map(a=>a.id));
             const existingIds=new Set(prev.map(a=>a.id));
-            injected=data.advisories.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
+            injected=incoming.filter(a=>!existingIds.has(a.id)).map(a=>({...a,isNew:true}));
             if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
-            return [...injected,...prev.filter(a=>!data.items.find(x=>x.id===a.id))].slice(0,500);
+            return [...injected,...prev.filter(a=>!incomingIds.has(a.id))].slice(0,500);
           });
         }
       }catch(err){console.error("Proxy error:",err.message);}
