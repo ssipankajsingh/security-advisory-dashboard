@@ -375,9 +375,31 @@ function Dashboard({onLogout}){
   const addSrc=()=>{if(!newSrc.name||!newSrc.vendor)return;setSources(s=>[...s,{...newSrc,id:Date.now().toString(),tier:3,enabled:true}]);setNewSrc({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});setAddOpen(false);};
   const clearNew=()=>{setAdvisories(p=>p.map(a=>({...a,isNew:false})));setNewCount(0);};
 
+  const [fDateRange,setFDateRange]=useState("all");
+  const [fDateFrom,setFDateFrom]=useState("");
+  const [fDateTo,setFDateTo]=useState("");
   const vendors=["All",...Array.from(new Set(advisories.map(a=>a.vendor)))];
   const cats=["All",...Array.from(new Set(advisories.map(a=>a.cat).filter(Boolean)))];
-  const filtered=advisories.filter(a=>(fSev==="All"||a.severity===fSev)&&(fVen==="All"||a.vendor===fVen)&&(fCat==="All"||a.cat===fCat)&&(!fZD||a.zeroDay)&&(!fNew||a.isNew)&&(!search||[a.title,a.id,a.vendor,a.summary].some(f=>f?.toLowerCase().includes(search.toLowerCase()))));
+  const now=new Date();
+  const dateRanges={"all":null,"today":1,"7d":7,"30d":30,"90d":90};
+  const filtered=advisories.filter(a=>{
+    if(fSev!=="All"&&a.severity!==fSev)return false;
+    if(fVen!=="All"&&a.vendor!==fVen)return false;
+    if(fCat!=="All"&&a.cat!==fCat)return false;
+    if(fZD&&!a.zeroDay)return false;
+    if(fNew&&!a.isNew)return false;
+    if(search&&![a.title,a.id,a.vendor,a.summary].some(f=>f?.toLowerCase().includes(search.toLowerCase())))return false;
+    // date range filter
+    if(fDateRange!=="all"&&fDateRange!=="custom"){
+      const days=dateRanges[fDateRange];
+      if(days){const cutoff=new Date(now-days*86400000);const d=new Date(a.date||a.published);if(isNaN(d)||d<cutoff)return false;}
+    }
+    if(fDateRange==="custom"){
+      if(fDateFrom){const d=new Date(a.date||a.published);if(isNaN(d)||d<new Date(fDateFrom))return false;}
+      if(fDateTo){const d=new Date(a.date||a.published);if(isNaN(d)||d>new Date(fDateTo+"T23:59:59"))return false;}
+    }
+    return true;
+  });
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
   const stats={critical:advisories.filter(a=>a.severity==="Critical").length,high:advisories.filter(a=>a.severity==="High").length,medium:advisories.filter(a=>a.severity==="Medium").length,low:advisories.filter(a=>a.severity==="Low").length,zeroDay:advisories.filter(a=>a.zeroDay).length,total:advisories.length,newItems:advisories.filter(a=>a.isNew).length};
   const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
@@ -446,14 +468,31 @@ function Dashboard({onLogout}){
         {/* FEED */}
         {tab==="feed"&&(
           <div>
-            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
               <input placeholder="🔍 Search ID, title, vendor..." value={search} onChange={e=>setSearch(e.target.value)} style={{...inp({flex:1,minWidth:150})}}/>
               <select value={fSev} onChange={e=>setFSev(e.target.value)} style={inp()}>{["All","Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}</select>
               <select value={fVen} onChange={e=>setFVen(e.target.value)} style={inp()}>{vendors.map(v=><option key={v}>{v}</option>)}</select>
               <select value={fCat} onChange={e=>setFCat(e.target.value)} style={inp()}>{cats.map(c=><option key={c}>{c}</option>)}</select>
               <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",color:M,whiteSpace:"nowrap"}}><input type="checkbox" checked={fZD} onChange={e=>setFZD(e.target.checked)}/> 0-Day</label>
               <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",color:fNew?"#58a6ff":M,whiteSpace:"nowrap"}}><input type="checkbox" checked={fNew} onChange={e=>setFNew(e.target.checked)}/> New</label>
-              <span style={{color:M,fontSize:12}}>{filtered.length} results</span>
+            </div>
+            {/* Date filter row */}
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+              <span style={{color:M,fontSize:12,whiteSpace:"nowrap"}}>📅 Date:</span>
+              {[["all","All Time"],["today","Today"],["7d","Last 7 Days"],["30d","Last 30 Days"],["90d","Last 90 Days"],["custom","Custom Range"]].map(([val,label])=>(
+                <button key={val} onClick={()=>setFDateRange(val)}
+                  style={{background:fDateRange===val?A:"#21262d",color:fDateRange===val?"#fff":M,border:`1px solid ${fDateRange===val?A:B}`,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:fDateRange===val?600:400}}>
+                  {label}
+                </button>
+              ))}
+              {fDateRange==="custom"&&(
+                <>
+                  <input type="date" value={fDateFrom} onChange={e=>setFDateFrom(e.target.value)} style={{...inp({fontSize:12})}} title="From date"/>
+                  <span style={{color:M,fontSize:12}}>→</span>
+                  <input type="date" value={fDateTo} onChange={e=>setFDateTo(e.target.value)} style={{...inp({fontSize:12})}} title="To date"/>
+                </>
+              )}
+              <span style={{color:M,fontSize:12,marginLeft:"auto"}}>{filtered.length} results</span>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {filtered.map(a=>{
