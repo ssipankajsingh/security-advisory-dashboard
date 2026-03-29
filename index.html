@@ -378,6 +378,23 @@ function Dashboard({onLogout}){
   const [fDateRange,setFDateRange]=useState("all");
   const [fDateFrom,setFDateFrom]=useState("");
   const [fDateTo,setFDateTo]=useState("");
+  const [teamsWebhook,setTeamsWebhook]=useState(()=>localStorage.getItem("sad_teams_webhook")||"");
+  const [teamsSending,setTeamsSending]=useState(false);
+  const [teamsStatus,setTeamsStatus]=useState(null);
+  useEffect(()=>{localStorage.setItem("sad_teams_webhook",teamsWebhook)},[teamsWebhook]);
+
+  const sendTeamsNow=useCallback(async()=>{
+    if(!teamsWebhook.trim()){setTeamsStatus({ok:false,msg:"❌ Please enter your Teams webhook URL first."});return;}
+    setTeamsSending(true);setTeamsStatus(null);
+    try{
+      const res=await fetch(`${PROXY_URL}/teams-notify`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},body:JSON.stringify({webhookUrl:teamsWebhook.trim()})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||"Send failed");
+      setTeamsStatus({ok:true,msg:`✅ Teams notification sent — ${data.critical} critical, ${data.zeroDays} zero-days included`});
+    }catch(e){setTeamsStatus({ok:false,msg:"❌ "+e.message});}
+    setTeamsSending(false);
+  },[teamsWebhook]);
+
   const vendors=["All",...Array.from(new Set(advisories.map(a=>a.vendor)))];
   const cats=["All",...Array.from(new Set(advisories.map(a=>a.cat).filter(Boolean)))];
   const now=new Date();
@@ -727,6 +744,55 @@ function Dashboard({onLogout}){
                 {emailSending?"⟳ Sending...":"📧 Send Digest Now"}
               </button>
               {emailStatus&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:6,background:emailStatus.ok?"#1f2d1f":"#2d1f1f",color:emailStatus.ok?"#6ea86e":"#ff8888",fontSize:13}}>{emailStatus.msg}</div>}
+            </div>
+
+            {/* TEAMS WEBHOOK */}
+            <div style={{background:C,border:`1px solid #6264a7`,borderRadius:8,padding:20,marginTop:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                <span style={{fontSize:20}}>💬</span>
+                <div style={{fontWeight:700,fontSize:15}}>Microsoft Teams Notifications</div>
+              </div>
+              <div style={{color:M,fontSize:12,marginBottom:14}}>Send daily security advisory alerts directly to your Concentrix Teams channel.</div>
+
+              {/* How to get webhook URL */}
+              <div style={{background:"#0d1117",border:`1px solid #30363d`,borderRadius:6,padding:"10px 14px",marginBottom:14,fontSize:12}}>
+                <div style={{color:"#58a6ff",fontWeight:600,marginBottom:6}}>📋 How to set up Teams webhook:</div>
+                <div style={{color:M,lineHeight:1.8}}>
+                  1. Open your Teams channel → ••• menu → <strong style={{color:T}}>Connectors</strong><br/>
+                  2. Search for <strong style={{color:T}}>Incoming Webhook</strong> → Configure<br/>
+                  3. Enter name: <strong style={{color:"#58a6ff"}}>SecAdvisory Intel</strong> → Create<br/>
+                  4. Copy the webhook URL → paste below
+                </div>
+              </div>
+
+              <div style={{marginBottom:12}}>
+                <div style={{color:M,fontSize:11,marginBottom:4}}>Teams Incoming Webhook URL</div>
+                <input
+                  placeholder="https://your-org.webhook.office.com/webhookb2/..."
+                  value={teamsWebhook}
+                  onChange={e=>{setTeamsWebhook(e.target.value);setTeamsStatus(null);}}
+                  style={{...inp({width:"100%",fontSize:12})}}
+                />
+              </div>
+
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+                <button onClick={sendTeamsNow} disabled={teamsSending||!teamsWebhook.trim()}
+                  style={{background:teamsWebhook.trim()?"#6264a7":"#333",color:"#fff",border:"none",borderRadius:6,padding:"10px 20px",cursor:teamsWebhook.trim()?"pointer":"not-allowed",fontSize:13,fontWeight:600,flex:1}}>
+                  {teamsSending?"⟳ Sending...":"💬 Send to Teams Now"}
+                </button>
+              </div>
+
+              {/* What the Teams message looks like */}
+              <div style={{background:"#0d1117",border:`1px solid #30363d`,borderRadius:6,padding:"10px 14px",fontSize:12}}>
+                <div style={{color:M,marginBottom:6}}>Teams message includes:</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {["Total advisories count","Critical & Zero-Day counts","Top 8 critical CVEs","Link to dashboard"].map(f=>(
+                    <span key={f} style={{background:"#6264a722",color:"#8b8fe8",border:"1px solid #6264a744",borderRadius:4,padding:"2px 8px",fontSize:11}}>✓ {f}</span>
+                  ))}
+                </div>
+              </div>
+
+              {teamsStatus&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:6,background:teamsStatus.ok?"#1f2d1f":"#2d1f1f",color:teamsStatus.ok?"#6ea86e":"#ff8888",fontSize:13}}>{teamsStatus.msg}</div>}
             </div>
           </div>
         )}
