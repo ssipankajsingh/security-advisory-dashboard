@@ -260,7 +260,7 @@ function Dashboard({onLogout}){
   const refreshedOnce=useRef(false);
 
   useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
-  useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories.map(a=>({...a,isNew:false}))))},[advisories]);
+  useEffect(()=>{   try{localStorage.setItem("sad_advisories",JSON.stringify(advisories.slice(0,500).map(a=>({...a,isNew:false}))));}   catch(e){console.warn("localStorage full, skipping save");} },[advisories]);
   useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
   useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
   useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
@@ -315,7 +315,7 @@ function Dashboard({onLogout}){
               return 0;
             });
             // Never reduce below previous count — always keep accumulating
-            return merged.slice(0,1000);
+            return merged.slice(0,2500);
           });
         }
       }catch(err){console.error("Proxy error:",err.message);}
