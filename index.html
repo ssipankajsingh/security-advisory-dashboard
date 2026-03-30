@@ -260,7 +260,7 @@ function Dashboard({onLogout}){
   const refreshedOnce=useRef(false);
 
   useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
-  useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories))},[advisories]);
+  useEffect(()=>{localStorage.setItem("sad_advisories",JSON.stringify(advisories.map(a=>({...a,isNew:false}))))},[advisories]);
   useEffect(()=>{localStorage.setItem("sad_autorefresh",JSON.stringify(autoRefresh))},[autoRefresh]);
   useEffect(()=>{localStorage.setItem("sad_interval",refreshInterval)},[refreshInterval]);
   useEffect(()=>{localStorage.setItem("sad_notif",JSON.stringify(notifEnabled))},[notifEnabled]);
@@ -283,7 +283,7 @@ function Dashboard({onLogout}){
 
   const doRefresh=useCallback(async(manual=false)=>{
     setFLoad(true);
-    const now=new Date();let injected=[];
+    const now=new Date();let injected=[];let alreadyCounted=false;
     if(PROXY_URL){
       try{
         const res=await fetch(`${PROXY_URL}/advisories`,{headers:{"Content-Type":"application/json",...getAuthHeader()}});
@@ -296,7 +296,7 @@ function Dashboard({onLogout}){
             const existingMap=new Map(prev.map(a=>[a.id,a]));
             // Find truly new ones (not seen before)
             injected=incoming.filter(a=>!existingMap.has(a.id)).map(a=>({...a,isNew:true}));
-            if(injected.length){setNewCount(c=>c+injected.length);sendNotification(injected);}
+            if(injected.length&&!alreadyCounted){alreadyCounted=true;setNewCount(c=>c+injected.length);sendNotification(injected);}
             // Merge: new items first, then all existing items
             // Update existing items with fresh data but keep isNew flag if already set
             incoming.forEach(a=>{
