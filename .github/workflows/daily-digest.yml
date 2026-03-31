@@ -1,0 +1,32 @@
+name: Daily Security Advisory Digest
+
+on:
+  schedule:
+    - cron: '30 2 * * *'  # 2:30 AM UTC = 8:00 AM IST every day
+  workflow_dispatch:        # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Email Digest
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-access-code: CNXadvisorySEC@123" \
+            -d '{
+              "to": "Endpoint_Security_Management@concentrix.com",
+              "from": "pankaj.singh15@concentrix.com",
+              "senderName": "Security Advisory"
+            }' \
+            https://security-advisory-proxy.onrender.com/email-digest)
+          
+          echo "HTTP Status: $response"
+          cat /tmp/response.json
+          
+          if [ "$response" -ne 200 ]; then
+            echo "❌ Digest send failed with status $response"
+            exit 1
+          fi
+          echo "✅ Digest sent successfully"
