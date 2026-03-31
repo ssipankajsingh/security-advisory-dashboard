@@ -128,6 +128,8 @@ const SOURCE_LIBRARY=[
   {id:"secweek",name:"SecurityWeek",vendor:"SecurityWeek",cat:"News",tier:2,enabled:true,rss:"https://feeds.feedburner.com/securityweek",url:"https://www.securityweek.com"},
   {id:"darkread",name:"Dark Reading",vendor:"Dark Reading",cat:"News",tier:2,enabled:true,rss:"https://www.darkreading.com/rss.xml",url:"https://www.darkreading.com"},
   {id:"helpnet",name:"Help Net Security",vendor:"HelpNet",cat:"News",tier:2,enabled:true,rss:"https://helpnetsecurity.com/feed/",url:"https://helpnetsecurity.com"},
+  {id:"reddit_netsec",name:"Reddit r/netsec — Information Security News",vendor:"Reddit",cat:"News",tier:1,enabled:true,rss:"https://www.reddit.com/r/netsec/.rss",url:"https://www.reddit.com/r/netsec"},
+  {id:"packetstorm",name:"Packet Storm Security — Exploits & Advisories",vendor:"Packet Storm",cat:"CVE Database",tier:1,enabled:true,rss:"https://rss.packetstormsecurity.com/files/",url:"https://packetstormsecurity.com"},
 ];
 
 const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
