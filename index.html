@@ -143,6 +143,8 @@ const MOCK=[
   {id:"IVANTI-2025-0047",vendor:"Ivanti",title:"Ivanti Connect Secure Pre-Auth RCE",severity:"Critical",cvss:9.9,date:"2025-03-19",zeroDay:true,summary:"Pre-auth RCE in Ivanti Connect Secure. Ransomware exploitation confirmed.",products:["Connect Secure 22.x"],url:"https://forums.ivanti.com",isNew:false,cat:"Network"},
   {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-18",zeroDay:false,summary:"SNMP vulnerability causes device reload.",products:["Cisco Secure Firewall 3100"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
   {id:"CVEFeed-001",vendor:"CVEFeed.io",title:"CVEFeed.io aggregating 100+ vendor advisories",severity:"Unknown",cvss:null,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"CVEFeed.io is now connected — real advisories will load on Refresh Now.",products:[],url:"https://cvefeed.io",isNew:false,cat:"Aggregator"},
+  {id:"reddit_netsec",name:"Reddit r/netsec — Information Security News",vendor:"Reddit",cat:"News",tier:1,enabled:true,rss:"https://www.reddit.com/r/netsec/.rss",url:"https://www.reddit.com/r/netsec"},
+  {id:"packetstorm",name:"Packet Storm Security — Exploits & Advisories",vendor:"Packet Storm",cat:"CVE Database",tier:1,enabled:true,rss:"https://rss.packetstormsecurity.com/files/",url:"https://packetstormsecurity.com"},
 ];
 
 const SIMULATED_NEW=[
