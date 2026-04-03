@@ -143,8 +143,6 @@ const MOCK=[
   {id:"IVANTI-2025-0047",vendor:"Ivanti",title:"Ivanti Connect Secure Pre-Auth RCE",severity:"Critical",cvss:9.9,date:"2025-03-19",zeroDay:true,summary:"Pre-auth RCE in Ivanti Connect Secure. Ransomware exploitation confirmed.",products:["Connect Secure 22.x"],url:"https://forums.ivanti.com",isNew:false,cat:"Network"},
   {id:"CVE-2025-0982",vendor:"Cisco",title:"Cisco Secure Firewall SNMP DoS",severity:"Medium",cvss:6.5,date:"2025-03-18",zeroDay:false,summary:"SNMP vulnerability causes device reload.",products:["Cisco Secure Firewall 3100"],url:"https://tools.cisco.com/security/center",isNew:false,cat:"Network"},
   {id:"CVEFeed-001",vendor:"CVEFeed.io",title:"CVEFeed.io aggregating 100+ vendor advisories",severity:"Unknown",cvss:null,date:new Date().toISOString().split("T")[0],zeroDay:false,summary:"CVEFeed.io is now connected — real advisories will load on Refresh Now.",products:[],url:"https://cvefeed.io",isNew:false,cat:"Aggregator"},
-  {id:"reddit_netsec",name:"Reddit r/netsec — Information Security News",vendor:"Reddit",cat:"News",tier:1,enabled:true,rss:"https://www.reddit.com/r/netsec/.rss",url:"https://www.reddit.com/r/netsec"},
-  {id:"packetstorm",name:"Packet Storm Security — Exploits & Advisories",vendor:"Packet Storm",cat:"CVE Database",tier:1,enabled:true,rss:"https://rss.packetstormsecurity.com/files/",url:"https://packetstormsecurity.com"},
 ];
 
 const SIMULATED_NEW=[
@@ -155,6 +153,7 @@ const SIMULATED_NEW=[
 const SevBadge=({sev})=>{const c=SEV[sev]||SEV.Unknown;return <span style={{background:c.badge,color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,letterSpacing:1}}>{sev?.toUpperCase()}</span>};
 const ZDBadge=()=><span style={{background:"#cc00cc",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>0-DAY</span>;
 const NewBadge=()=><span className="new-badge" style={{background:"#1f6feb",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>NEW</span>;
+const AckBadge=({by,at})=>{const d=at?new Date(at).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";return<span style={{background:"#0a2a0a",color:"#4ade80",border:"1px solid #16a34a",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:600,marginLeft:4}}>✓ {by} · {d}</span>;};
 function countdown(ms){const d=Math.max(0,ms-Date.now());const h=Math.floor(d/3600000);const m=Math.floor((d%3600000)/60000);const s=Math.floor((d%60000)/1000);return`${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;}
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
@@ -262,6 +261,42 @@ function Dashboard({onLogout}){
   const [scheduleStatus,setScheduleStatus]=useState(null);
   const timerRef=useRef(null);
   const refreshedOnce=useRef(false);
+
+  // ── Acknowledge state ──────────────────────────────────────────────────────
+  const [acks,setAcks]=useState({});
+  const [userName,setUserName]=useState(()=>localStorage.getItem("sad_username")||"");
+  const [ackingId,setAckingId]=useState(null);
+  useEffect(()=>{localStorage.setItem("sad_username",userName)},[userName]);
+
+  // Load acks from proxy on mount
+  useEffect(()=>{
+    if(!PROXY_URL)return;
+    fetch(`${PROXY_URL}/ack`,{headers:getAuthHeader()})
+      .then(r=>r.json()).then(d=>setAcks(d.acks||{})).catch(()=>{});
+  },[]);
+
+  const handleAck=useCallback(async(advisoryId,e)=>{
+    e.stopPropagation();
+    if(!userName.trim()){alert("Please set your name in Settings first.");return;}
+    setAckingId(advisoryId);
+    try{
+      const res=await fetch(`${PROXY_URL}/ack`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
+        body:JSON.stringify({id:advisoryId,by:userName.trim()})});
+      const data=await res.json();
+      if(data.success)setAcks(p=>({...p,[advisoryId]:{by:userName.trim(),at:new Date().toISOString()}}));
+    }catch(e){console.error("Ack failed",e);}
+    setAckingId(null);
+  },[userName]);
+
+  const handleUnack=useCallback(async(advisoryId,e)=>{
+    e.stopPropagation();
+    setAckingId(advisoryId);
+    try{
+      await fetch(`${PROXY_URL}/ack/${encodeURIComponent(advisoryId)}`,{method:"DELETE",headers:getAuthHeader()});
+      setAcks(p=>{const n={...p};delete n[advisoryId];return n;});
+    }catch(e){console.error("Unack failed",e);}
+    setAckingId(null);
+  },[]);
 
   useEffect(()=>{localStorage.setItem("sad_sources",JSON.stringify(sources))},[sources]);
   useEffect(()=>{   try{localStorage.setItem("sad_advisories",JSON.stringify(advisories.slice(0,500).map(a=>({...a,isNew:false}))));}   catch(e){console.warn("localStorage full, skipping save");} },[advisories]);
@@ -538,25 +573,39 @@ function Dashboard({onLogout}){
                 const c=SEV[a.severity]||SEV.Unknown;const open=sel===a.id;const cc=CAT_COLORS[a.cat]||"#888";
                 return(
                   <div key={a.id} onClick={()=>setSel(open?null:a.id)}
-                    style={{background:a.isNew?"#0d1f3c":C,border:`1px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.border}`,borderLeft:`4px solid ${a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.badge}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}>
+                    style={{background:acks[a.id]?"#0a1a0a":a.isNew?"#0d1f3c":C,border:`1px solid ${acks[a.id]?"#16a34a":a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.border}`,borderLeft:`4px solid ${acks[a.id]?"#16a34a":a.isNew?"#1f6feb":a.zeroDay?"#cc00cc":c.badge}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}>
                     <div style={{display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
                       <div style={{flex:1}}>
                         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
-                          <SevBadge sev={a.severity}/>{a.zeroDay&&<ZDBadge/>}{a.isNew&&<NewBadge/>}
+                          <SevBadge sev={a.severity}/>{a.zeroDay&&<ZDBadge/>}{a.isNew&&!acks[a.id]&&<NewBadge/>}
+                          {acks[a.id]&&<AckBadge by={acks[a.id].by} at={acks[a.id].at}/>}
                           {a.cat&&<span style={{background:cc+"22",color:cc,border:`1px solid ${cc}44`,borderRadius:4,padding:"1px 7px",fontSize:11}}>{a.cat}</span>}
                           <span style={{color:M,fontSize:12}}>{a.vendor}</span><span style={{color:B}}>·</span>
-                          <span style={{color:M,fontSize:12}}>{a.date}</span>
+                          <span style={{color:M,fontSize:12}}>{a.date||a.published?.slice(0,10)}</span>
                           {a.cvss&&<span style={{color:c.text,fontSize:12,fontWeight:700}}>CVSS {a.cvss}</span>}
                         </div>
                         <div style={{fontWeight:600,marginBottom:3}}>{a.id} — {a.title}</div>
                         <div style={{color:M,fontSize:13}}>{a.summary}</div>
                       </div>
-                      <span style={{color:M}}>{open?"▲":"▼"}</span>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+                        {acks[a.id]?(
+                          <button onClick={e=>handleUnack(a.id,e)} disabled={ackingId===a.id}
+                            style={{background:"#0a2a0a",color:"#4ade80",border:"1px solid #16a34a",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>
+                            {ackingId===a.id?"...":"✓ Ack'd · Undo"}
+                          </button>
+                        ):(
+                          <button onClick={e=>handleAck(a.id,e)} disabled={ackingId===a.id}
+                            style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>
+                            {ackingId===a.id?"...":"Acknowledge"}
+                          </button>
+                        )}
+                        <span style={{color:M}}>{open?"▲":"▼"}</span>
+                      </div>
                     </div>
                     {open&&(
                       <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}}>
                         <div style={{marginBottom:8}}><span style={{color:M,fontSize:12}}>Affected: </span>{a.products?.map(p=><span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12,marginRight:6}}>{p}</span>)}</div>
-                        <a href={a.url} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
+                        <a href={a.url||a.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
                       </div>
                     )}
                   </div>
@@ -822,6 +871,38 @@ function Dashboard({onLogout}){
         {/* SETTINGS */}
         {tab==="settings"&&(
           <div style={{maxWidth:560}}>
+            {/* YOUR NAME */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{fontWeight:700,marginBottom:4}}>👤 Your Name</div>
+              <div style={{color:M,fontSize:12,marginBottom:10}}>Used when acknowledging advisories — visible to all team members.</div>
+              <div style={{display:"flex",gap:8}}>
+                <input placeholder="e.g. Pankaj, Rakesh, Dileep..." value={userName} onChange={e=>setUserName(e.target.value)}
+                  style={{...inp({flex:1,fontSize:13})}}/>
+                {userName.trim()&&<span style={{color:"#4ade80",fontSize:13,alignSelf:"center"}}>✓ Set</span>}
+              </div>
+            </div>
+            {/* ACK STATS */}
+            <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{fontWeight:700}}>✅ Acknowledgment Summary</div>
+                <span style={{color:M,fontSize:12}}>{Object.keys(acks).length} acknowledged</span>
+              </div>
+              {Object.keys(acks).length===0?(
+                <div style={{color:M,fontSize:13}}>No advisories acknowledged yet.</div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
+                  {Object.entries(acks).slice(0,20).map(([id,info])=>(
+                    <div key={id} style={{background:D,borderRadius:6,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:600,color:"#4ade80",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
+                        <div style={{fontSize:11,color:M}}>by {info.by} · {new Date(info.at).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+                      </div>
+                      <button onClick={()=>handleUnack(id,{stopPropagation:()=>{}})} style={{background:"none",border:`1px solid ${B}`,color:"#ff4444",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11,flexShrink:0}}>Undo</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>🔐 Session</div>
               <div style={{color:M,fontSize:12,marginBottom:12}}>Your login session lasts 7 days before re-authentication is required.</div>
