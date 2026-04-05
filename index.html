@@ -603,9 +603,84 @@ function Dashboard({onLogout}){
                       </div>
                     </div>
                     {open&&(
-                      <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}}>
-                        <div style={{marginBottom:8}}><span style={{color:M,fontSize:12}}>Affected: </span>{a.products?.map(p=><span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12,marginRight:6}}>{p}</span>)}</div>
-                        <a href={a.url||a.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:A,fontSize:13}}>🔗 View Official Advisory →</a>
+                      <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${B}`}} onClick={e=>e.stopPropagation()}>
+                        {/* CVE IDs */}
+                        {(a.cves?.length>0||a.cve)&&(
+                          <div style={{marginBottom:8,display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+                            <span style={{color:M,fontSize:12,marginRight:2}}>CVE IDs:</span>
+                            {(a.cves||[a.cve]).filter(Boolean).map(cve=>(
+                              <a key={cve} href={`https://nvd.nist.gov/vuln/detail/${cve}`} target="_blank" rel="noreferrer"
+                                style={{background:"#0d2137",color:"#58a6ff",border:"1px solid #1f6feb44",borderRadius:4,padding:"2px 8px",fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                                {cve}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {/* CVSS Score */}
+                        {a.cvss&&(
+                          <div style={{marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{color:M,fontSize:12}}>CVSS Score:</span>
+                            <span style={{background:(SEV[a.severity]||SEV.Unknown).badge,color:"#fff",borderRadius:4,padding:"2px 10px",fontSize:12,fontWeight:700}}>
+                              {a.cvss} / 10 — {a.severity}
+                            </span>
+                            {a.cvss>=9&&<span style={{color:"#ff4444",fontSize:11,fontWeight:600}}>⚠ PATCH IMMEDIATELY</span>}
+                            {a.cvss>=7&&a.cvss<9&&<span style={{color:"#ff7700",fontSize:11,fontWeight:600}}>⚠ HIGH PRIORITY</span>}
+                          </div>
+                        )}
+                        {/* Description */}
+                        {(a.description||a.summary)&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{color:M,fontSize:12,marginBottom:4}}>Description:</div>
+                            <div style={{background:D,borderRadius:6,padding:"10px 12px",fontSize:13,color:T,lineHeight:1.6,maxHeight:160,overflowY:"auto",border:`1px solid ${B}`}}>
+                              {(a.description&&a.description.length>a.summary?.length?a.description:a.summary)||"No description available."}
+                            </div>
+                          </div>
+                        )}
+                        {/* Affected Products */}
+                        {a.products?.length>0&&(
+                          <div style={{marginBottom:8}}>
+                            <span style={{color:M,fontSize:12}}>Affected Products: </span>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
+                              {a.products.map(p=>(
+                                <span key={p} style={{background:"#21262d",border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",fontSize:12}}>{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {/* Tags */}
+                        {a.tags?.length>0&&(
+                          <div style={{marginBottom:8,display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                            <span style={{color:M,fontSize:12,marginRight:2}}>Tags:</span>
+                            {a.tags.map(t=>(
+                              <span key={t} style={{background:"#1f2937",color:"#9ca3af",border:"1px solid #374151",borderRadius:10,padding:"1px 8px",fontSize:11}}>{t}</span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Source & Date row */}
+                        <div style={{display:"flex",flexWrap:"wrap",gap:16,marginBottom:8,fontSize:12,color:M}}>
+                          <span>📡 Source: <strong style={{color:T}}>{a.source||a.vendor}</strong></span>
+                          {a.author&&<span>✍ Author: <strong style={{color:T}}>{a.author}</strong></span>}
+                          <span>📅 Published: <strong style={{color:T}}>{a.published?new Date(a.published).toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):a.date||"Unknown"}</strong></span>
+                        </div>
+                        {/* Action buttons */}
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                          <a href={a.url||a.link} target="_blank" rel="noreferrer"
+                            style={{background:A,color:"#fff",borderRadius:6,padding:"6px 14px",fontSize:13,fontWeight:600,textDecoration:"none",display:"inline-block"}}>
+                            🔗 View Official Advisory
+                          </a>
+                          {a.cve&&(
+                            <a href={`https://nvd.nist.gov/vuln/detail/${a.cve}`} target="_blank" rel="noreferrer"
+                              style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 14px",fontSize:13,textDecoration:"none",display:"inline-block"}}>
+                              🔍 NVD Details
+                            </a>
+                          )}
+                          {a.cve&&(
+                            <a href={`https://www.exploit-db.com/search?cve=${a.cve}`} target="_blank" rel="noreferrer"
+                              style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"6px 14px",fontSize:13,textDecoration:"none",display:"inline-block"}}>
+                              💣 Exploit-DB
+                            </a>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
