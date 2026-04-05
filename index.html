@@ -1050,8 +1050,8 @@ function Dashboard({onLogout}){
               <div style={{color:M,fontSize:12,marginBottom:12}}>Export or reset your local advisory data.</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button onClick={exportCSV} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>⬇ Export CSV</button>
-                <button onClick={()=>{if(confirm("Reset advisories to defaults?")){setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");}}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
-                <button onClick={()=>{if(confirm("Reset sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");}}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
+                <button onClick={()=>{if(confirm("Reset advisories to defaults?")){   setAdvisories(MOCK);setNewCount(0);localStorage.removeItem("sad_advisories");   fetch(`${PROXY_URL}/cache/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{}); }}} style={{background:"#21262d",color:"#ff4444",border:"1px solid #ff444466",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Advisories</button>
+                <button onClick={()=>{if(confirm("Reset sources to defaults?")){   setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");   fetch(`${PROXY_URL}/source-config/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{}); }}} style={{background:"#21262d",color:"#ff7700",border:"1px solid #ff770066",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>↺ Reset Sources</button>
               </div>
             </div>
           </div>
