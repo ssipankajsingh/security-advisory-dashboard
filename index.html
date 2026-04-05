@@ -325,7 +325,7 @@ function Dashboard({onLogout}){
     const now=new Date();let injected=[];let alreadyCounted=false;
     if(PROXY_URL){
       try{
-        const res=await fetch(`${PROXY_URL}/advisories`,{headers:{"Content-Type":"application/json",...getAuthHeader()}});
+        const res=await fetch(`${PROXY_URL}/advisories${manual?"?force=true":""}`,{headers:{"Content-Type":"application/json",...getAuthHeader()}});
         if(!res.ok)throw new Error("Proxy returned "+res.status);
         const data=await res.json();
         if(data.advisories?.length){
@@ -956,27 +956,83 @@ function Dashboard({onLogout}){
                 {userName.trim()&&<span style={{color:"#4ade80",fontSize:13,alignSelf:"center"}}>✓ Set</span>}
               </div>
             </div>
-            {/* ACK STATS */}
+            {/* ACK STATS — Shared Team View from Supabase */}
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontWeight:700}}>✅ Acknowledgment Summary</div>
-                <span style={{color:M,fontSize:12}}>{Object.keys(acks).length} acknowledged</span>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                <div style={{fontWeight:700}}>✅ Team Acknowledgment Summary</div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{color:M,fontSize:12}}>{Object.keys(acks).length} total</span>
+                  <button onClick={()=>{
+                    fetch(`${PROXY_URL}/ack`,{headers:getAuthHeader()})
+                      .then(r=>r.json()).then(d=>setAcks(d.acks||{})).catch(()=>{});
+                  }} style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11}}>↻ Refresh</button>
+                </div>
+              </div>
+              {/* Filter bar */}
+              <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                <select
+                  onChange={e=>{const v=e.target.value;window._ackFilter=v;window.dispatchEvent(new Event('ackfilter'));}}
+                  style={{...inp({fontSize:12,flex:1,minWidth:120})}}>
+                  <option value="">All Members</option>
+                  {[...new Set(Object.values(acks).map(a=>a.by))].sort().map(name=>(
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <select
+                  onChange={e=>{const v=e.target.value;window._ackSort=v;window.dispatchEvent(new Event('ackfilter'));}}
+                  style={{...inp({fontSize:12})}}>
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name">By Member</option>
+                </select>
               </div>
               {Object.keys(acks).length===0?(
                 <div style={{color:M,fontSize:13}}>No advisories acknowledged yet.</div>
-              ):(
-                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto"}}>
-                  {Object.entries(acks).slice(0,20).map(([id,info])=>(
-                    <div key={id} style={{background:D,borderRadius:6,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"#4ade80",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
-                        <div style={{fontSize:11,color:M}}>by {info.by} · {new Date(info.at).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+              ):(()=>{
+                const memberFilter=window._ackFilter||"";
+                const sortBy=window._ackSort||"newest";
+                let entries=Object.entries(acks);
+                if(memberFilter)entries=entries.filter(([,info])=>info.by===memberFilter);
+                entries.sort(([,a],[,b])=>{
+                  if(sortBy==="oldest")return new Date(a.at)-new Date(b.at);
+                  if(sortBy==="name")return a.by.localeCompare(b.by);
+                  return new Date(b.at)-new Date(a.at);
+                });
+                // Group by member
+                const grouped={};
+                entries.forEach(([id,info])=>{
+                  if(!grouped[info.by])grouped[info.by]=[];
+                  grouped[info.by].push([id,info]);
+                });
+                return(
+                  <div style={{display:"flex",flexDirection:"column",gap:10,maxHeight:400,overflowY:"auto"}}>
+                    {Object.entries(grouped).map(([member,items])=>(
+                      <div key={member}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                          <span style={{background:"#1f6feb22",color:"#58a6ff",border:"1px solid #1f6feb44",borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700}}>
+                            👤 {member}
+                          </span>
+                          <span style={{color:M,fontSize:11}}>{items.length} acknowledged</span>
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column",gap:4,paddingLeft:8,borderLeft:`2px solid #1f6feb44`}}>
+                          {items.map(([id,info])=>(
+                            <div key={id} style={{background:D,borderRadius:6,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:600,color:"#4ade80",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
+                                <div style={{fontSize:10,color:M}}>{new Date(info.at).toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+                              </div>
+                              {(member===userName||!userName)&&(
+                                <button onClick={()=>handleUnack(id,{stopPropagation:()=>{}})}
+                                  style={{background:"none",border:`1px solid ${B}`,color:"#ff4444",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:10,flexShrink:0}}>Undo</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <button onClick={()=>handleUnack(id,{stopPropagation:()=>{}})} style={{background:"none",border:`1px solid ${B}`,color:"#ff4444",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11,flexShrink:0}}>Undo</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{fontWeight:700,marginBottom:4}}>🔐 Session</div>
