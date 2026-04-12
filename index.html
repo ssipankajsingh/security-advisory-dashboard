@@ -184,7 +184,7 @@ function LoginScreen({onLogin,onDenied}){
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:48,marginBottom:12}}>🛡️</div>
           <div style={{fontSize:22,fontWeight:700,color:T}}>Security Advisory Dashboard</div>
-          <div style={{fontSize:13,color:M,marginTop:6}}>Concentrix Endpoint Security</div>
+          <div style={{fontSize:13,color:M,marginTop:6}}> Endpoint Security</div>
         </div>
         <div style={{marginBottom:8,fontSize:13,color:M,fontWeight:600}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:16}}>
@@ -211,7 +211,7 @@ function AccessDeniedScreen({onRetry}){
       <div style={{width:460,background:C,border:"1px solid #ff444466",borderRadius:12,padding:40,textAlign:"center"}}>
         <div style={{fontSize:56,marginBottom:16}}>🚫</div>
         <div style={{fontSize:22,fontWeight:700,color:"#ff6b6b",marginBottom:8}}>Access Denied</div>
-        <div style={{fontSize:14,color:M,lineHeight:1.7,marginBottom:24}}>The access code you entered is incorrect.<br/>Contact <strong style={{color:T}}>Concentrix Endpoint Security</strong> team.</div>
+        <div style={{fontSize:14,color:M,lineHeight:1.7,marginBottom:24}}>The access code you entered is incorrect.<br/>Contact <strong style={{color:T}}> Endpoint Security</strong> team.</div>
         <button onClick={onRetry} style={{background:"#21262d",color:T,border:`1px solid ${B}`,borderRadius:6,padding:"10px 24px",cursor:"pointer",fontSize:14,fontWeight:600}}>← Try Again</button>
       </div>
     </div>
@@ -250,7 +250,7 @@ function Dashboard({onLogout}){
   const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
   const [newRecipient,setNewRecipient]=useState("");
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
-  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
+  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||" SOC Dashboard");
   const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
   const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"IST");
   const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
