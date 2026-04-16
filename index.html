@@ -303,7 +303,7 @@ function Dashboard({onLogout}){
 
   // Auto-fetch on first login if only showing MOCK
   useEffect(()=>{
-    if(isFirstLoad.current&&advisories.length<=4&&PROXY_URL){
+    if(isFirstLoad.current&&advisories.length<=500&&PROXY_URL){
       isFirstLoad.current=false;
       doRefresh(true);
     }
