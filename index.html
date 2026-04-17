@@ -46,7 +46,7 @@ const INTERVAL_LABELS = {"1hr":"Every 1 Hour","6hr":"Every 6 Hours","12hr":"Ever
 const STATUS_OPTIONS = ["New","In Review","Patched","Accepted Risk","False Positive"];
 const STATUS_COLORS  = {"New":"#1f6feb","In Review":"#e6b800","Patched":"#00aa00","Accepted Risk":"#ff7700","False Positive":"#888"};
 const SLA_HOURS = {"Critical":24,"High":72,"Medium":168,"Low":720,"Unknown":720};
-const TEAM_MEMBERS = ["Unassigned","Pankaj Singh","Ravi Kumar","Priya Sharma","Amit Patel","Neha Singh","Suresh Reddy","Kavya Nair","Deepak Verma","Anita Joshi","Rajesh Gupta","Meera Pillai","Vikas Malhotra"];
+const TEAM_MEMBERS = ["Unassigned","Pankaj Singh","Wisnu","Sai","Ganesh"];
 
 function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
 function setSession(code){localStorage.setItem(SESSION_KEY,JSON.stringify({authenticated:true,expiry:Date.now()+SESSION_MS,loginTime:new Date().toISOString(),code}));}
