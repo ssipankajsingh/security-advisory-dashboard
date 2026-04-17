@@ -715,7 +715,7 @@ function Dashboard({onLogout}){
               {fLoad&&advisories.length===0&&(
                 <div style={{color:M,textAlign:"center",padding:60,fontSize:14}}>
                   <div style={{fontSize:28,marginBottom:12}}>⟳</div>
-                  Loading advisories from proxy…
+                  Loading advisories. Pls wait......
                 </div>
               )}
               {filtered.slice(0,visibleCount).map(a=>{
