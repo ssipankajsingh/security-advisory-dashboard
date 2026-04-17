@@ -174,16 +174,20 @@ const ZDBadge=()=><span style={{background:"#cc00cc",color:"#fff",borderRadius:4
 const NewBadge=()=><span className="new-badge" style={{background:"#1f6feb",color:"#fff",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:700,marginLeft:4,letterSpacing:1}}>NEW</span>;
 const OEMBadge=()=><span style={{background:"#0a2a0a",color:"#4ade80",border:"1px solid #16a34a",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700,marginLeft:4}}>OEM</span>;
 const SourceCountBadge=({count,sources})=>{if(!count||count<2)return null;const tip=sources?sources.join(", "):`Reported by ${count} sources`;return <span title={tip} style={{background:"#1f6feb22",color:"#58a6ff",border:"1px solid #1f6feb55",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700,marginLeft:4,cursor:"default"}}>📡 {count} sources</span>;};
-function slaStatus(advisory){
-  const limitH=SLA_HOURS[advisory.severity]||720;
+function slaStatus(advisory, status){
+  // Never show SLA for resolved statuses
+  if(["Patched","Accepted Risk","False Positive"].includes(status)) return null;
+  // P11: Only show SLA for items published within last 30 days — older items are historical
   const pub=new Date(advisory.published||advisory.date||0);
-  if(isNaN(pub.getTime()))return null;
-  const elapsedH=(Date.now()-pub.getTime())/3600000;
-  const remainH=limitH-elapsedH;
+  if(isNaN(pub.getTime())) return null;
+  const ageH=(Date.now()-pub.getTime())/3600000;
+  if(ageH > 30*24) return null; // older than 30 days — no SLA noise
+  const limitH=SLA_HOURS[advisory.severity]||720;
+  const remainH=limitH-ageH;
   return{overdue:remainH<0,urgent:remainH>=0&&remainH<limitH*0.1,remainH:Math.round(Math.abs(remainH)),limitH};
 }
-const SLABadge=({advisory})=>{
-  const s=slaStatus(advisory);
+const SLABadge=({advisory,status})=>{
+  const s=slaStatus(advisory,status);
   if(!s)return null;
   if(s.overdue)return <span className="sla-overdue" style={{background:"#ff000025",color:"#ff4444",border:"1px solid #ff444488",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700,marginLeft:4}}>⏰ SLA OVERDUE</span>;
   if(s.urgent)return <span style={{background:"#ff770020",color:"#ff8800",border:"1px solid #ff770066",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700,marginLeft:4}}>⚡ {s.remainH}h left</span>;
@@ -192,6 +196,25 @@ const SLABadge=({advisory})=>{
 const AckBadge=({by,at,note})=><span title={note||""} style={{background:"#0a2a0a",color:"#4ade80",border:"1px solid #16a34a",borderRadius:4,padding:"2px 8px",fontSize:11,fontWeight:600,marginLeft:4}}>✓ {by} · {fmtTs(at)}{note&&" 📝"}</span>;
 const StatusBadge=({status})=>{const c=STATUS_COLORS[status]||"#888";return <span style={{background:c+"22",color:c,border:`1px solid ${c}44`,borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700,marginLeft:4}}>{status}</span>;};
 function countdown(ms){const d=Math.max(0,ms-Date.now());const h=Math.floor(d/3600000);const m=Math.floor((d%3600000)/60000);const s=Math.floor((d%60000)/1000);return`${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;}
+
+// ─── AI TRIAGE KEY PANEL (proper component — hooks cannot be in IIFEs) ─────────
+function AITriageKeyPanel({inp,B,M,C}){
+  const [ak,setAk]=useState(()=>localStorage.getItem("sad_apikey")||"");
+  const [showAk,setShowAk]=useState(false);
+  const saveAk=v=>{setAk(v);localStorage.setItem("sad_apikey",v);};
+  return(
+    <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
+      <div style={{fontWeight:700,marginBottom:4}}>🤖 AI Triage Key</div>
+      <div style={{color:M,fontSize:12,marginBottom:10}}>Anthropic API key for one-line AI triage on Critical/High advisories. Stored in your browser only.</div>
+      <div style={{display:"flex",gap:8}}>
+        <input type={showAk?"text":"password"} placeholder="sk-ant-api03-…" value={ak} onChange={e=>saveAk(e.target.value)}
+          style={{...inp({flex:1,fontSize:12,fontFamily:"monospace"})}}/>
+        <button onClick={()=>setShowAk(v=>!v)} style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:6,padding:"0 12px",cursor:"pointer",fontSize:13}}>{showAk?"Hide":"Show"}</button>
+      </div>
+      {ak&&<div style={{color:"#4ade80",fontSize:12,marginTop:8}}>✓ API key saved — AI Triage available on Critical/High advisories</div>}
+    </div>
+  );
+}
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginScreen({onLogin,onDenied}){
@@ -295,6 +318,7 @@ function Dashboard({onLogout}){
   const timerRef=useRef(null);
   const refreshedOnce=useRef(false);
   const isFirstLoad=useRef(true);
+  const hasLoadedOnce=useRef(false); // P9: track first load to avoid marking all items as NEW
 
   // Acknowledge + Status state
   const [acks,setAcks]=useState({});
@@ -334,8 +358,8 @@ function Dashboard({onLogout}){
       .then(r=>r.json()).then(d=>setAcks(d.acks||{})).catch(()=>{});
   },[]);
 
-  // P2: Always fetch from proxy on mount — no localStorage fallback
-  useEffect(()=>{doRefresh(false);},[]);
+  // P2+P10: Always fetch live from proxy on mount (force=true = skip Supabase cache)
+  useEffect(()=>{doRefresh(true);},[]);
 
   const handleAck=useCallback(async(advisoryId,note,e)=>{
     if(e)e.stopPropagation();
@@ -428,13 +452,18 @@ function Dashboard({onLogout}){
         const data=await res.json();
         if(data.advisories?.length){
           const incoming=data.advisories.filter(a=>a&&a.id);
-          // P1: replace state — diff against current ids to detect new ones
+          // P1+P9: replace state — diff for isNew, but skip on first load
           setAdvisories(prev=>{
+            const isFirst=!hasLoadedOnce.current;
+            hasLoadedOnce.current=true;
             const prevIds=new Set(prev.map(a=>a.id));
-            const marked=incoming.map(a=>({...a,isNew:!prevIds.has(a.id)}));
-            const newCount=marked.filter(a=>a.isNew).length;
-            if(newCount>0){setNewCount(c=>c+newCount);sendNotification(marked.filter(a=>a.isNew));}
-            return marked; // replace entirely — no accumulation
+            const marked=incoming.map(a=>({
+              ...a,
+              isNew: isFirst ? false : !prevIds.has(a.id) // P9: nothing is "new" on first load
+            }));
+            const newItems=marked.filter(a=>a.isNew).length;
+            if(newItems>0){setNewCount(c=>c+newItems);sendNotification(marked.filter(a=>a.isNew));}
+            return marked;
           });
           setLastFetchedTs(Date.now());
         }
@@ -563,7 +592,7 @@ function Dashboard({onLogout}){
     zeroDay:advisories.filter(a=>a.zeroDay).length,
     total:advisories.length,
     newItems:advisories.filter(a=>a.isNew).length,
-    slaOverdue:advisories.filter(a=>{const s=slaStatus(a);return s&&s.overdue;}).length,
+    slaOverdue:advisories.filter(a=>{const s=slaStatus(a,statuses[a.id]||"New");return s&&s.overdue;}).length,
   }),[advisories]);
   const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
   const inp=ex=>({background:D,color:T,border:`1px solid ${B}`,borderRadius:6,padding:"7px 10px",...ex});
@@ -710,7 +739,7 @@ function Dashboard({onLogout}){
                           {a.isNew&&!ackInfo&&<NewBadge/>}
                           {a.isOEM&&<OEMBadge/>}
                           <SourceCountBadge count={a.source_count} sources={a.sources_list}/>
-                          <SLABadge advisory={a}/>
+                          <SLABadge advisory={a} status={statuses[a.id]||"New"}/>
                           {ackInfo&&<AckBadge by={ackInfo.by} at={ackInfo.at} note={ackInfo.note}/>}
                           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
                           {ackInfo?.assigned_to&&ackInfo.assigned_to!=="Unassigned"&&<span style={{background:"#1f6feb15",color:"#58a6ff",border:"1px solid #1f6feb44",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:600,marginLeft:4}}>👤 {ackInfo.assigned_to}</span>}
@@ -778,7 +807,7 @@ function Dashboard({onLogout}){
                           </div>
                         )}
                         {/* SLA info */}
-                        {(()=>{const s=slaStatus(a);if(!s)return null;return(
+                        {(()=>{const s=slaStatus(a,statuses[a.id]||"New");if(!s)return null;return(
                           <div style={{marginBottom:8,fontSize:12,color:s.overdue?"#ff4444":s.urgent?"#ff8800":"#8b949e"}}>
                             ⏱ SLA: <strong>{SLA_HOURS[a.severity]}h</strong> limit for {a.severity} —{" "}
                             {s.overdue?<span style={{color:"#ff4444",fontWeight:700}}>{s.remainH}h overdue ⚠</span>:<span>{s.remainH}h remaining</span>}
@@ -1123,23 +1152,7 @@ function Dashboard({onLogout}){
               </div>
             </div>
             {/* AI Triage Key */}
-            {(()=>{
-              const [ak,setAk]=React.useState(()=>localStorage.getItem("sad_apikey")||"");
-              const [showAk,setShowAk]=React.useState(false);
-              const saveAk=v=>{setAk(v);localStorage.setItem("sad_apikey",v);};
-              return(
-                <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
-                  <div style={{fontWeight:700,marginBottom:4}}>🤖 AI Triage Key</div>
-                  <div style={{color:M,fontSize:12,marginBottom:10}}>Anthropic API key for one-line AI triage on Critical/High advisories. Stored in your browser only.</div>
-                  <div style={{display:"flex",gap:8}}>
-                    <input type={showAk?"text":"password"} placeholder="sk-ant-api03-…" value={ak} onChange={e=>saveAk(e.target.value)}
-                      style={{...inp({flex:1,fontSize:12,fontFamily:"monospace"})}}/>
-                    <button onClick={()=>setShowAk(v=>!v)} style={{background:"#21262d",color:M,border:`1px solid ${B}`,borderRadius:6,padding:"0 12px",cursor:"pointer",fontSize:13}}>{showAk?"Hide":"Show"}</button>
-                  </div>
-                  {ak&&<div style={{color:"#4ade80",fontSize:12,marginTop:8}}>✓ API key saved — AI Triage available on Critical/High advisories</div>}
-                </div>
-              );
-            })()}
+            <AITriageKeyPanel inp={inp} B={B} M={M} C={C}/>
             {/* Team Acknowledgment Summary */}
             <div style={{background:C,border:`1px solid ${B}`,borderRadius:8,padding:20,marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
