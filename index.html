@@ -79,7 +79,7 @@ a:hover{text-decoration:underline}
 .load-more-btn:hover{background:#f0f0f0;color:#555}
 
 /* Right reading pane */
-.read-pane{flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.read-pane{flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 .read-pane-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:12px}
 .read-pane-header{padding:16px 24px 12px;border-bottom:1px solid #efefef;flex-shrink:0}
 .read-pane-body{flex:1;overflow-y:auto;padding:20px 24px}
@@ -179,7 +179,10 @@ a:hover{text-decoration:underline}
 .ack-input-row{display:flex;gap:4px;align-items:center}
 
 /* Scroll area for panels */
-.scroll-area{flex:1;overflow-y:auto;padding:16px}
+.scroll-area{flex:1;overflow-y:auto;padding:16px;min-height:0}
+/* Full-width panel (no mid-panel) */
+.full-panel{flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.full-panel-inner{max-width:700px;margin:0 auto;width:100%}
 
 /* Login */
 .login-wrap{min-height:100vh;background:#f5f5f5;display:flex;align-items:center;justify-content:center}
@@ -228,7 +231,45 @@ a:hover{text-decoration:underline}
 .pane-ack-note{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;font-size:12px;color:#15803d;margin-bottom:12px}
 
 /* Scroll within panel tabs content */
-.tab-content{flex:1;overflow-y:auto}
+.tab-content{flex:1;overflow-y:auto;min-height:0}
+
+/* ── CVE SEARCH TAB ── */
+.cve-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fafafa}
+.cve-search-bar{padding:12px 16px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.cve-search-row{display:flex;gap:8px;margin-bottom:8px}
+.cve-search-input{flex:1;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:7px;padding:8px 12px;font-size:13px;color:#1a1a1a;transition:all 0.15s}
+.cve-search-input:focus{background:#fff;border-color:#c0392b;box-shadow:0 0 0 2px rgba(192,57,43,0.08);outline:none}
+.cve-filter-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cve-filter-row select{background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:4px 8px;font-size:11px;color:#444;cursor:pointer}
+.cve-filter-row select:focus{border-color:#c0392b;outline:none}
+.cve-body{display:flex;flex:1;overflow:hidden;min-height:0}
+.cve-list{width:380px;flex-shrink:0;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden}
+.cve-list-header{padding:8px 12px;background:#fff;border-bottom:1px solid #efefef;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cve-items{flex:1;overflow-y:auto;min-height:0}
+.cve-item{padding:10px 12px 8px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.1s;border-left:3px solid transparent}
+.cve-item:hover{background:#f5f5f5}
+.cve-item.selected{background:#fdf0ef;border-left-color:#c0392b}
+.cve-item .ci-id{font-size:11px;font-weight:700;color:#c0392b;margin-bottom:3px}
+.cve-item .ci-title{font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cve-item .ci-meta{font-size:10.5px;color:#aaa;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;overflow:hidden}
+.cve-detail{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+.cve-detail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ccc;gap:10px}
+.cve-detail-header{padding:16px 20px 12px;border-bottom:1px solid #efefef;flex-shrink:0}
+.cve-detail-scroll{flex:1;overflow-y:auto;padding:16px 20px;min-height:0}
+.cve-detail-footer{padding:10px 20px;border-top:1px solid #efefef;background:#fafafa;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.cvss-bar{height:6px;border-radius:3px;background:#e0e0e0;overflow:hidden;margin-top:4px}
+.cvss-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+.cve-ref-link{display:block;font-size:11px;color:#2563eb;padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cve-ref-link:hover{text-decoration:underline}
+.kev-badge{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.epss-badge{background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700}
+.nvd-key-banner{background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px 12px;font-size:11px;color:#92400e;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cpe-tag{background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:4px;padding:2px 7px;font-size:10.5px;white-space:nowrap}
+.pagination-row{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-top:1px solid #efefef;background:#fff;flex-shrink:0}
+.page-btn{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #e0e0e0;background:#fff;color:#444;transition:all 0.1s}
+.page-btn:hover{border-color:#c0392b;color:#c0392b}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed}
+.page-btn.active{background:#c0392b;color:#fff;border-color:#c0392b}
 </style>
 </head>
 <body>
@@ -703,9 +744,11 @@ function Dashboard({onLogout}){
     return(
       <div className="read-pane">
         {/* Header */}
-        <div className="read-pane-header">
-          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+        <div className="read-pane-header" style={{background:"#fff"}}>
+          {/* Badge row */}
+          <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap",marginBottom:7}}>
             <SevBadge sev={a.severity}/>
+            {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
             {a.zeroDay&&<ZDBadge/>}
             {a.isNew&&!ackInfo&&<NewBadge/>}
             {a.isOEM&&<OEMBadge/>}
@@ -715,12 +758,16 @@ function Dashboard({onLogout}){
             {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
             {a.cat&&<span className="badge" style={{background:cc+"18",color:cc,border:`1px solid ${cc}33`}}>{a.cat}</span>}
           </div>
-          <div style={{fontSize:16,fontWeight:700,color:"#1a1a1a",lineHeight:1.4,marginBottom:8}}>{a.id} — {a.title}</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:16,fontSize:12,color:"#888"}}>
-            <span>📡 <strong style={{color:"#555"}}>{a.source||a.vendor}</strong>{a.isOEM&&<span style={{color:"#15803d",fontSize:10,marginLeft:4}}>[OEM Direct]</span>}</span>
-            {a.author&&<span>✍ <strong style={{color:"#555"}}>{a.author}</strong></span>}
-            <span>📅 {fmtTs(a.published||a.date)}</span>
-            {a.cvss&&<span style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",fontWeight:700}}>CVSS {a.cvss}/10</span>}
+          {/* Title */}
+          <div style={{fontSize:15,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:8}}>{a.title||a.id}</div>
+          {/* Meta grid */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 16px",fontSize:11,color:"#888"}}>
+            <span>📡 Source: <strong style={{color:"#444"}}>{a.source||a.vendor||"—"}</strong></span>
+            <span>📅 Published: <strong style={{color:"#444"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}</strong></span>
+            {(a.cve||(a.cves&&a.cves[0]))&&<span>🔖 CVE: <strong style={{color:"#c0392b"}}>{a.cve||a.cves[0]}</strong></span>}
+            {a.cvss&&<span>📊 CVSS: <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10 ({a.severity})</strong></span>}
+            {a.author&&<span>✍️ Author: <strong style={{color:"#444"}}>{a.author}</strong></span>}
+            {a.source_count>1&&<span>📡 Also in: <strong style={{color:"#2563eb"}}>{a.source_count} sources</strong></span>}
           </div>
         </div>
 
@@ -735,45 +782,163 @@ function Dashboard({onLogout}){
           {/* ── DETAIL TAB ── */}
           {readPane==="detail"&&(
             <div className="scroll-area">
-              {ackInfo?.note&&<div className="pane-ack-note">📝 Note: {ackInfo.note}</div>}
+              {ackInfo?.note&&<div className="pane-ack-note">📝 {ackInfo.note}</div>}
+
+              {/* ── SLA STATUS ── */}
               {sl&&(
-                <div style={{background:sl.overdue?"#fef2f2":sl.urgent?"#fff7ed":"#f5f5f5",border:`1px solid ${sl.overdue?"#fecaca":sl.urgent?"#fed7aa":"#e8e8e8"}`,borderRadius:6,padding:"8px 12px",marginBottom:14,fontSize:12,color:sl.overdue?"#dc2626":sl.urgent?"#ea580c":"#888"}}>
-                  ⏱ SLA: <strong>{SLA_HOURS[a.severity]}h</strong> limit for {a.severity} —{" "}
-                  {sl.overdue?<strong>{sl.remainH}h overdue ⚠</strong>:<span>{sl.remainH}h remaining</span>}
+                <div style={{background:sl.overdue?"#fef2f2":sl.urgent?"#fff7ed":"#f0fdf4",border:`1px solid ${sl.overdue?"#fecaca":sl.urgent?"#fed7aa":"#bbf7d0"}`,borderRadius:7,padding:"8px 14px",marginBottom:12,fontSize:12,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:16}}>{sl.overdue?"⏰":sl.urgent?"⚡":"✅"}</span>
+                  <span style={{color:sl.overdue?"#dc2626":sl.urgent?"#ea580c":"#15803d"}}>
+                    <strong>SLA {sl.overdue?"OVERDUE":"OK"}</strong> — {SLA_HOURS[a.severity]}h limit for {a.severity} severity
+                    {sl.overdue?<span> · <strong>{sl.remainH}h past due</strong></span>:<span> · {sl.remainH}h remaining</span>}
+                  </span>
                 </div>
               )}
+
+              {/* ── KEY METRICS ROW ── */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8,marginBottom:12}}>
+                {/* CVSS Score */}
+                {a.cvss&&(
+                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>CVSS Score</div>
+                    <div style={{fontSize:22,fontWeight:800,color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",lineHeight:1}}>{a.cvss}</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>/ 10.0 · v3</div>
+                    <div style={{height:4,background:"#f0f0f0",borderRadius:2,marginTop:5,overflow:"hidden"}}>
+                      <div style={{height:"100%",borderRadius:2,width:`${(a.cvss/10)*100}%`,background:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}/>
+                    </div>
+                  </div>
+                )}
+                {/* Severity */}
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Severity</div>
+                  <div style={{fontSize:16,fontWeight:700,color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a","Unknown":"#888"}[a.severity])||"#888"}}>{a.severity||"Unknown"}</div>
+                  {a.zeroDay&&<div style={{fontSize:10,color:"#9333ea",fontWeight:700,marginTop:2}}>🔴 Zero-Day</div>}
+                </div>
+                {/* Published */}
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Published</div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</div>
+                  <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.published?new Date(a.published).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC":""}</div>
+                </div>
+                {/* Source */}
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Source</div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#333",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.source||a.vendor||"—"}</div>
+                  {a.isOEM&&<div style={{fontSize:10,color:"#15803d",fontWeight:700,marginTop:2}}>✓ OEM Direct</div>}
+                  {a.source_count>1&&<div style={{fontSize:10,color:"#2563eb",marginTop:2}}>📡 {a.source_count} sources</div>}
+                </div>
+              </div>
+
+              {/* ── CVE IDs ── */}
               {(a.cves?.length>0||a.cve)&&(
-                <div className="section-card" style={{padding:"12px 14px"}}>
-                  <div className="field-label" style={{marginBottom:8}}>CVE IDs</div>
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                    🔖 CVE Identifiers <span style={{fontWeight:400,color:"#ccc"}}>({(a.cves||[a.cve]).filter(Boolean).length})</span>
+                  </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {(a.cves||[a.cve]).filter(Boolean).map(cve=>(
                       <a key={cve} href={`https://nvd.nist.gov/vuln/detail/${cve}`} target="_blank" rel="noreferrer" className="cve-tag">{cve}</a>
                     ))}
                   </div>
+                  {/* Cross-reference links for first CVE */}
+                  {(a.cve||(a.cves&&a.cves[0]))&&(
+                    <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+                      {[
+                        {label:"NVD",url:`https://nvd.nist.gov/vuln/detail/${a.cve||a.cves[0]}`},
+                        {label:"MITRE CVE.org",url:`https://www.cve.org/CVERecord?id=${a.cve||a.cves[0]}`},
+                        {label:"Exploit-DB",url:`https://www.exploit-db.com/search?cve=${a.cve||a.cves[0]}`},
+                        {label:"GitHub Advisory",url:`https://github.com/advisories?query=${a.cve||a.cves[0]}`},
+                        {label:"CISA KEV Check",url:`https://www.cisa.gov/known-exploited-vulnerabilities-catalog`},
+                      ].map(({label,url})=>(
+                        <a key={label} href={url} target="_blank" rel="noreferrer"
+                          style={{fontSize:10,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:4,padding:"2px 8px",fontWeight:600,textDecoration:"none"}}>
+                          ↗ {label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* ── ADVISORY / BUG NUMBER ── */}
+              {(()=>{
+                const bugMatch = (a.id||"").match(/^(https?:\/\/)?(?:.*\/)?((?:SA|ADV|GHSA|FG-IR|ASB|MSRC|VMSA|VU#|KB|SEC|INTEL|HPSBST|HPSBHF|cisco-sa|fortinet|juniper)[^\s\/]{3,40})/i);
+                const bugId = bugMatch?.[2] || (a.id && !a.id.startsWith("http") && a.id.length < 60 ? a.id : null);
+                if(!bugId) return null;
+                return(
+                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>🔢 Advisory / Bug Number</div>
+                    <code style={{fontSize:13,fontWeight:700,color:"#1a1a1a",background:"#f5f5f5",padding:"3px 8px",borderRadius:4}}>{bugId}</code>
+                  </div>
+                );
+              })()}
+
+              {/* ── DESCRIPTION ── */}
               {(a.description||a.summary)&&(
-                <div className="section-card" style={{padding:"14px"}}>
-                  <div className="field-label">Description</div>
-                  <div className="desc-box">{a.description&&a.description.length>(a.summary||"").length?a.description:a.summary}</div>
-                </div>
-              )}
-              {a.products?.length>0&&(
-                <div className="section-card" style={{padding:"12px 14px"}}>
-                  <div className="field-label" style={{marginBottom:8}}>Affected Products</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                    {a.products.map(p=><span key={p} className="product-tag">{p}</span>)}
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>📋 Issue Description</div>
+                  <div style={{fontSize:12.5,color:"#333",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflowY:"auto"}}>
+                    {(a.description&&a.description.length>(a.summary||"").length?a.description:a.summary).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}
                   </div>
                 </div>
               )}
+
+              {/* ── AFFECTED PRODUCTS ── */}
+              {a.products?.length>0&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>📦 Affected Products</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                    {a.products.map(p=>(
+                      <span key={p} style={{background:"#fef9ef",border:"1px solid #fed7aa",borderRadius:5,padding:"3px 10px",fontSize:11.5,color:"#92400e",fontWeight:500}}>{p}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SOLUTION / PATCH INFO extracted from description ── */}
+              {(()=>{
+                const text = (a.description||a.summary||"");
+                const patchMatch = text.match(/(?:solution|patch|fix|remediation|mitigation|update|upgrade|workaround|recommended action|required action)[:\s]+([^.]{20,400})/i);
+                const patchText = patchMatch?.[1]?.trim();
+                if(!patchText) return null;
+                return(
+                  <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#15803d",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>🩹 Solution / Patch Information</div>
+                    <div style={{fontSize:12.5,color:"#166534",lineHeight:1.65}}>{patchText}</div>
+                  </div>
+                );
+              })()}
+
+              {/* ── SOURCES REPORTED BY ── */}
+              {a.sources_list?.length>1&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>📡 Reported By ({a.source_count} sources)</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                    {a.sources_list.map(s=>(
+                      <span key={s} style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:4,padding:"2px 8px",fontSize:11,color:"#1d4ed8",fontWeight:500}}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAGS ── */}
               {a.tags?.length>0&&(
-                <div className="section-card" style={{padding:"12px 14px"}}>
-                  <div className="field-label" style={{marginBottom:8}}>Tags</div>
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>🏷️ Tags</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                     {a.tags.map(t=><span key={t} style={{background:"#f5f5f5",border:"1px solid #e8e8e8",borderRadius:10,padding:"2px 9px",fontSize:11,color:"#666"}}>{t}</span>)}
                   </div>
                 </div>
               )}
+
+              {/* ── AUTHOR ── */}
+              {a.author&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>✍️ Author / Reporter</div>
+                  <div style={{fontSize:12,color:"#444",fontWeight:500}}>{a.author}</div>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -837,11 +1002,13 @@ function Dashboard({onLogout}){
         </div>
 
         {/* Action bar */}
-        <div className="read-pane-actions">
-          <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary">🔗 Official Advisory</a>
-          {a.cve&&<a href={`https://nvd.nist.gov/vuln/detail/${a.cve}`} target="_blank" rel="noreferrer" className="btn btn-secondary">🔍 NVD</a>}
-          {a.cve&&<a href={`https://www.exploit-db.com/search?cve=${a.cve}`} target="_blank" rel="noreferrer" className="btn btn-secondary">💣 Exploit-DB</a>}
-          <button className="btn btn-ghost" onClick={()=>setSel(null)} style={{marginLeft:"auto"}}>✕ Close</button>
+        <div className="read-pane-actions" style={{flexWrap:"wrap",gap:6}}>
+          <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:11}}>🔗 Official Advisory</a>
+          {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://nvd.nist.gov/vuln/detail/${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>🔍 NVD</a>}
+          {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.exploit-db.com/search?cve=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>💣 Exploit-DB</a>}
+          {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.cve.org/CVERecord?id=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>📋 CVE.org</a>}
+          {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://github.com/advisories?query=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>🐙 GitHub</a>}
+          <button className="btn btn-ghost" onClick={()=>setSel(null)} style={{marginLeft:"auto",fontSize:11}}>✕ Close</button>
         </div>
       </div>
     );
@@ -893,6 +1060,7 @@ function Dashboard({onLogout}){
       {id:"autorefresh",label:"Auto-Refresh",icon:"🔄",badge:0},
       {id:"email",label:"Email & Notifications",icon:"📧",badge:0},
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
+      {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
     ];
     return(
       <div className="sidebar">
@@ -1150,6 +1318,21 @@ function Dashboard({onLogout}){
             </div>
           </div>
           <div className="section-card">
+            <div className="section-title">🔍 NVD API Key <span style={{fontSize:11,fontWeight:400,color:"#aaa"}}>(optional — increases rate limit 10×)</span></div>
+            <div style={{color:"#888",fontSize:12,marginBottom:10}}>Free key from <a href="https://nvd.nist.gov/developers/request-an-api-key" target="_blank" rel="noreferrer" style={{color:"#c0392b"}}>nvd.nist.gov/developers/request-an-api-key</a>. Stored in your browser only.</div>
+            {(()=>{
+              const [nk,setNk]=React.useState(()=>localStorage.getItem("sad_nvdkey")||"");
+              const saveNk=v=>{setNk(v);localStorage.setItem("sad_nvdkey",v);};
+              return(
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input placeholder="NVD API key…" value={nk} onChange={e=>saveNk(e.target.value)} className="field-input" style={{flex:1,fontFamily:"monospace",fontSize:12}}/>
+                  {nk&&<span style={{color:"#15803d",fontSize:12,flexShrink:0}}>✓ Set</span>}
+                  {nk&&<button onClick={()=>saveNk("")} className="btn btn-ghost" style={{fontSize:11,padding:"4px 8px"}}>Clear</button>}
+                </div>
+              );
+            })()}
+          </div>
+          <div className="section-card">
             <div className="section-title">🤖 AI Triage Key</div>
             <div style={{color:"#888",fontSize:12,marginBottom:10}}>Anthropic API key for one-line AI triage on Critical/High advisories. Stored in your browser only.</div>
             <div style={{display:"flex",gap:8}}>
@@ -1197,6 +1380,395 @@ function Dashboard({onLogout}){
             </div>
           </div>
         </div></div>
+      </div>
+    );
+  }
+
+
+  // ── CVE SEARCH PANEL (NVD API) ────────────────────────────────────────────
+  function CVESearchPanel(){
+    const NVD_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0";
+    const PAGE_SIZE = 20;
+    const [keyword,setKeyword]   = useState("");
+    const [cveId,setCveId]       = useState("");
+    const [severity,setSeverity] = useState("");
+    const [dateFrom,setDateFrom] = useState("");
+    const [dateTo,setDateTo]     = useState("");
+    const [hasKev,setHasKev]     = useState(false);
+    const [results,setResults]   = useState([]);
+    const [total,setTotal]       = useState(0);
+    const [page,setPage]         = useState(0);
+    const [loading,setLoading]   = useState(false);
+    const [error,setError]       = useState("");
+    const [selCve,setSelCve]     = useState(null);
+    const [detailLoading,setDetailLoading] = useState(false);
+    const [detail,setDetail]     = useState(null);
+    const nvdKey = localStorage.getItem("sad_nvdkey")||"";
+    const abortRef = useRef(null);
+
+    function buildUrl(startIndex=0){
+      const params = new URLSearchParams();
+      params.set("resultsPerPage", PAGE_SIZE);
+      params.set("startIndex", startIndex);
+      if(cveId.trim()) params.set("cveId", cveId.trim().toUpperCase());
+      else {
+        if(keyword.trim()) params.set("keywordSearch", keyword.trim());
+        if(severity) params.set("cvssV3Severity", severity);
+        if(dateFrom) params.set("pubStartDate", dateFrom+"T00:00:00.000");
+        if(dateTo)   params.set("pubEndDate",   dateTo+"T23:59:59.999");
+        if(hasKev)   params.set("isVulnerable", "");
+      }
+      return NVD_BASE + "?" + params.toString();
+    }
+
+    async function doSearch(startIndex=0){
+      if(abortRef.current) abortRef.current.abort();
+      abortRef.current = new AbortController();
+      setLoading(true); setError(""); setDetail(null); setSelCve(null);
+      try{
+        const headers = nvdKey ? {"apiKey": nvdKey} : {};
+        const res = await fetch(buildUrl(startIndex), {signal: abortRef.current.signal, headers});
+        if(!res.ok){
+          if(res.status===403) throw new Error("NVD rate limit hit — add a free NVD API key in Settings to increase limits");
+          throw new Error("NVD returned "+res.status);
+        }
+        const data = await res.json();
+        setResults(data.vulnerabilities||[]);
+        setTotal(data.totalResults||0);
+        setPage(startIndex/PAGE_SIZE);
+      } catch(e){
+        if(e.name==="AbortError") return;
+        setError(e.message||"Failed to fetch from NVD");
+        setResults([]); setTotal(0);
+      }
+      setLoading(false);
+    }
+
+    async function loadDetail(cveIdStr){
+      setDetailLoading(true); setDetail(null);
+      try{
+        const headers = nvdKey ? {"apiKey": nvdKey} : {};
+        const res = await fetch(`${NVD_BASE}?cveId=${cveIdStr}`, {headers});
+        const data = await res.json();
+        setDetail(data.vulnerabilities?.[0]?.cve||null);
+      } catch(e){ setDetail(null); }
+      setDetailLoading(false);
+    }
+
+    function selectCve(vuln){
+      setSelCve(vuln.cve.id);
+      loadDetail(vuln.cve.id);
+    }
+
+    function cvssScore(cve){
+      return cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore
+          || cve?.metrics?.cvssMetricV30?.[0]?.cvssData?.baseScore
+          || cve?.metrics?.cvssMetricV2?.[0]?.cvssData?.baseScore
+          || null;
+    }
+    function cvssV(cve){
+      if(cve?.metrics?.cvssMetricV31?.[0]) return "3.1";
+      if(cve?.metrics?.cvssMetricV30?.[0]) return "3.0";
+      if(cve?.metrics?.cvssMetricV2?.[0])  return "2.0";
+      return null;
+    }
+    function cvssVector(cve){
+      return cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.vectorString
+          || cve?.metrics?.cvssMetricV30?.[0]?.cvssData?.vectorString
+          || cve?.metrics?.cvssMetricV2?.[0]?.cvssData?.vectorString
+          || null;
+    }
+    function sevFromScore(s){
+      if(s===null||s===undefined) return "Unknown";
+      if(s>=9.0) return "Critical";
+      if(s>=7.0) return "High";
+      if(s>=4.0) return "Medium";
+      return "Low";
+    }
+    function sevColor(sev){
+      return {Critical:"#dc2626",High:"#ea580c",Medium:"#ca8a04",Low:"#16a34a",Unknown:"#888"}[sev]||"#888";
+    }
+    function cvssBarColor(s){
+      if(s>=9) return "#dc2626";
+      if(s>=7) return "#ea580c";
+      if(s>=4) return "#ca8a04";
+      return "#16a34a";
+    }
+    function getVendors(cve){
+      const vendors = new Set();
+      (cve?.configurations||[]).forEach(cfg=>{
+        (cfg.nodes||[]).forEach(n=>{
+          (n.cpeMatch||[]).forEach(c=>{
+            const parts = c.criteria?.split(":")||[];
+            if(parts[3]) vendors.add(parts[3].replace(/_/g," "));
+          });
+        });
+      });
+      return [...vendors].slice(0,8);
+    }
+    function getProducts(cve){
+      const prods = new Set();
+      (cve?.configurations||[]).forEach(cfg=>{
+        (cfg.nodes||[]).forEach(n=>{
+          (n.cpeMatch||[]).forEach(c=>{
+            const parts = c.criteria?.split(":")||[];
+            if(parts[4]) prods.add(parts[4].replace(/_/g," "));
+          });
+        });
+      });
+      return [...prods].slice(0,10);
+    }
+    function getCpes(cve){
+      const cpes = [];
+      (cve?.configurations||[]).forEach(cfg=>{
+        (cfg.nodes||[]).forEach(n=>{
+          (n.cpeMatch||[]).forEach(c=>{ if(c.criteria) cpes.push(c.criteria); });
+        });
+      });
+      return [...new Set(cpes)].slice(0,12);
+    }
+    function getDescription(cve){
+      return (cve?.descriptions||[]).find(d=>d.lang==="en")?.value||"No description available.";
+    }
+    function totalPages(){ return Math.ceil(total/PAGE_SIZE); }
+
+    const handleKeyDown = e => { if(e.key==="Enter") doSearch(0); };
+
+    return(
+      <div className="cve-panel">
+        {/* Search bar */}
+        <div className="cve-search-bar">
+          {!nvdKey&&(
+            <div className="nvd-key-banner">
+              ⚡ <span>Add a free NVD API key in <strong>Settings → NVD API Key</strong> for 10× higher rate limits</span>
+            </div>
+          )}
+          <div className="cve-search-row">
+            <input className="cve-search-input" placeholder="🔍 Search keywords (e.g. remote code execution, log4j, apache)…"
+              value={keyword} onChange={e=>{setKeyword(e.target.value);setCveId("");}}
+              onKeyDown={handleKeyDown}/>
+            <input className="cve-search-input" style={{width:170,flex:"none"}} placeholder="CVE-YYYY-XXXXX"
+              value={cveId} onChange={e=>{setCveId(e.target.value);setKeyword("");}}
+              onKeyDown={handleKeyDown}/>
+            <button className="btn btn-primary" onClick={()=>doSearch(0)} disabled={loading} style={{whiteSpace:"nowrap"}}>
+              {loading?"Searching…":"Search NVD"}
+            </button>
+          </div>
+          <div className="cve-filter-row">
+            <span style={{fontSize:11,color:"#999",fontWeight:600}}>Filters:</span>
+            <select value={severity} onChange={e=>setSeverity(e.target.value)}>
+              <option value="">All Severity</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+              className="cve-search-input" style={{width:130,padding:"3px 7px",fontSize:11}}
+              title="Published from"/>
+            <span style={{fontSize:11,color:"#aaa"}}>→</span>
+            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+              className="cve-search-input" style={{width:130,padding:"3px 7px",fontSize:11}}
+              title="Published to"/>
+            <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#555",cursor:"pointer"}}>
+              <input type="checkbox" checked={hasKev} onChange={e=>setHasKev(e.target.checked)}/> KEV only
+            </label>
+            {(keyword||cveId||severity||dateFrom||dateTo||hasKev)&&(
+              <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}}
+                onClick={()=>{setKeyword("");setCveId("");setSeverity("");setDateFrom("");setDateTo("");setHasKev(false);setResults([]);setTotal(0);setDetail(null);setSelCve(null);}}>
+                ✕ Clear
+              </button>
+            )}
+            {total>0&&<span style={{marginLeft:"auto",fontSize:11,color:"#888",fontWeight:600}}>{total.toLocaleString()} CVEs found</span>}
+          </div>
+        </div>
+
+        {/* Body: list + detail */}
+        <div className="cve-body">
+          {/* CVE list */}
+          <div className="cve-list">
+            <div className="cve-list-header">
+              <span style={{fontSize:12,fontWeight:600,color:"#444"}}>Results</span>
+              <span style={{fontSize:11,color:"#aaa"}}>{results.length ? `Showing ${page*PAGE_SIZE+1}–${Math.min((page+1)*PAGE_SIZE, total)} of ${total.toLocaleString()}` : ""}</span>
+            </div>
+            <div className="cve-items">
+              {loading&&(
+                <div className="empty-state"><div className="em-icon" style={{fontSize:24}}>⟳</div><div>Querying NVD…</div></div>
+              )}
+              {!loading&&error&&(
+                <div style={{padding:16}}>
+                  <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"10px 12px",color:"#dc2626",fontSize:12}}>{error}</div>
+                </div>
+              )}
+              {!loading&&!error&&results.length===0&&total===0&&(
+                <div className="empty-state">
+                  <div style={{fontSize:36}}>🔍</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#aaa"}}>Search the NVD</div>
+                  <div style={{fontSize:11,color:"#ccc",textAlign:"center",maxWidth:220,lineHeight:1.5}}>Enter keywords, a CVE ID, or use the filters above — then click Search NVD</div>
+                </div>
+              )}
+              {results.map(vuln=>{
+                const c = vuln.cve;
+                const score = cvssScore(c);
+                const sev = sevFromScore(score);
+                const col = sevColor(sev);
+                const desc = getDescription(c);
+                return(
+                  <div key={c.id} className={"cve-item"+(selCve===c.id?" selected":"")}
+                    style={{borderLeftColor: selCve===c.id ? "#c0392b" : col}}
+                    onClick={()=>selectCve(vuln)}>
+                    <div className="ci-id">{c.id}</div>
+                    <div className="ci-title">{c.descriptions?.find(d=>d.lang==="en")?.value||"No description"}</div>
+                    <div className="ci-meta">
+                      {score!==null&&(
+                        <span className="badge" style={{background:col+"18",color:col,border:`1px solid ${col}33`,padding:"1px 6px",fontSize:10}}>
+                          {sev} {score}
+                        </span>
+                      )}
+                      <span>{c.published?.slice(0,10)}</span>
+                      {c.cisaExploitAdd&&<span style={{color:"#dc2626",fontWeight:600}}>KEV</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Pagination */}
+            {total>PAGE_SIZE&&(
+              <div className="pagination-row">
+                <button className="page-btn" disabled={page===0} onClick={()=>doSearch((page-1)*PAGE_SIZE)}>← Prev</button>
+                <span style={{fontSize:11,color:"#888"}}>Page {page+1} of {totalPages()}</span>
+                <button className="page-btn" disabled={page>=totalPages()-1} onClick={()=>doSearch((page+1)*PAGE_SIZE)}>Next →</button>
+              </div>
+            )}
+          </div>
+
+          {/* CVE detail pane */}
+          <div className="cve-detail">
+            {!selCve&&!detailLoading&&(
+              <div className="cve-detail-empty">
+                <div style={{fontSize:44}}>🛡️</div>
+                <div style={{fontSize:14,fontWeight:600}}>Select a CVE</div>
+                <div style={{fontSize:12,color:"#ccc"}}>Click any CVE in the list to see full details</div>
+              </div>
+            )}
+            {detailLoading&&(
+              <div className="cve-detail-empty">
+                <div style={{fontSize:32}}>⟳</div>
+                <div style={{fontSize:13,color:"#aaa"}}>Loading CVE details…</div>
+              </div>
+            )}
+            {!detailLoading&&detail&&(()=>{
+              const score = cvssScore(detail);
+              const sev = sevFromScore(score);
+              const col = sevColor(sev);
+              const ver = cvssV(detail);
+              const vec = cvssVector(detail);
+              const vendors = getVendors(detail);
+              const products = getProducts(detail);
+              const cpes = getCpes(detail);
+              const refs = (detail.references||[]).slice(0,12);
+              const weaknesses = (detail.weaknesses||[]).flatMap(w=>w.description||[]).map(d=>d.value).filter(Boolean);
+              const isKev = !!detail.cisaExploitAdd;
+              return(
+                <>
+                  {/* Detail header */}
+                  <div className="cve-detail-header">
+                    <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+                      {score!==null&&(
+                        <span className="badge" style={{background:col+"18",color:col,border:`1px solid ${col}33`,fontSize:11}}>
+                          {sev.toUpperCase()} {score}{ver&&` (v${ver})`}
+                        </span>
+                      )}
+                      {isKev&&<span className="kev-badge">🚨 CISA KEV — Actively Exploited</span>}
+                      {weaknesses.map(w=>(
+                        <span key={w} style={{background:"#fdf4ff",color:"#7e22ce",border:"1px solid #e9d5ff",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>{w}</span>
+                      ))}
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:"#1a1a1a",lineHeight:1.4,marginBottom:6}}>{detail.id}</div>
+                    <div style={{fontSize:11,color:"#aaa",display:"flex",gap:14}}>
+                      <span>Published: <strong style={{color:"#555"}}>{detail.published?.slice(0,10)}</strong></span>
+                      <span>Modified: <strong style={{color:"#555"}}>{detail.lastModified?.slice(0,10)}</strong></span>
+                      <span>Status: <strong style={{color:"#555"}}>{detail.vulnStatus||"—"}</strong></span>
+                    </div>
+                    {score!==null&&(
+                      <div style={{marginTop:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#888",marginBottom:2}}>
+                          <span>CVSS {ver} Score</span><span style={{fontWeight:700,color:col}}>{score}/10</span>
+                        </div>
+                        <div className="cvss-bar">
+                          <div className="cvss-fill" style={{width:`${(score/10)*100}%`,background:cvssBarColor(score)}}/>
+                        </div>
+                        {vec&&<div style={{fontSize:10,color:"#aaa",marginTop:3,fontFamily:"monospace"}}>{vec}</div>}
+                      </div>
+                    )}
+                  </div>
+                  {/* Detail scrollable body */}
+                  <div className="cve-detail-scroll">
+                    {/* Description */}
+                    <div style={{marginBottom:14}}>
+                      <div className="field-label" style={{marginBottom:6}}>Description</div>
+                      <div className="desc-box" style={{maxHeight:120}}>{getDescription(detail)}</div>
+                    </div>
+                    {/* KEV details */}
+                    {isKev&&(
+                      <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,padding:"10px 12px",marginBottom:14}}>
+                        <div style={{fontWeight:700,color:"#dc2626",fontSize:12,marginBottom:6}}>🚨 CISA Known Exploited Vulnerability</div>
+                        {detail.cisaVulnerabilityName&&<div style={{fontSize:12,marginBottom:3}}><span style={{color:"#999"}}>Name:</span> {detail.cisaVulnerabilityName}</div>}
+                        {detail.cisaRequiredAction&&<div style={{fontSize:12,marginBottom:3}}><span style={{color:"#999"}}>Required Action:</span> {detail.cisaRequiredAction}</div>}
+                        {detail.cisaActionDue&&<div style={{fontSize:12}}><span style={{color:"#999"}}>Due Date:</span> <strong style={{color:"#dc2626"}}>{detail.cisaActionDue}</strong></div>}
+                      </div>
+                    )}
+                    {/* Vendors & Products */}
+                    {vendors.length>0&&(
+                      <div style={{marginBottom:12}}>
+                        <div className="field-label" style={{marginBottom:6}}>Affected Vendors</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                          {vendors.map(v=><span key={v} className="product-tag" style={{textTransform:"capitalize"}}>{v}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {products.length>0&&(
+                      <div style={{marginBottom:12}}>
+                        <div className="field-label" style={{marginBottom:6}}>Affected Products</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                          {products.map(p=><span key={p} className="product-tag" style={{textTransform:"capitalize"}}>{p}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {/* CPE strings */}
+                    {cpes.length>0&&(
+                      <div style={{marginBottom:12}}>
+                        <div className="field-label" style={{marginBottom:6}}>CPE Identifiers ({cpes.length})</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {cpes.map(c=><span key={c} className="cpe-tag">{c}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {/* References */}
+                    {refs.length>0&&(
+                      <div style={{marginBottom:12}}>
+                        <div className="field-label" style={{marginBottom:6}}>References ({(detail.references||[]).length})</div>
+                        <div style={{background:"#fafafa",border:"1px solid #f0f0f0",borderRadius:6,padding:"8px 10px"}}>
+                          {refs.map((r,i)=>(
+                            <a key={i} href={r.url} target="_blank" rel="noreferrer" className="cve-ref-link">{r.url}</a>
+                          ))}
+                          {(detail.references||[]).length>12&&<div style={{fontSize:11,color:"#aaa",marginTop:4}}>+{(detail.references||[]).length-12} more references</div>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Footer actions */}
+                  <div className="cve-detail-footer">
+                    <a href={`https://nvd.nist.gov/vuln/detail/${detail.id}`} target="_blank" rel="noreferrer" className="btn btn-primary">🔗 NVD Full Record</a>
+                    <a href={`https://www.cve.org/CVERecord?id=${detail.id}`} target="_blank" rel="noreferrer" className="btn btn-secondary">📋 CVE.org</a>
+                    <a href={`https://www.exploit-db.com/search?cve=${detail.id}`} target="_blank" rel="noreferrer" className="btn btn-secondary">💣 Exploit-DB</a>
+                    {isKev&&<a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noreferrer" className="btn btn-danger">🚨 CISA KEV</a>}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1331,10 +1903,11 @@ function Dashboard({onLogout}){
           </>
         )}
 
-        {tab==="sources"&&<><div className="mid-panel" style={{display:"none"}}/><SourcesPanel/></>}
-        {tab==="autorefresh"&&<><div className="mid-panel" style={{display:"none"}}/><AutoRefreshPanel/></>}
-        {tab==="email"&&<><div className="mid-panel" style={{display:"none"}}/><EmailPanel/></>}
-        {tab==="settings"&&<><div className="mid-panel" style={{display:"none"}}/><SettingsPanel/></>}
+        {tab==="sources"&&<SourcesPanel/>}
+        {tab==="autorefresh"&&<AutoRefreshPanel/>}
+        {tab==="email"&&<EmailPanel/>}
+        {tab==="settings"&&<SettingsPanel/>}
+        {tab==="cvesearch"&&<CVESearchPanel/>}
       </div>
     </div>
   );
