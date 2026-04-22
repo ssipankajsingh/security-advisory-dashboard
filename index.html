@@ -49,26 +49,33 @@ a:hover{text-decoration:underline}
 
 /* Middle panel */
 .mid-panel{width:340px;flex-shrink:0;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden}
-.mid-header{padding:10px 14px 8px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
-.mid-title{font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:6px;display:flex;align-items:center;gap:8px}
-.mid-filters{display:flex;gap:5px;flex-wrap:wrap}
-.filter-chip{padding:3px 9px;border-radius:12px;font-size:11px;font-weight:500;border:1px solid #e0e0e0;background:#fff;color:#555;cursor:pointer;transition:all 0.1s}
+.mid-header{padding:8px 12px 6px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.mid-title{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.mid-filters{display:flex;gap:4px;flex-wrap:wrap}
+.filter-chip{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;border:1px solid #e0e0e0;background:#fff;color:#555;cursor:pointer;transition:all 0.1s;white-space:nowrap}
 .filter-chip:hover{border-color:#c0392b;color:#c0392b}
 .filter-chip.active{background:#c0392b;border-color:#c0392b;color:#fff}
-.mid-search{padding:8px 12px;border-bottom:1px solid #efefef;flex-shrink:0}
-.mid-search input{width:100%;background:#f0f0f0;border:1px solid #e8e8e8;border-radius:6px;padding:6px 10px;font-size:12px;color:#333;transition:all 0.15s}
+.mid-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.mid-filter-row::-webkit-scrollbar{height:3px}
+.mid-filter-row::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
+.mid-search{padding:6px 10px;border-bottom:1px solid #efefef;flex-shrink:0}
+.mid-search input{width:100%;background:#f0f0f0;border:1px solid #e8e8e8;border-radius:5px;padding:5px 9px;font-size:12px;color:#333;transition:all 0.15s}
 .mid-search input:focus{background:#fff;border-color:#c0392b;box-shadow:0 0 0 2px rgba(192,57,43,0.08)}
-.mid-list{flex:1;overflow-y:auto}
-.feed-item{padding:12px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid transparent;position:relative}
+.mid-extra-filters{padding:5px 10px;background:#fafafa;border-bottom:1px solid #efefef;flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap}
+.mid-extra-filters select{background:#fff;border:1px solid #e0e0e0;border-radius:5px;padding:3px 6px;font-size:11px;color:#444;cursor:pointer;max-width:120px}
+.mid-list{flex:1;overflow-y:auto;min-height:0}
+.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid transparent;position:relative}
 .feed-item:hover{background:#f5f5f5}
 .feed-item.selected{background:#fdf0ef;border-left-color:#c0392b}
-.feed-item.is-new{background:#fff9f9}
-.feed-item .fi-badges{display:flex;gap:4px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
-.feed-item .fi-title{font-size:12.5px;font-weight:600;color:#1a1a1a;line-height:1.4;margin-bottom:3px}
-.feed-item .fi-meta{font-size:11px;color:#999;display:flex;align-items:center;gap:6px}
-.feed-item.unread .fi-title{font-weight:700}
-.unread-dot{width:7px;height:7px;border-radius:50%;background:#c0392b;position:absolute;right:12px;top:14px;flex-shrink:0}
-.load-more-btn{width:100%;padding:12px;text-align:center;font-size:12px;color:#888;background:#f8f8f8;border:none;border-top:1px solid #efefef;cursor:pointer}
+.feed-item.is-new{background:#fffaf9}
+.feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:nowrap;overflow:hidden}
+.feed-item .fi-title{font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.feed-item .fi-id{font-size:10.5px;font-weight:700;color:#c0392b;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-item .fi-meta{font-size:10.5px;color:#aaa;display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+.feed-item .fi-meta span{overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.feed-item.unread .fi-title{font-weight:700;color:#111}
+.unread-dot{width:6px;height:6px;border-radius:50%;background:#c0392b;position:absolute;right:10px;top:11px;flex-shrink:0}
+.load-more-btn{width:100%;padding:10px;text-align:center;font-size:11px;color:#888;background:#f8f8f8;border:none;border-top:1px solid #efefef;cursor:pointer}
 .load-more-btn:hover{background:#f0f0f0;color:#555}
 
 /* Right reading pane */
@@ -864,10 +871,11 @@ function Dashboard({onLogout}){
           <SLABadge advisory={a} statuses={statuses}/>
           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
         </div>
-        <div className={"fi-title"+(a.isNew&&!ackInfo?" unread":"")}>{a.id} — {a.title}</div>
+        <div className="fi-id">{a.id}</div>
+        <div className={"fi-title"+(a.isNew&&!ackInfo?" unread":"")}>{a.title}</div>
         <div className="fi-meta">
-          <span style={{color:(CAT_COLORS[a.cat]||"#888"),fontWeight:600,fontSize:10}}>{a.cat}</span>
-          <span>·</span>
+          <span style={{color:(CAT_COLORS[resolveAdvisoryCat(a)]||"#888"),fontWeight:600,flexShrink:0}}>{resolveAdvisoryCat(a)}</span>
+          <span style={{flexShrink:0}}>·</span>
           <span>{a.vendor||a.source}</span>
           <span>·</span>
           <span>{fmtRel(a.published||a.date)}</span>
@@ -1248,20 +1256,57 @@ function Dashboard({onLogout}){
               <div className="mid-header">
                 <div className="mid-title">
                   {sideFilter==="all"?"All Advisories":sideFilter}
-                  <span style={{background:"#f0f0f0",color:"#888",borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:600}}>{filtered.length}</span>
+                  <span style={{background:"#f0f0f0",color:"#888",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:600}}>{filtered.length}</span>
                 </div>
-                <div className="mid-filters">
+                {/* Severity row */}
+                <div className="mid-filter-row">
                   {["All","Critical","High","Medium","Low"].map(s=>(
                     <button key={s} className={"filter-chip"+(fSev===s?" active":"")} onClick={()=>setFSev(s)}>{s}</button>
                   ))}
                   <button className={"filter-chip"+(fZD?" active":"")} onClick={()=>setFZD(v=>!v)}>0-Day</button>
-                  <button className={"filter-chip"+(fAck==="Acknowledged"?" active":"")} onClick={()=>setFAck(v=>v==="Acknowledged"?"All":"Acknowledged")}>Acked</button>
-                  <button className={"filter-chip"+(fStatus==="Patched"?" active":"")} onClick={()=>setFStatus(v=>v==="Patched"?"All":"Patched")}>Patched</button>
+                  <button className={"filter-chip"+(fNew?" active":"")} onClick={()=>setFNew(v=>!v)}>New</button>
                 </div>
               </div>
+              {/* Search */}
               <div className="mid-search">
-                <input placeholder="🔍 Search advisories..." value={search} onChange={e=>setSearch(e.target.value)}/>
+                <input placeholder="🔍 Search ID, title, vendor..." value={search} onChange={e=>setSearch(e.target.value)}/>
               </div>
+              {/* Extra filters */}
+              <div className="mid-extra-filters">
+                <select value={fAck} onChange={e=>setFAck(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="Acknowledged">✅ Acked</option>
+                  <option value="Unacknowledged">⬜ Unacked</option>
+                </select>
+                <select value={fStatus} onChange={e=>setFStatus(e.target.value)}>
+                  <option value="All">All Status</option>
+                  {STATUS_OPTIONS.map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+                {sideFilter==="all"&&(
+                  <select value={fCat} onChange={e=>setFCat(e.target.value)}>
+                    <option value="All">All Categories</option>
+                    {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                )}
+                <select value={fDateRange} onChange={e=>setFDateRange(e.target.value)}>
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="90d">Last 90 Days</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                {(fSev!=="All"||fZD||fNew||fAck!=="All"||fStatus!=="All"||fCat!=="All"||fDateRange!=="all"||search)&&(
+                  <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFCat("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
+                )}
+              </div>
+              {fDateRange==="custom"&&(
+                <div style={{display:"flex",gap:5,padding:"5px 10px",background:"#fafafa",borderBottom:"1px solid #efefef",flexShrink:0}}>
+                  <input type="date" value={fDateFrom} onChange={e=>setFDateFrom(e.target.value)} className="field-input" style={{flex:1,padding:"3px 7px",fontSize:11}}/>
+                  <span style={{color:"#aaa",alignSelf:"center",fontSize:11}}>→</span>
+                  <input type="date" value={fDateTo} onChange={e=>setFDateTo(e.target.value)} className="field-input" style={{flex:1,padding:"3px 7px",fontSize:11}}/>
+                </div>
+              )}
               <div className="mid-list">
                 {fLoad&&advisories.length===0&&(
                   <div className="empty-state"><div className="em-icon">⟳</div><div style={{fontSize:13}}>Loading advisories…</div></div>
