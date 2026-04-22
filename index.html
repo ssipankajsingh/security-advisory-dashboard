@@ -299,12 +299,14 @@ function fmtRel(ts){if(!ts)return"";try{const d=Date.now()-new Date(ts).getTime(
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
 function slaStatus(a){
-  const status=a.statusOverride||localStorage.getItem("sad_statuses")?null:null;
-  const limitH=SLA_HOURS[a.severity]||720;
   const pub=new Date(a.published||a.date||0);
   if(isNaN(pub.getTime()))return null;
-  const elapsedH=(Date.now()-pub.getTime())/3600000;
-  const remainH=limitH-elapsedH;
+  // P11: Only show SLA badge for advisories published in the last 30 days
+  // Older items are historical — no SLA noise for Dec 2025 items in April 2026
+  const ageH=(Date.now()-pub.getTime())/3600000;
+  if(ageH>30*24)return null;
+  const limitH=SLA_HOURS[a.severity]||720;
+  const remainH=limitH-ageH;
   return{overdue:remainH<0,urgent:remainH>=0&&remainH<limitH*0.1,remainH:Math.round(Math.abs(remainH)),limitH};
 }
 
@@ -1375,7 +1377,7 @@ function Dashboard({onLogout}){
             <div className="section-title">📊 Data Management</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button onClick={exportCSV} className="btn btn-secondary">⬇ Export CSV</button>
-              <button onClick={()=>{if(confirm("Reset advisories? Clears Supabase cache and re-fetches live feeds.")){setAdvisories([]);setNewCount(0);setVisibleCount(50);fetch(`${PROXY_URL}/cache/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});setTimeout(()=>doRefresh(true),500);}}} className="btn btn-danger">↺ Reset Advisories</button>
+              <button onClick={()=>{if(confirm("Reset advisories? Clears Supabase cache and re-fetches live feeds (last 30 days only).")){setAdvisories([]);setNewCount(0);setVisibleCount(50);fetch(`${PROXY_URL}/cache/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});setTimeout(()=>doRefresh(true),500);}}} className="btn btn-danger">↺ Reset & Refresh (30d)</button>
               <button onClick={()=>{if(confirm("Reset sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");fetch(`${PROXY_URL}/source-config/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});}}} style={{background:"#fff",color:"#ea580c",border:"1px solid #fed7aa",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>↺ Reset Sources</button>
             </div>
           </div>
@@ -1839,6 +1841,19 @@ function Dashboard({onLogout}){
                   <button className={"filter-chip"+(fNew?" active":"")} onClick={()=>setFNew(v=>!v)}>New</button>
                 </div>
               </div>
+              {/* Old data warning */}
+              {advisories.length>0&&(()=>{
+                const oldCount=advisories.filter(a=>{
+                  try{const d=new Date(a.published||a.date);return !isNaN(d)&&(Date.now()-d.getTime())>30*24*3600000;}catch{return false;}
+                }).length;
+                if(oldCount===0)return null;
+                return(
+                  <div style={{padding:"5px 10px",background:"#fff7ed",borderBottom:"1px solid #fed7aa",display:"flex",alignItems:"center",gap:7,fontSize:11,color:"#92400e",flexShrink:0}}>
+                    <span>⚠️</span>
+                    <span><strong>{oldCount} advisories</strong> are older than 30 days — go to Settings → Reset &amp; Refresh to clear stale cache</span>
+                  </div>
+                );
+              })()}
               {/* Search */}
               <div className="mid-search">
                 <input placeholder="🔍 Search ID, title, vendor..." value={search} onChange={e=>setSearch(e.target.value)}/>
