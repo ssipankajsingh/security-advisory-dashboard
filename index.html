@@ -625,11 +625,24 @@ function Dashboard({onLogout}){
   const removeSrc=id=>setSources(s=>s.filter(x=>x.id!==id));
   const addSrc=()=>{if(!newSrc.name||!newSrc.vendor)return;setSources(s=>[...s,{...newSrc,id:Date.now().toString(),tier:3,enabled:true}]);setNewSrc({name:"",vendor:"",cat:"Your Stack",rss:"",url:""});setAddOpen(false);};
 
+  // Build a vendor→cat lookup from SOURCE_LIBRARY for fallback matching
+  const vendorCatMap=useMemo(()=>{const m={};SOURCE_LIBRARY.forEach(s=>{if(s.vendor)m[s.vendor.toLowerCase()]=s.cat;if(s.name)m[s.name.toLowerCase()]=s.cat;});return m;},[]);
+  // Resolve the effective category of an advisory — proxy cat first, fallback to source library lookup
+  const resolveAdvisoryCat=useCallback((a)=>{
+    if(a.cat&&CATEGORIES.includes(a.cat))return a.cat;
+    // Try matching by source/vendor name against source library
+    const key=(a.source||a.vendor||"").toLowerCase();
+    if(vendorCatMap[key])return vendorCatMap[key];
+    // Partial match
+    for(const [k,v] of Object.entries(vendorCatMap)){if(key.includes(k)||k.includes(key))return v;}
+    return a.cat||"Aggregator";
+  },[vendorCatMap]);
+
   const nowTs=new Date();
   const dateRanges={"all":null,"today":1,"7d":7,"30d":30,"90d":90};
   const filtered=useMemo(()=>{
     let list=advisories;
-    if(sideFilter!=="all")list=list.filter(a=>a.cat===sideFilter);
+    if(sideFilter!=="all")list=list.filter(a=>resolveAdvisoryCat(a)===sideFilter);
     if(fSev!=="All")list=list.filter(a=>a.severity===fSev);
     if(fCat!=="All")list=list.filter(a=>a.cat===fCat);
     if(fZD)list=list.filter(a=>a.zeroDay);
@@ -641,7 +654,7 @@ function Dashboard({onLogout}){
     if(fDateRange!=="all"&&fDateRange!=="custom"){const days=dateRanges[fDateRange];if(days){const cutoff=new Date(nowTs-days*86400000);list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=cutoff;});}}
     if(fDateRange==="custom"){if(fDateFrom)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=new Date(fDateFrom);});if(fDateTo)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d<=new Date(fDateTo+"T23:59:59");});}
     return list;
-  },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses]);
+  },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,resolveAdvisoryCat]);
 
   const [visibleCount,setVisibleCount]=useState(50);
   useEffect(()=>{setVisibleCount(50);},[sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,search,fDateRange,fDateFrom,fDateTo]);
@@ -658,8 +671,8 @@ function Dashboard({onLogout}){
   }),[advisories,statuses]);
   const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
 
-  // Sidebar category counts
-  const catCounts=useMemo(()=>{const m={};advisories.forEach(a=>{if(a.cat)m[a.cat]=(m[a.cat]||0)+1;});return m;},[advisories]);
+  // Sidebar category counts — use resolver so sidebar shows correct counts
+  const catCounts=useMemo(()=>{const m={};advisories.forEach(a=>{const cat=resolveAdvisoryCat(a);m[cat]=(m[cat]||0)+1;});return m;},[advisories,resolveAdvisoryCat]);
   const selectedAdvisory=sel?advisories.find(a=>a.id===sel):null;
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
 
@@ -893,7 +906,7 @@ function Dashboard({onLogout}){
                 const cc=CAT_COLORS[cat]||"#888";
                 return(
                   <div key={cat} className={"sidebar-item"+(sideFilter===cat?" active":"")}
-                    onClick={()=>{setTab("feed");setSideFilter(cat);}}>
+                    onClick={()=>{setTab("feed");setSideFilter(cat);setFSev("All");setSearch("");setSel(null);}}>
                     <span className={"si-dot "+catDotClass(cat)} style={{background:cc}}/>
                     <span className="si-name" style={{fontSize:12}}>{cat}</span>
                     {cnt>0&&<span className="si-count">{cnt}</span>}
