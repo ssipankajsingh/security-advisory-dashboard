@@ -616,6 +616,7 @@ function Dashboard({onLogout}){
   const [ackNote,setAckNote]=useState("");
   const [showAckInput,setShowAckInput]=useState(false);
   const [showAssignPanel,setShowAssignPanel]=useState(false);
+  const [fAssignee,setFAssignee]=useState("All"); // "All" | "me" | any team member name
   const [triageLoading,setTriageLoading]=useState({});
   const [aiTriageResults,setAiTriageResults]=useState(()=>{try{return JSON.parse(localStorage.getItem("sad_triage")||"{}")}catch{return{}}});
 
@@ -780,14 +781,16 @@ function Dashboard({onLogout}){
     if(fAck==="Acknowledged")list=list.filter(a=>acks[a.id]);
     if(fAck==="Unacknowledged")list=list.filter(a=>!acks[a.id]);
     if(fStatus!=="All")list=list.filter(a=>(statuses[a.id]||"New")===fStatus);
+    if(fAssignee==="me")list=list.filter(a=>acks[a.id]?.assigned_to===userName);
+    else if(fAssignee!=="All")list=list.filter(a=>acks[a.id]?.assigned_to===fAssignee);
     if(search)list=list.filter(a=>[a.title,a.id,a.vendor,a.source,a.summary].some(f=>f?.toLowerCase().includes(search.toLowerCase())));
     if(fDateRange!=="all"&&fDateRange!=="custom"){const days=dateRanges[fDateRange];if(days){const cutoff=new Date(nowTs-days*86400000);list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=cutoff;});}}
     if(fDateRange==="custom"){if(fDateFrom)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=new Date(fDateFrom);});if(fDateTo)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d<=new Date(fDateTo+"T23:59:59");});}
     return list;
-  },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,resolveAdvisoryCat]);
+  },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,userName,resolveAdvisoryCat]);
 
   const [visibleCount,setVisibleCount]=useState(50);
-  useEffect(()=>{setVisibleCount(50);},[sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,search,fDateRange,fDateFrom,fDateTo]);
+  useEffect(()=>{setVisibleCount(50);},[sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
 
   const stats=useMemo(()=>({
     critical:advisories.filter(a=>a.severity==="Critical").length,
@@ -798,7 +801,20 @@ function Dashboard({onLogout}){
     total:advisories.length,
     newItems:advisories.filter(a=>a.isNew).length,
     slaOverdue:advisories.filter(a=>{const sl=slaStatus(a);const st=statuses[a.id];return sl&&sl.overdue&&st!=="Patched"&&st!=="Accepted Risk"&&st!=="False Positive";}).length,
-  }),[advisories,statuses]);
+    assignedToMe:advisories.filter(a=>userName&&acks[a.id]?.assigned_to===userName).length,
+    assigned:advisories.filter(a=>acks[a.id]?.assigned_to&&acks[a.id].assigned_to!=="Unassigned").length,
+    unassigned:advisories.filter(a=>acks[a.id]&&(!acks[a.id].assigned_to||acks[a.id].assigned_to==="Unassigned")).length,
+  }),[advisories,statuses,acks,userName]);
+  // Per-member assignment counts for the assignee dropdown
+  const assigneeCounts=useMemo(()=>{
+    const m={};
+    Object.values(acks).forEach(ack=>{
+      if(ack.assigned_to&&ack.assigned_to!=="Unassigned"){
+        m[ack.assigned_to]=(m[ack.assigned_to]||0)+1;
+      }
+    });
+    return m;
+  },[acks]);
   const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
 
   // Sidebar category counts — use resolver so sidebar shows correct counts
@@ -1155,6 +1171,11 @@ function Dashboard({onLogout}){
           {a.zeroDay&&<ZDBadge/>}
           {a.isOEM&&<OEMBadge/>}
           {ackInfo&&<AckBadge by={ackInfo.by}/>}
+          {ackInfo?.assigned_to&&ackInfo.assigned_to!=="Unassigned"&&(
+            <span style={{background:"#f0f9ff",color:"#0369a1",border:"1px solid #bae6fd",borderRadius:4,padding:"1px 5px",fontSize:9,fontWeight:700}}>
+              👤 {ackInfo.assigned_to===userName?"Me":ackInfo.assigned_to.split(" ")[0]}
+            </span>
+          )}
           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
         </div>
         <div className="fi-id">{a.id}</div>
@@ -1186,15 +1207,39 @@ function Dashboard({onLogout}){
         <div className="sidebar-header">Navigation</div>
         <div className="sidebar-scroll">
           {navItems.map(item=>(
-            <div key={item.id} className={"sidebar-item"+(tab===item.id&&sideFilter==="all"?" active":"")}
-              onClick={()=>{setTab(item.id);setSideFilter("all");}}>
+            <div key={item.id} className={"sidebar-item"+(tab===item.id&&sideFilter==="all"&&fAssignee==="All"?" active":"")}
+              onClick={()=>{setTab(item.id);setSideFilter("all");if(item.id==="feed")setFAssignee("All");}}>
               <span style={{fontSize:14,width:18,flexShrink:0}}>{item.icon}</span>
               <span className="si-name">{item.label}</span>
               {item.badge>0&&<span className="si-count">{item.badge}</span>}
             </div>
           ))}
+          {/* My Work quick filter — only shown when name is set */}
+          {userName&&tab==="feed"&&(
+            <div className={"sidebar-item"+(fAssignee==="me"?" active":"")}
+              onClick={()=>{setTab("feed");setSideFilter("all");setFAssignee("me");}}>
+              <span style={{fontSize:14,width:18,flexShrink:0}}>👤</span>
+              <span className="si-name" style={{fontWeight:600}}>My Work</span>
+              {stats.assignedToMe>0&&<span className="si-count">{stats.assignedToMe}</span>}
+            </div>
+          )}
           {tab==="feed"&&(
             <>
+              {/* Team Workload section — only show if anyone is assigned */}
+              {Object.keys(assigneeCounts).length>0&&(
+                <>
+                  <div className="sidebar-section">Team Workload</div>
+                  {TEAM_MEMBERS.filter(m=>m!=="Unassigned"&&assigneeCounts[m]>0).map(member=>(
+                    <div key={member}
+                      className={"sidebar-item"+(fAssignee===member?" active":"")}
+                      onClick={()=>{setTab("feed");setSideFilter("all");setFAssignee(member);}}>
+                      <span style={{fontSize:12,width:18,flexShrink:0}}>👤</span>
+                      <span className="si-name" style={{fontSize:12}}>{member}{member===userName?" (me)":""}</span>
+                      <span className="si-count">{assigneeCounts[member]}</span>
+                    </div>
+                  ))}
+                </>
+              )}
               <div className="sidebar-section">By Category</div>
               {CATEGORIES.map(cat=>{
                 const cnt=catCounts[cat]||0;
@@ -1942,6 +1987,17 @@ function Dashboard({onLogout}){
             <div className="stat-val" style={{color:stats.slaOverdue>0?"#dc2626":"#ccc"}}>{fLoad&&stats.slaOverdue===0?"…":stats.slaOverdue}</div>
             <div className="stat-lbl" style={{color:stats.slaOverdue>0?"#dc2626":undefined}}>SLA Due</div>
           </div>
+          <div className="stat-item clickable" title="Click to filter assigned advisories"
+            onClick={stats.assigned>0?()=>{setFAssignee("All");setFAck("Acknowledged");setTab("feed");}:undefined}>
+            <div className="stat-val" style={{color:stats.assigned>0?"#0369a1":"#ccc",fontSize:16}}>{fLoad&&stats.assigned===0?"…":stats.assigned}</div>
+            <div className="stat-lbl">Assigned</div>
+          </div>
+          {userName&&<div className="stat-item clickable" title={`Assigned to me (${userName})`}
+            onClick={stats.assignedToMe>0?()=>{setFAssignee("me");setTab("feed");setSideFilter("all");}:undefined}
+            style={stats.assignedToMe>0?{background:"#f0f9ff"}:{}}>
+            <div className="stat-val" style={{color:stats.assignedToMe>0?"#0369a1":"#ccc",fontSize:16}}>{fLoad&&stats.assignedToMe===0?"…":stats.assignedToMe}</div>
+            <div className="stat-lbl" style={{color:stats.assignedToMe>0?"#0369a1":undefined}}>My Work</div>
+          </div>}
           <div className="stat-item">
             <div className="stat-val" style={{color:srcStats.enabled>0?"#6b7280":"#ccc",fontSize:15}}>{srcStats.enabled}</div>
             <div className="stat-lbl">Sources</div>
@@ -1975,8 +2031,11 @@ function Dashboard({onLogout}){
             <div className="mid-panel">
               <div className="mid-header">
                 <div className="mid-title">
-                  {sideFilter==="all"?"All Advisories":sideFilter}
+                  {fAssignee==="me"?"My Work":fAssignee!=="All"?`Assigned: ${fAssignee}`:sideFilter==="all"?"All Advisories":sideFilter}
                   <span style={{background:"#f0f0f0",color:"#888",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:600}}>{filtered.length}</span>
+                  {fAssignee!=="All"&&(
+                    <button onClick={()=>setFAssignee("All")} style={{marginLeft:"auto",background:"none",border:"none",color:"#aaa",cursor:"pointer",fontSize:13,padding:"0 2px"}} title="Clear assignee filter">✕</button>
+                  )}
                 </div>
                 {/* Severity row */}
                 <div className="mid-filter-row">
@@ -2015,6 +2074,16 @@ function Dashboard({onLogout}){
                   <option value="All">All Status</option>
                   {STATUS_OPTIONS.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
+                {/* Assignee filter */}
+                <select value={fAssignee} onChange={e=>setFAssignee(e.target.value)}
+                  style={fAssignee!=="All"?{borderColor:"#c0392b",color:"#c0392b",fontWeight:600}:{}}>
+                  <option value="All">All Assigned</option>
+                  {userName&&<option value="me">👤 My Work ({stats.assignedToMe})</option>}
+                  {TEAM_MEMBERS.filter(m=>m!=="Unassigned"&&assigneeCounts[m]>0).map(m=>(
+                    <option key={m} value={m}>{m} ({assigneeCounts[m]})</option>
+                  ))}
+                  {stats.unassigned>0&&<option value="__unassigned__" disabled>— {stats.unassigned} acked but unassigned</option>}
+                </select>
                 {sideFilter==="all"&&(
                   <select value={fCat} onChange={e=>setFCat(e.target.value)}>
                     <option value="All">All Categories</option>
@@ -2029,8 +2098,8 @@ function Dashboard({onLogout}){
                   <option value="90d">Last 90 Days</option>
                   <option value="custom">Custom…</option>
                 </select>
-                {(fSev!=="All"||fZD||fNew||fAck!=="All"||fStatus!=="All"||fCat!=="All"||fDateRange!=="all"||search)&&(
-                  <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFCat("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
+                {(fSev!=="All"||fZD||fNew||fAck!=="All"||fStatus!=="All"||fAssignee!=="All"||fCat!=="All"||fDateRange!=="all"||search)&&(
+                  <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFAssignee("All");setFCat("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
                 )}
               </div>
               {fDateRange==="custom"&&(
