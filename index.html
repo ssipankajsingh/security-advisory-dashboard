@@ -48,16 +48,16 @@ a:hover{text-decoration:underline}
 .sidebar-section{padding:4px 16px 4px;font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:0.8px;margin-top:8px}
 
 /* Middle panel */
-.mid-panel{width:340px;flex-shrink:0;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden}
+.mid-panel{width:360px;flex-shrink:0;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden}
+.mid-panel-resize{width:4px;background:transparent;cursor:col-resize;flex-shrink:0;transition:background 0.15s}
+.mid-panel-resize:hover{background:#e0e0e0}
 .mid-header{padding:8px 12px 6px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
 .mid-title{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .mid-filters{display:flex;gap:4px;flex-wrap:wrap}
 .filter-chip{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;border:1px solid #e0e0e0;background:#fff;color:#555;cursor:pointer;transition:all 0.1s;white-space:nowrap}
 .filter-chip:hover{border-color:#c0392b;color:#c0392b}
 .filter-chip.active{background:#c0392b;border-color:#c0392b;color:#fff}
-.mid-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
-.mid-filter-row::-webkit-scrollbar{height:3px}
-.mid-filter-row::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
+.mid-filter-row{display:flex;gap:4px;flex-wrap:wrap;overflow-x:hidden;padding-bottom:2px}
 .mid-search{padding:6px 10px;border-bottom:1px solid #efefef;flex-shrink:0}
 .mid-search input{width:100%;background:#f0f0f0;border:1px solid #e8e8e8;border-radius:5px;padding:5px 9px;font-size:12px;color:#333;transition:all 0.15s}
 .mid-search input:focus{background:#fff;border-color:#c0392b;box-shadow:0 0 0 2px rgba(192,57,43,0.08)}
@@ -69,8 +69,8 @@ a:hover{text-decoration:underline}
 .feed-item.selected{background:#fdf0ef;border-left-color:#c0392b}
 .feed-item.is-new{background:#fffaf9}
 .feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:nowrap;overflow:hidden}
-.feed-item .fi-title{font-size:12px;font-weight:600;color:#1a1a1a;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.feed-item .fi-id{font-size:10.5px;font-weight:700;color:#c0392b;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-item .fi-title{font-size:12px;font-weight:700;color:#1a1a1a;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.feed-item .fi-id{font-size:10px;font-weight:700;color:#c0392b;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .feed-item .fi-meta{font-size:10.5px;color:#aaa;display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
 .feed-item .fi-meta span{overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .feed-item.unread .fi-title{font-weight:700;color:#111}
@@ -86,7 +86,7 @@ a:hover{text-decoration:underline}
 .read-pane-actions{padding:12px 24px;border-top:1px solid #efefef;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;background:#fafafa}
 
 /* Badges */
-.badge{display:inline-flex;align-items:center;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:0.3px;line-height:1.4}
+.badge{display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:9.5px;font-weight:700;letter-spacing:0.3px;line-height:1.4}
 .badge-critical{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 .badge-high{background:#fff7ed;color:#ea580c;border:1px solid #fed7aa}
 .badge-medium{background:#fefce8;color:#ca8a04;border:1px solid #fef08a}
@@ -132,13 +132,17 @@ a:hover{text-decoration:underline}
 .paused-dot-gray{width:6px;height:6px;border-radius:50%;background:#aaa}
 
 /* Stats bar */
-.stats-bar{display:flex;gap:0;border-bottom:1px solid #e8e8e8;background:#fff;flex-shrink:0;overflow-x:auto}
-.stat-item{padding:8px 16px;text-align:center;border-right:1px solid #f0f0f0;flex-shrink:0;cursor:default;transition:background 0.1s}
+.stats-bar{display:flex;gap:0;border-bottom:1px solid #e8e8e8;background:#fff;flex-shrink:0;overflow-x:auto;align-items:stretch}
+.stat-group{display:flex;align-items:stretch;border-right:2px solid #e8e8e8}
+.stat-group:last-child{border-right:none}
+.stat-group-label{font-size:9px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:0.8px;writing-mode:vertical-rl;text-orientation:mixed;padding:6px 5px 6px 8px;border-right:1px solid #f0f0f0;background:#fafafa;display:flex;align-items:center;transform:rotate(180deg);user-select:none}
+.stat-item{padding:7px 16px;text-align:center;border-right:1px solid #f0f0f0;flex-shrink:0;cursor:default;transition:background 0.1s;display:flex;flex-direction:column;justify-content:center}
+.stat-item:last-child{border-right:none}
 .stat-item:hover{background:#fafafa}
 .stat-item.clickable{cursor:pointer}
 .stat-item:hover.clickable{background:#fdf0ef}
-.stat-val{font-size:17px;font-weight:700;line-height:1.2}
-.stat-lbl{font-size:10px;color:#999;font-weight:500;white-space:nowrap}
+.stat-val{font-size:18px;font-weight:700;line-height:1.2}
+.stat-lbl{font-size:9.5px;color:#aaa;font-weight:500;white-space:nowrap;margin-top:1px}
 
 /* Panel tabs (for right pane sub-sections) */
 .panel-tabs{display:flex;gap:0;border-bottom:1px solid #efefef;background:#fff;flex-shrink:0}
@@ -839,14 +843,52 @@ function Dashboard({onLogout}){
           {/* Title */}
           <div style={{fontSize:15,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:8}}>{a.title||a.id}</div>
           {/* Meta grid */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 16px",fontSize:11,color:"#888"}}>
-            <span>📡 Source: <strong style={{color:"#444"}}>{a.source||a.vendor||"—"}</strong></span>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 16px",fontSize:11,color:"#888",marginBottom:8}}>
+            <span>📡 Source: <strong style={{color:"#444"}}>{a.source||a.vendor||"—"}</strong>
+              {a.isOEM&&<span style={{marginLeft:4,fontSize:9,background:"#f0fdf4",color:"#15803d",border:"1px solid #86efac",borderRadius:3,padding:"1px 4px",fontWeight:700}}>OEM Direct</span>}
+              {!a.isOEM&&(a.source==="CISA KEV"||a.source==="cisa_kev")&&<span style={{marginLeft:4,fontSize:9,background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca",borderRadius:3,padding:"1px 4px",fontWeight:700}} title="Confirmed actively exploited by CISA — vendor patch may be available at official source">KEV Listed</span>}
+            </span>
             <span>📅 Published: <strong style={{color:"#444"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}</strong></span>
             {(a.cve||(a.cves&&a.cves[0]))&&<span>🔖 CVE: <strong style={{color:"#c0392b"}}>{a.cve||a.cves[0]}</strong></span>}
             {a.cvss&&<span>📊 CVSS: <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10 ({a.severity})</strong></span>}
             {a.author&&<span>✍️ Author: <strong style={{color:"#444"}}>{a.author}</strong></span>}
-            {a.source_count>1&&<span>📡 Also in: <strong style={{color:"#2563eb"}}>{a.source_count} sources</strong></span>}
+            {a.source_count>1&&(
+              <span title={a.sources_list?`Also reported by: ${a.sources_list.join(", ")}`:`Reported by ${a.source_count} sources`}
+                style={{cursor:"help"}}>
+                📡 Also in: <strong style={{color:"#2563eb"}}>{a.source_count} sources</strong>
+                <span style={{fontSize:9,color:"#aaa",marginLeft:2}}>ⓘ</span>
+              </span>
+            )}
           </div>
+          {/* Why This Matters — urgency summary line */}
+          {(()=>{
+            const reasons=[];
+            if(a.zeroDay)reasons.push({icon:"🔴",text:"Actively exploited zero-day",color:"#dc2626"});
+            else if(a.severity==="Critical")reasons.push({icon:"🔥",text:"Critical severity — patch immediately",color:"#dc2626"});
+            else if(a.severity==="High")reasons.push({icon:"⚠️",text:"High severity",color:"#ea580c"});
+            const text=a.description||a.summary||"";
+            if(/exploit|actively exploit|in the wild/i.test(text))reasons.push({icon:"💣",text:"Exploit available",color:"#9333ea"});
+            if(/internet.?facing|remote|unauthenticated|no auth/i.test(text))reasons.push({icon:"🌐",text:"Remote / unauthenticated",color:"#2563eb"});
+            if(/patch|update|available|fixed in/i.test(text))reasons.push({icon:"🩹",text:"Patch available",color:"#15803d"});
+            if(/identity|active directory|auth|credential|ldap|kerberos/i.test(text))reasons.push({icon:"🔐",text:"Identity service",color:"#7c3aed"});
+            if(/ransomware|nation.?state|apt|threat actor/i.test(text))reasons.push({icon:"☠️",text:"Nation-state / ransomware threat",color:"#dc2626"});
+            const vendor=(a.vendor||a.source||"").toLowerCase();
+            if(/microsoft|cisco|fortinet|palo alto|vmware|oracle|adobe/i.test(vendor))reasons.push({icon:"🏢",text:`${a.vendor||a.source} (widely deployed)`,color:"#555"});
+            const sl=slaStatus(a);
+            if(sl&&sl.overdue)reasons.push({icon:"⏰",text:`SLA overdue by ${sl.remainH}h`,color:"#dc2626"});
+            if(reasons.length===0)return null;
+            return(
+              <div style={{background:"#fffbf0",border:"1px solid #fde68a",borderRadius:6,padding:"6px 10px",display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+                <span style={{fontSize:10,fontWeight:700,color:"#92400e",textTransform:"uppercase",letterSpacing:"0.5px",flexShrink:0}}>Why this matters:</span>
+                {reasons.slice(0,4).map((r,i)=>(
+                  <span key={i} style={{fontSize:11,color:r.color,fontWeight:500,display:"flex",alignItems:"center",gap:3}}>
+                    {i>0&&<span style={{color:"#d97706",marginRight:2}}>·</span>}
+                    {r.icon} {r.text}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Panel tabs */}
@@ -1113,7 +1155,6 @@ function Dashboard({onLogout}){
           {a.zeroDay&&<ZDBadge/>}
           {a.isOEM&&<OEMBadge/>}
           {ackInfo&&<AckBadge by={ackInfo.by}/>}
-          <SLABadge advisory={a} statuses={statuses}/>
           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
         </div>
         <div className="fi-id">{a.id}</div>
@@ -1869,18 +1910,47 @@ function Dashboard({onLogout}){
         </div>
       </div>
 
-      {/* STATS BAR */}
+      {/* STATS BAR — grouped: Severity | Threat Activity | Workflow | Timestamp */}
       <div className="stats-bar">
-        {[["Total",stats.total,"#444"],["Critical",stats.critical,"#dc2626"],["High",stats.high,"#ea580c"],["Medium",stats.medium,"#ca8a04"],["Low",stats.low,"#16a34a"],["Zero-Days",stats.zeroDay,"#9333ea"],["New",stats.newItems,"#2563eb"],["SLA Overdue",stats.slaOverdue,"#dc2626"]].map(([l,v,c])=>(
-          <div key={l} className={"stat-item"+(l==="New"&&v>0?" clickable":"")} onClick={l==="New"&&v>0?()=>{setFNew(true);setTab("feed");setSideFilter("all");}:undefined}
-            style={l==="New"&&v>0?{borderColor:"#bfdbfe"}:{}}>
-            <div className="stat-val" style={{color:v>0?c:"#ccc"}}>{fLoad&&v===0?"…":v}</div>
-            <div className="stat-lbl">{l}</div>
+        {/* Group 1: Total + Severity */}
+        <div className="stat-group">
+          <div className="stat-group-label">Severity</div>
+          {[["Total",stats.total,"#444"],["Critical",stats.critical,"#dc2626"],["High",stats.high,"#ea580c"],["Medium",stats.medium,"#ca8a04"],["Low",stats.low,"#16a34a"]].map(([l,v,c])=>(
+            <div key={l} className="stat-item">
+              <div className="stat-val" style={{color:v>0?c:"#ccc"}}>{fLoad&&v===0?"…":v}</div>
+              <div className="stat-lbl">{l}</div>
+            </div>
+          ))}
+        </div>
+        {/* Group 2: Threat Signals */}
+        <div className="stat-group">
+          <div className="stat-group-label">Threats</div>
+          <div className="stat-item">
+            <div className="stat-val" style={{color:stats.zeroDay>0?"#9333ea":"#ccc"}}>{fLoad&&stats.zeroDay===0?"…":stats.zeroDay}</div>
+            <div className="stat-lbl">Zero-Days</div>
           </div>
-        ))}
-        <div className="stat-item" style={{marginLeft:"auto",textAlign:"right"}}>
-          <div className="stat-val" style={{fontSize:12,color:"#888",fontWeight:500}}>{lastFetched?"Updated":""}</div>
-          <div className="stat-lbl">{lastFetched||"Never fetched"}</div>
+          <div className="stat-item clickable" onClick={stats.newItems>0?()=>{setFNew(true);setTab("feed");setSideFilter("all");}:undefined}
+            style={stats.newItems>0?{background:"#eff6ff"}:{}}>
+            <div className="stat-val" style={{color:stats.newItems>0?"#2563eb":"#ccc"}}>{fLoad&&stats.newItems===0?"…":stats.newItems}</div>
+            <div className="stat-lbl" style={{color:stats.newItems>0?"#2563eb":undefined}}>New ↗</div>
+          </div>
+        </div>
+        {/* Group 3: Workflow */}
+        <div className="stat-group">
+          <div className="stat-group-label">Workflow</div>
+          <div className="stat-item" style={stats.slaOverdue>0?{background:"#fef2f2"}:{}}>
+            <div className="stat-val" style={{color:stats.slaOverdue>0?"#dc2626":"#ccc"}}>{fLoad&&stats.slaOverdue===0?"…":stats.slaOverdue}</div>
+            <div className="stat-lbl" style={{color:stats.slaOverdue>0?"#dc2626":undefined}}>SLA Due</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-val" style={{color:srcStats.enabled>0?"#6b7280":"#ccc",fontSize:15}}>{srcStats.enabled}</div>
+            <div className="stat-lbl">Sources</div>
+          </div>
+        </div>
+        {/* Timestamp — right-aligned */}
+        <div className="stat-item" style={{marginLeft:"auto",textAlign:"right",paddingRight:16,borderLeft:"1px solid #f0f0f0"}}>
+          <div style={{fontSize:11,color:"#aaa",fontWeight:500}}>{lastFetched?"Updated":""}</div>
+          <div style={{fontSize:11,color:"#666",fontWeight:500}}>{lastFetched||"Never fetched"}</div>
         </div>
       </div>
 
@@ -1989,6 +2059,17 @@ function Dashboard({onLogout}){
               </div>
             </div>
 
+            {/* Drag-to-resize handle */}
+            <div className="mid-panel-resize" onMouseDown={e=>{
+              e.preventDefault();
+              const panel=e.currentTarget.previousSibling;
+              const startX=e.clientX;
+              const startW=panel.offsetWidth;
+              const onMove=ev=>{const w=Math.max(280,Math.min(520,startW+(ev.clientX-startX)));panel.style.width=w+"px";};
+              const onUp=()=>{document.removeEventListener("mousemove",onMove);document.removeEventListener("mouseup",onUp);};
+              document.addEventListener("mousemove",onMove);
+              document.addEventListener("mouseup",onUp);
+            }} title="Drag to resize"/>
             {/* Right reading pane */}
             <ReadingPane advisory={selectedAdvisory}/>
           </>
