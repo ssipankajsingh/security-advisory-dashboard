@@ -399,6 +399,82 @@ const SOURCE_LIBRARY=[
   {id:"reddit_netsec",name:"Reddit r/netsec",vendor:"Reddit",cat:"News",tier:1,enabled:true,rss:"https://www.reddit.com/r/netsec/.rss",url:"https://www.reddit.com/r/netsec"},
   {id:"threatpost",name:"Threatpost",vendor:"Threatpost",cat:"News",tier:2,enabled:false,rss:"https://threatpost.com/feed/",url:"https://threatpost.com"},
   {id:"schneier",name:"Schneier on Security",vendor:"Schneier",cat:"News",tier:2,enabled:true,rss:"https://www.schneier.com/feed/atom/",url:"https://www.schneier.com"},
+  // ══ BATCH 2 ADDITIONS (url_LIST.xlsx audit Apr 2026) ═══════════════════════
+  // OS & PLATFORM
+  {id:"lenovo_security",name:"Lenovo Product Security Advisories",vendor:"Lenovo",cat:"OS & Platform",tier:1,enabled:true,rss:"https://support.lenovo.com/us/en/product_security/rss",url:"https://support.lenovo.com/us/en/product_security/ps500001-lenovo-product-security-advisories"},
+  {id:"amd_security",name:"AMD Product Security Advisories",vendor:"AMD",cat:"OS & Platform",tier:1,enabled:true,rss:"https://www.amd.com/en/resources/product-security.html/rss",url:"https://www.amd.com/en/resources/product-security.html"},
+  {id:"hp_security",name:"HP Security Bulletins",vendor:"HP",cat:"OS & Platform",tier:1,enabled:true,rss:"https://support.hp.com/wps/mss/rss/en_US/security-bulletins",url:"https://support.hp.com/us-en/security-bulletins"},
+  {id:"acer_security",name:"Acer Security Vulnerabilities",vendor:"Acer",cat:"OS & Platform",tier:2,enabled:true,rss:"https://community.acer.com/en/kb/categories/1623-security-vulnerabilities/feed",url:"https://community.acer.com/en/kb/categories/1623-security-vulnerabilities/"},
+  // NETWORK
+  {id:"arista_security",name:"Arista Networks Security Advisories",vendor:"Arista Networks",cat:"Network",tier:1,enabled:true,rss:"https://www.arista.com/en/support/advisories-notices/security-advisory/rss",url:"https://www.arista.com/en/support/advisories-notices"},
+  {id:"mitel_security",name:"Mitel Security Advisories",vendor:"Mitel",cat:"Network",tier:1,enabled:true,rss:"https://www.mitel.com/support/security-advisories/rss",url:"https://www.mitel.com/support/security-advisories"},
+  {id:"forcepoint_security",name:"Forcepoint Security Advisories",vendor:"Forcepoint",cat:"Network",tier:1,enabled:true,rss:"https://support.forcepoint.com/rss/security-advisories",url:"https://support.forcepoint.com/s/article/Forcepoint-Security-Advisories-Featured-Article"},
+  // CLOUD
+  {id:"nutanix_security",name:"Nutanix Security Advisories",vendor:"Nutanix",cat:"Cloud",tier:1,enabled:true,rss:"https://portal.nutanix.com/page/documents/security-advisories/list/rss",url:"https://portal.nutanix.com/page/documents/security-advisories"},
+  // ENDPOINT
+  {id:"beyondtrust_security",name:"BeyondTrust Security Advisories",vendor:"BeyondTrust",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.beyondtrust.com/rss/security-advisories",url:"https://www.beyondtrust.com/trust-center/security-advisories"},
+  {id:"brother_security",name:"Brother Security Advisories",vendor:"Brother",cat:"Endpoint",tier:2,enabled:true,rss:"https://support.brother.com/g/s/security/rss/en/",url:"https://support.brother.com/g/s/security/en/"},
+  {id:"marvell_security",name:"Marvell Security Advisories",vendor:"Marvell",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.marvell.com/rss/security-advisories.xml",url:"https://www.marvell.com/support/security-advisories.html"},
+  // BROWSER / MIDDLEWARE
+  {id:"sap_security",name:"SAP Security Notes & News",vendor:"SAP",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.sap.com/rss/content/whatsnew.xml",url:"https://support.sap.com/en/my-support/knowledge-base/security-notes-news.html"},
+  {id:"devolutions_security",name:"Devolutions Security Advisories",vendor:"Devolutions",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://devolutions.net/security/advisories/rss",url:"https://devolutions.net/security/advisories/"},
+  // GOVERNMENT
+  {id:"cccs_alerts",name:"Canadian Centre for Cyber Security Alerts",vendor:"CCCS",cat:"Government",tier:1,enabled:true,rss:"https://www.cyber.gc.ca/api/en/alerts-advisories/feed/rss",url:"https://www.cyber.gc.ca/en/alerts-advisories"},
+  // THREAT INTEL
+  {id:"qualys_blog",name:"Qualys Security Blog",vendor:"Qualys",cat:"Threat Intel",tier:2,enabled:true,rss:"https://blog.qualys.com/feed",url:"https://blog.qualys.com/"},
+  // NEWS
+  {id:"cybersecnews",name:"Cybersecurity News",vendor:"CybersecurityNews",cat:"News",tier:2,enabled:true,rss:"https://cybersecuritynews.com/feed/",url:"https://cybersecuritynews.com/"},
+  {id:"gbhackers",name:"GBHackers On Security",vendor:"GBHackers",cat:"News",tier:2,enabled:true,rss:"https://gbhackers.com/feed/",url:"https://gbhackers.com/"},
+  {id:"cyberinsider",name:"Cyber Insider",vendor:"CyberInsider",cat:"News",tier:2,enabled:true,rss:"https://cyberinsider.com/feed/",url:"https://cyberinsider.com/"},
+  // ══ NEWLY ADDED VENDORS (missing vendor audit Apr 2026) ══════════════════
+  // OS & PLATFORM — ENTERPRISE
+  {id:"dell_security",name:"Dell Security Advisories",vendor:"Dell",cat:"OS & Platform",tier:1,enabled:true,rss:"https://www.dell.com/support/security/rss.xml",url:"https://www.dell.com/support/security"},
+  {id:"ibm_psirt",name:"IBM PSIRT Blog",vendor:"IBM",cat:"OS & Platform",tier:1,enabled:true,rss:"https://www.ibm.com/blogs/psirt/feed/",url:"https://www.ibm.com/blogs/psirt/"},
+  {id:"intel_security",name:"Intel Security Center",vendor:"Intel",cat:"OS & Platform",tier:1,enabled:true,rss:"https://www.intel.com/content/www/us/en/security-center/rss.html",url:"https://www.intel.com/content/www/us/en/security-center/default.html"},
+  {id:"nvidia_security",name:"NVIDIA Security Bulletins",vendor:"NVIDIA",cat:"OS & Platform",tier:1,enabled:true,rss:"https://www.nvidia.com/object/nvidia-rss.xml",url:"https://www.nvidia.com/en-us/security/"},
+  {id:"qualcomm_security",name:"Qualcomm Security Bulletins",vendor:"Qualcomm",cat:"Endpoint",tier:1,enabled:true,rss:"https://docs.qualcomm.com/product/publicresources/securitybulletin/rss.xml",url:"https://docs.qualcomm.com/product/publicresources/securitybulletin/"},
+  {id:"samsung_security",name:"Samsung Semiconductor Security Updates",vendor:"Samsung",cat:"Endpoint",tier:2,enabled:true,rss:"https://semiconductor.samsung.com/rss/security/",url:"https://semiconductor.samsung.com/support/quality-support/product-security-updates/"},
+  // NETWORK / SECURITY APPLIANCES
+  {id:"huawei_psirt",name:"Huawei PSIRT Security Bulletins",vendor:"Huawei",cat:"Network",tier:1,enabled:true,rss:"https://www.huawei.com/en/rss-feeds/psirt",url:"https://www.huawei.com/en/psirt"},
+  {id:"asus_security",name:"ASUS Product Security Advisories",vendor:"ASUS",cat:"Network",tier:1,enabled:true,rss:"https://www.asus.com/security-advisory/rss",url:"https://www.asus.com/content/asus-product-security-advisory/"},
+  {id:"tplink_security",name:"TP-Link Security Advisories",vendor:"TP-Link",cat:"Network",tier:1,enabled:true,rss:"https://www.tp-link.com/security.xml",url:"https://www.tp-link.com/en/support/security-advisory/"},
+  {id:"netapp_security",name:"NetApp Security Advisories",vendor:"NetApp",cat:"Network",tier:1,enabled:true,rss:"https://security.netapp.com/atom.xml",url:"https://security.netapp.com/advisory/"},
+  {id:"openvpn_security",name:"OpenVPN Security Advisories",vendor:"OpenVPN",cat:"Network",tier:1,enabled:true,rss:"https://openvpn.net/security-advisories/feed/",url:"https://openvpn.net/security-advisories/"},
+  {id:"thales_psirt",name:"Thales PSIRT Advisories",vendor:"Thales",cat:"Network",tier:1,enabled:true,rss:"https://www.thalesgroup.com/en/global/group/psirt/feed",url:"https://www.thalesgroup.com/en/global/group/psirt"},
+  {id:"apc_schneider",name:"Schneider Electric / APC Security Notifications",vendor:"Schneider Electric",cat:"Network",tier:1,enabled:true,rss:"https://www.se.com/ww/en/rss/security-notifications.xml",url:"https://www.se.com/ww/en/work/support/cybersecurity/security-notifications.jsp"},
+  {id:"zscaler_security",name:"Zscaler Security Advisories",vendor:"Zscaler",cat:"Cloud",tier:1,enabled:true,rss:"https://www.zscaler.com/security-advisories/rss",url:"https://www.zscaler.com/security-advisories"},
+  // ENDPOINT / IDENTITY SECURITY
+  {id:"kaspersky_security",name:"Kaspersky Vulnerability Advisories",vendor:"Kaspersky",cat:"Endpoint",tier:1,enabled:true,rss:"https://support.kaspersky.com/rss/vulnerability.rss",url:"https://support.kaspersky.com/vulnerability"},
+  {id:"cyberark_security",name:"CyberArk Product Security",vendor:"CyberArk",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.cyberark.com/product-security/rss",url:"https://www.cyberark.com/product-security/"},
+  {id:"veritas_security",name:"Veritas Security Advisories",vendor:"Veritas",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.veritas.com/support/en_US/security.rss",url:"https://www.veritas.com/support/en_US/security"},
+  {id:"commvault_security",name:"Commvault Security Advisories",vendor:"Commvault",cat:"Endpoint",tier:1,enabled:true,rss:"https://documentation.commvault.com/securityadvisories/rss.xml",url:"https://documentation.commvault.com/securityadvisories/"},
+  {id:"yubico_advisories",name:"Yubico Security Advisories",vendor:"Yubico",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.yubico.com/support/security-advisories/feed/",url:"https://www.yubico.com/support/security-advisories/"},
+  {id:"symantec_broadcom",name:"Broadcom / Symantec Security Updates",vendor:"Broadcom/Symantec",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.broadcom.com/rss/security-advisories.xml",url:"https://www.broadcom.com/support/security-center"},
+  {id:"lexmark_security",name:"Lexmark Security Advisories",vendor:"Lexmark",cat:"Endpoint",tier:1,enabled:true,rss:"https://www.lexmark.com/en_us/solutions/security/lexmark-security-advisories/rss.xml",url:"https://www.lexmark.com/en_us/solutions/security/lexmark-security-advisories.html"},
+  {id:"zebra_security",name:"Zebra Security Alerts",vendor:"Zebra Technologies",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.zebra.com/rss/security-alerts.xml",url:"https://www.zebra.com/ap/en/support-downloads/lifeguard-security/"},
+  {id:"ricoh_security",name:"Ricoh Security Alerts",vendor:"Ricoh",cat:"Endpoint",tier:2,enabled:true,rss:"https://www.ricoh.com/rss/security-alerts.rss",url:"https://www.ricoh-ap.com/security-alerts"},
+  // CLOUD / SaaS
+  {id:"zoom_security",name:"Zoom Security Bulletins",vendor:"Zoom",cat:"Cloud",tier:1,enabled:true,rss:"https://explore.zoom.us/en/trust/security/security-bulletin/feed/",url:"https://www.zoom.com/en/trust/security-bulletin/"},
+  {id:"salesforce_security",name:"Salesforce Security Advisories",vendor:"Salesforce",cat:"Cloud",tier:1,enabled:true,rss:"https://security.salesforce.com/security-advisories.rss",url:"https://security.salesforce.com/security-advisories"},
+  {id:"newrelic_security",name:"New Relic Security Bulletins",vendor:"New Relic",cat:"Cloud",tier:1,enabled:true,rss:"https://docs.newrelic.com/docs/security/security-privacy/information-security/security-bulletins/rss.xml",url:"https://docs.newrelic.com/docs/security/security-privacy/information-security/security-bulletins/"},
+  {id:"mongodb_security",name:"MongoDB Security Advisories",vendor:"MongoDB",cat:"Cloud",tier:2,enabled:true,rss:"https://www.mongodb.com/blog/channel/security/rss",url:"https://www.mongodb.com/resources/products/alerts"},
+  {id:"uipath_security",name:"UiPath Security Advisories",vendor:"UiPath",cat:"Cloud",tier:2,enabled:true,rss:"https://www.uipath.com/trust-security-advisories.rss",url:"https://www.uipath.com/legal/trust-and-security/security-advisories"},
+  // BROWSER / MIDDLEWARE / DEV TOOLS
+  {id:"adobe_security",name:"Adobe Security Bulletins",vendor:"Adobe",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://helpx.adobe.com/security/home.xml",url:"https://helpx.adobe.com/security.html"},
+  {id:"jenkins_security",name:"Jenkins Security Advisories",vendor:"Jenkins",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.jenkins.io/security/advisories/rss.xml",url:"https://www.jenkins.io/security/advisories/"},
+  {id:"nodejs_security",name:"Node.js Security Releases",vendor:"Node.js",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://nodejs.org/en/feed/vulnerability.xml",url:"https://nodejs.org/en/blog/vulnerability"},
+  {id:"mariadb_security",name:"MariaDB Security Advisories",vendor:"MariaDB",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://mariadb.com/kb/en/security/rss/",url:"https://mariadb.com/kb/en/security/"},
+  {id:"postgresql_security",name:"PostgreSQL Security Announcements",vendor:"PostgreSQL",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.postgresql.org/news/pgsql-announce/",url:"https://www.postgresql.org/support/security/"},
+  {id:"libreoffice_security",name:"LibreOffice Security Advisories",vendor:"LibreOffice",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.libreoffice.org/news-and-events/rss/",url:"https://www.libreoffice.org/about-us/security/advisories/"},
+  {id:"ruby_security",name:"Ruby Security Advisories",vendor:"Ruby",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.ruby-lang.org/en/security/feed/",url:"https://www.ruby-lang.org/en/security/"},
+  {id:"foxit_security",name:"Foxit Security Bulletins",vendor:"Foxit",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.foxit.com/rss/security-bulletins.rss",url:"https://www.foxit.com/support/security-bulletins.html"},
+  {id:"wireshark_security",name:"Wireshark Security Advisories",vendor:"Wireshark",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://www.wireshark.org/news/rss.xml",url:"https://www.wireshark.org/security/"},
+  {id:"jetbrains_security",name:"JetBrains Security Issues Fixed",vendor:"JetBrains",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://www.jetbrains.com/privacy-security/issues-fixed/rss",url:"https://www.jetbrains.com/privacy-security/issues-fixed/"},
+  {id:"teamviewer_security",name:"TeamViewer Security Bulletins",vendor:"TeamViewer",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.teamviewer.com/en/resources/trust-center/security-bulletins/rss/",url:"https://www.teamviewer.com/en/trust/security-bulletins/"},
+  {id:"avaya_security",name:"Avaya Security Advisories",vendor:"Avaya",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://support.avaya.com/rss/security.xml",url:"https://support.avaya.com/css/public/documents/101090376"},
+  {id:"autodesk_security",name:"Autodesk Security Advisories",vendor:"Autodesk",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.autodesk.com/trust/security-advisories/rss.xml",url:"https://www.autodesk.com/trust/security-advisories"},
+  {id:"zimbra_security",name:"Zimbra Security Advisories",vendor:"Zimbra",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://wiki.zimbra.com/wiki/Special:RecentChanges&feed=rss",url:"https://wiki.zimbra.com/wiki/Zimbra_Security_Advisories"},
+  {id:"pgadmin_news",name:"pgAdmin Security News",vendor:"pgAdmin",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://www.pgadmin.org/rss.xml",url:"https://www.pgadmin.org/news/"},
 ];
 
 const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
