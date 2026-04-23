@@ -530,7 +530,7 @@ function LoginScreen({onLogin,onDenied}){
         <div className="login-logo">
           <div className="login-logo-icon">🛡️</div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Concentrix Endpoint Security · GSE SOC Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -822,6 +822,217 @@ function Dashboard({onLogout}){
   const selectedAdvisory=sel?advisories.find(a=>a.id===sel):null;
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
 
+
+  // ── SOC NOTES TAB — no API key needed, shared via Supabase ─────────────────
+  function SOCNotesTab({advisory, ackInfo, userName, onSave}){
+    // Try to parse existing note as structured SOC JSON, fall back to plain text
+    const existing = React.useMemo(()=>{
+      const raw = ackInfo?.note||"";
+      if(!raw) return null;
+      try{ const p=JSON.parse(raw); if(p.note!==undefined) return p; }catch{}
+      return {note:raw, impact:"", action:"", falsePos:false};
+    },[ackInfo?.note]);
+
+    const [note,setNote]     = React.useState(existing?.note||"");
+    const [impact,setImpact] = React.useState(existing?.impact||"");
+    const [action,setAction] = React.useState(existing?.action||"");
+    const [falsePos,setFP]   = React.useState(existing?.falsePos||false);
+    const [saving,setSaving] = React.useState(false);
+    const [saved,setSaved]   = React.useState(false);
+
+    // Reset when advisory changes
+    React.useEffect(()=>{
+      const ex=existing;
+      setNote(ex?.note||""); setImpact(ex?.impact||"");
+      setAction(ex?.action||""); setFP(ex?.falsePos||false); setSaved(false);
+    },[advisory.id]);
+
+    const handleSave=async()=>{
+      if(!note.trim()&&!impact.trim()&&!action.trim()){alert("Add at least one note before saving.");return;}
+      setSaving(true);
+      const ok=await onSave(note,impact,action,falsePos);
+      setSaving(false);
+      if(ok)setSaved(true);
+    };
+
+    // Quick action templates
+    const templates=[
+      {label:"False Positive",note:"Reviewed — does not affect our environment. Marking as False Positive.",action:"None — not applicable to our stack.",falsePos:true},
+      {label:"Patch Scheduled",note:"Vulnerability confirmed. Patch scheduled for next maintenance window.",action:"Schedule patching in next maintenance window.",falsePos:false},
+      {label:"Under Investigation",note:"Under investigation — checking affected systems.",action:"Identify affected systems and assess blast radius.",falsePos:false},
+      {label:"Patch Applied",note:"Patch has been applied and verified on all affected systems.",action:"Patch applied. Verify with vulnerability scan.",falsePos:false},
+      {label:"Risk Accepted",note:"Risk formally accepted — mitigating controls in place.",action:"Document risk acceptance and compensating controls.",falsePos:false},
+    ];
+
+    return(
+      <div className="scroll-area">
+        {/* Show previous note if exists */}
+        {existing&&(
+          <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:7,padding:"10px 12px",marginBottom:14,fontSize:12}}>
+            <div style={{fontWeight:700,color:"#15803d",marginBottom:4,display:"flex",justifyContent:"space-between"}}>
+              <span>📋 Last saved by {existing.by||ackInfo?.by||"team"}</span>
+              <span style={{color:"#aaa",fontWeight:400}}>{existing.at?new Date(existing.at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""}</span>
+            </div>
+            {existing.note&&<div style={{color:"#166534",marginBottom:existing.impact||existing.action?4:0}}>{existing.note}</div>}
+            {existing.impact&&<div style={{color:"#555",fontSize:11}}><strong>Impact:</strong> {existing.impact}</div>}
+            {existing.action&&<div style={{color:"#555",fontSize:11}}><strong>Action:</strong> {existing.action}</div>}
+            {existing.falsePos&&<span style={{background:"#f5f5f5",color:"#888",border:"1px solid #e0e0e0",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700}}>FALSE POSITIVE</span>}
+          </div>
+        )}
+
+        {/* Quick Templates */}
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>⚡ Quick Templates</div>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {templates.map(t=>(
+              <button key={t.label} className="btn btn-secondary" style={{fontSize:11,padding:"4px 10px"}}
+                onClick={()=>{setNote(t.note);setAction(t.action);setFP(t.falsePos);setSaved(false);}}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Note fields */}
+        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>📝 Analysis Note <span style={{fontWeight:400,color:"#bbb"}}>(visible to whole team)</span></div>
+            <textarea value={note} onChange={e=>{setNote(e.target.value);setSaved(false);}} rows={3}
+              placeholder="Describe your analysis, context, or findings about this advisory…"
+              style={{width:"100%",background:"#fff",border:"1px solid #e0e0e0",borderRadius:6,padding:"8px 10px",fontSize:12.5,color:"#333",resize:"vertical",lineHeight:1.6,fontFamily:"inherit"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>🎯 Impact Assessment <span style={{fontWeight:400,color:"#bbb"}}>(optional)</span></div>
+            <textarea value={impact} onChange={e=>{setImpact(e.target.value);setSaved(false);}} rows={2}
+              placeholder="e.g. Affects Windows 11 endpoints. ~200 devices potentially impacted."
+              style={{width:"100%",background:"#fff",border:"1px solid #e0e0e0",borderRadius:6,padding:"8px 10px",fontSize:12.5,color:"#333",resize:"vertical",lineHeight:1.6,fontFamily:"inherit"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>✅ Recommended Action <span style={{fontWeight:400,color:"#bbb"}}>(optional)</span></div>
+            <textarea value={action} onChange={e=>{setAction(e.target.value);setSaved(false);}} rows={2}
+              placeholder="e.g. Apply KB5034441 via SCCM by Friday. Test in staging first."
+              style={{width:"100%",background:"#fff",border:"1px solid #e0e0e0",borderRadius:6,padding:"8px 10px",fontSize:12.5,color:"#333",resize:"vertical",lineHeight:1.6,fontFamily:"inherit"}}/>
+          </div>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#555"}}>
+            <input type="checkbox" checked={falsePos} onChange={e=>{setFP(e.target.checked);setSaved(false);}} style={{width:14,height:14}}/>
+            <span>Mark as <strong>False Positive</strong> — not applicable to our environment</span>
+          </label>
+        </div>
+
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{minWidth:120}}>
+            {saving?"💾 Saving…":"💾 Save Note"}
+          </button>
+          {saved&&<span style={{color:"#15803d",fontSize:12,fontWeight:600}}>✓ Saved — visible to all team members</span>}
+          {!userName&&<span style={{color:"#dc2626",fontSize:11}}>⚠ Set your name in Settings first</span>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── NVD ENRICHMENT — fetches extra CVE data on demand ────────────────────
+  function NVDEnrichment({cveId}){
+    const [data,setData]=React.useState(null);
+    const [loading,setLoading]=React.useState(false);
+    const [fetched,setFetched]=React.useState(false);
+    const nvdKey=localStorage.getItem("sad_nvdkey")||"";
+
+    const fetch_nvd=async()=>{
+      if(loading||fetched)return;
+      setLoading(true);
+      try{
+        const headers=nvdKey?{"apiKey":nvdKey}:{};
+        const res=await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cveId}`,{headers});
+        const json=await res.json();
+        const cve=json.vulnerabilities?.[0]?.cve||null;
+        setData(cve);
+      }catch(e){setData(null);}
+      setLoading(false);setFetched(true);
+    };
+
+    // Auto-fetch on mount
+    React.useEffect(()=>{fetch_nvd();},[cveId]);
+
+    if(loading) return <div style={{color:"#aaa",fontSize:12,padding:"8px 0"}}>⟳ Loading NVD data…</div>;
+    if(!data||!fetched) return null;
+
+    const score=data?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore
+              ||data?.metrics?.cvssMetricV30?.[0]?.cvssData?.baseScore
+              ||data?.metrics?.cvssMetricV2?.[0]?.cvssData?.baseScore;
+    const vector=data?.metrics?.cvssMetricV31?.[0]?.cvssData?.vectorString
+               ||data?.metrics?.cvssMetricV30?.[0]?.cvssData?.vectorString||"";
+    const weaknesses=(data?.weaknesses||[]).flatMap(w=>w.description||[]).map(d=>d.value).filter(Boolean);
+    const isKev=!!data?.cisaExploitAdd;
+    const refs=(data?.references||[]).slice(0,8);
+
+    // Extract vendor/products from CPE
+    const vendors=new Set(),products=new Set();
+    (data?.configurations||[]).forEach(cfg=>(cfg.nodes||[]).forEach(n=>(n.cpeMatch||[]).forEach(c=>{
+      const p=c.criteria?.split(":")||[];
+      if(p[3])vendors.add(p[3].replace(/_/g," "));
+      if(p[4])products.add(p[4].replace(/_/g," "));
+    })));
+
+    return(
+      <div style={{marginTop:4}}>
+        {/* NVD header */}
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+          <span style={{fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:4,padding:"2px 7px"}}>NVD</span>
+          <span style={{fontSize:11,color:"#aaa"}}>Data auto-fetched from NIST NVD</span>
+          {isKev&&<span style={{fontSize:10,fontWeight:700,color:"#dc2626",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:4,padding:"2px 7px"}}>🚨 CISA KEV</span>}
+        </div>
+        {/* Score + vector */}
+        {score&&(
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:20,fontWeight:800,color:score>=9?"#dc2626":score>=7?"#ea580c":score>=4?"#ca8a04":"#16a34a"}}>{score}</span>
+            <span style={{fontSize:11,color:"#888"}}>/ 10</span>
+            {vector&&<code style={{fontSize:10,color:"#555",background:"#f5f5f5",padding:"2px 6px",borderRadius:3}}>{vector}</code>}
+          </div>
+        )}
+        {/* KEV details */}
+        {isKev&&(
+          <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,padding:"8px 10px",marginBottom:8,fontSize:11}}>
+            <strong style={{color:"#dc2626"}}>CISA KEV:</strong>
+            {data.cisaVulnerabilityName&&<span style={{color:"#444",marginLeft:4}}>{data.cisaVulnerabilityName}</span>}
+            {data.cisaRequiredAction&&<div style={{color:"#555",marginTop:3}}><strong>Required action:</strong> {data.cisaRequiredAction}</div>}
+            {data.cisaActionDue&&<div style={{color:"#dc2626",marginTop:2}}><strong>Due:</strong> {data.cisaActionDue}</div>}
+          </div>
+        )}
+        {/* Weaknesses */}
+        {weaknesses.length>0&&(
+          <div style={{marginBottom:8}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px"}}>Weaknesses: </span>
+            {weaknesses.map(w=><span key={w} style={{background:"#fdf4ff",color:"#7e22ce",border:"1px solid #e9d5ff",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700,marginLeft:4}}>{w}</span>)}
+          </div>
+        )}
+        {/* Vendors */}
+        {vendors.size>0&&(
+          <div style={{marginBottom:6}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px"}}>Vendors: </span>
+            {[...vendors].slice(0,6).map(v=><span key={v} style={{background:"#f5f5f5",border:"1px solid #e8e8e8",borderRadius:4,padding:"1px 6px",fontSize:10,color:"#555",marginLeft:4,textTransform:"capitalize"}}>{v}</span>)}
+          </div>
+        )}
+        {/* Products */}
+        {products.size>0&&(
+          <div style={{marginBottom:6}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px"}}>Products: </span>
+            {[...products].slice(0,8).map(p=><span key={p} style={{background:"#fef9ef",border:"1px solid #fed7aa",borderRadius:4,padding:"1px 6px",fontSize:10,color:"#92400e",marginLeft:4,textTransform:"capitalize"}}>{p}</span>)}
+          </div>
+        )}
+        {/* References */}
+        {refs.length>0&&(
+          <div style={{marginTop:8}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5}}>References</div>
+            <div style={{background:"#fafafa",border:"1px solid #f0f0f0",borderRadius:6,padding:"6px 10px"}}>
+              {refs.map((r,i)=><a key={i} href={r.url} target="_blank" rel="noreferrer"
+                style={{display:"block",fontSize:11,color:"#2563eb",padding:"2px 0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.url}</a>)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── READING PANE ──────────────────────────────────────────────────────────
   function ReadingPane({advisory}){
     if(!advisory)return(
@@ -910,7 +1121,7 @@ function Dashboard({onLogout}){
         {/* Panel tabs */}
         <div className="panel-tabs">
           <div className={"panel-tab"+(readPane==="detail"?" active":"")} onClick={()=>setReadPane("detail")}>Advisory Details</div>
-          <div className={"panel-tab"+(readPane==="triage"?" active":"")} onClick={()=>setReadPane("triage")}>🤖 AI Triage</div>
+          <div className={"panel-tab"+(readPane==="triage"?" active":"")} onClick={()=>setReadPane("triage")}>📋 SOC Notes</div>
           <div className={"panel-tab"+(readPane==="assign"?" active":"")} onClick={()=>setReadPane("assign")}>👤 Assign & Status</div>
         </div>
 
@@ -993,6 +1204,10 @@ function Dashboard({onLogout}){
                       ))}
                     </div>
                   )}
+                  {/* Auto-enrich with NVD data for this CVE */}
+                  <div style={{borderTop:"1px solid #efefef",paddingTop:10,marginTop:10}}>
+                    <NVDEnrichment cveId={a.cve||a.cves[0]}/>
+                  </div>
                 </div>
               )}
 
@@ -1009,6 +1224,19 @@ function Dashboard({onLogout}){
                 );
               })()}
 
+              {/* ── FULL LINK READ-MORE (when no CVE + no description) ── */}
+              {!(a.cve||(a.cves&&a.cves[0]))&&!(a.description||a.summary)&&(a.url||a.link)&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"14px 16px",marginBottom:10,textAlign:"center"}}>
+                  <div style={{fontSize:28,marginBottom:8}}>📰</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#333",marginBottom:4}}>Full content available at source</div>
+                  <div style={{fontSize:11,color:"#aaa",marginBottom:12,wordBreak:"break-all"}}>{(a.url||a.link)}</div>
+                  <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:12}}>
+                    🔗 Read Full Advisory at Source
+                  </a>
+                  <div style={{fontSize:10,color:"#bbb",marginTop:8}}>This advisory's full content is on the vendor's portal. Click to open in a new tab.</div>
+                </div>
+              )}
+
               {/* ── DESCRIPTION ── */}
               {(a.description||a.summary)&&(
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
@@ -1016,6 +1244,12 @@ function Dashboard({onLogout}){
                   <div style={{fontSize:12.5,color:"#333",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflowY:"auto"}}>
                     {(a.description&&a.description.length>(a.summary||"").length?a.description:a.summary).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}
                   </div>
+                  {/* If description is very short, prompt to check source */}
+                  {(a.description||a.summary||"").replace(/<[^>]+>/g," ").trim().length<120&&(
+                    <div style={{marginTop:8,padding:"6px 10px",background:"#f8f8f8",borderRadius:5,fontSize:11,color:"#888",display:"flex",alignItems:"center",gap:6}}>
+                      ℹ️ Summary is brief — <a href={a.url||a.link} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontWeight:600}}>read full advisory at source ↗</a>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1078,25 +1312,27 @@ function Dashboard({onLogout}){
             </div>
           )}
 
-          {/* ── TRIAGE TAB ── */}
+          {/* ── SOC NOTES TAB ── */}
           {readPane==="triage"&&(
-            <div className="scroll-area">
-              {(aiTriageResults[a.id]||ackInfo?.ai_triage)?(
-                <div className="ai-box" style={{marginBottom:14}}>
-                  🤖 <strong>AI Triage:</strong> {aiTriageResults[a.id]||ackInfo?.ai_triage}
-                </div>
-              ):(
-                <div style={{color:"#888",fontSize:13,marginBottom:14}}>No AI triage run yet for this advisory.</div>
-              )}
-              {(a.severity==="Critical"||a.severity==="High"||a.zeroDay)&&(
-                <button className="btn btn-ai" onClick={()=>runAITriage(a)} disabled={!!triageLoading[a.id]}>
-                  {triageLoading[a.id]?"🤖 Analyzing…":"🤖 Run AI Triage"}
-                </button>
-              )}
-              {a.severity!=="Critical"&&a.severity!=="High"&&!a.zeroDay&&(
-                <div style={{color:"#bbb",fontSize:12}}>AI Triage is only available for Critical, High, and Zero-Day advisories.</div>
-              )}
-            </div>
+            <SOCNotesTab advisory={a} ackInfo={ackInfo} userName={userName}
+              onSave={async(note,impact,action,falsePos)=>{
+                if(!userName.trim()){alert("Set your name in Settings first.");return false;}
+                try{
+                  const existing=acks[a.id]||{};
+                  const socNote=JSON.stringify({note,impact,action,falsePos,by:userName,at:new Date().toISOString()});
+                  const res=await fetch(`${PROXY_URL}/ack`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
+                    body:JSON.stringify({id:a.id,by:existing.by||userName,note:socNote,
+                      status:statuses[a.id]||"In Review",assigned_to:existing.assigned_to||"",ai_triage:existing.ai_triage||""})});
+                  const data=await res.json();
+                  if(data.success){
+                    setAcks(p=>({...p,[a.id]:{...existing,by:existing.by||userName,note:socNote,at:existing.at||new Date().toISOString()}}));
+                    setStatuses(p=>({...p,[a.id]:p[a.id]||"In Review"}));
+                    return true;
+                  }
+                }catch(e){console.error("SOC note save failed",e);}
+                return false;
+              }}
+            />
           )}
 
           {/* ── ASSIGN & STATUS TAB ── */}
