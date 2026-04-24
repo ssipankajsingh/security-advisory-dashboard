@@ -485,6 +485,11 @@ const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
 
 // ─── MINI COMPONENTS ─────────────────────────────────────────────────────────
 const SevBadge=({sev})=><span className={"badge "+(SEV_BADGE_CLS[sev]||"badge-unknown")}>{(sev||"UNK").toUpperCase()}</span>;
+const DataQualityBadge=({q})=>{
+  if(q==="rich")   return null; // rich data needs no label
+  if(q==="partial")return<span title="Partial data — some fields extracted from text" style={{fontSize:9,fontWeight:600,color:"#ca8a04",background:"#fefce8",border:"1px solid #fef08a",borderRadius:3,padding:"1px 5px",flexShrink:0}}>PARTIAL</span>;
+  return<span title="Thin data — news/blog article. Full details at source." style={{fontSize:9,fontWeight:600,color:"#888",background:"#f5f5f5",border:"1px solid #e0e0e0",borderRadius:3,padding:"1px 5px",flexShrink:0}}>NEWS</span>;
+};
 const ZDBadge=()=><span className="badge badge-zeroday">0-DAY</span>;
 const NewBadge=()=><span className="badge badge-new fade-in">NEW</span>;
 const OEMBadge=()=><span className="badge badge-oem">OEM</span>;
@@ -1131,6 +1136,26 @@ function Dashboard({onLogout}){
             <div className="scroll-area">
               {ackInfo?.note&&<div className="pane-ack-note">📝 {ackInfo.note}</div>}
 
+              {/* ── DATA QUALITY BANNER for thin/news articles ── */}
+              {(a.data_quality==="thin"||a.isNews)&&(
+                <div style={{background:"#fffbf0",border:"1px solid #fde68a",borderRadius:7,padding:"9px 13px",marginBottom:12,display:"flex",gap:10,alignItems:"flex-start",fontSize:12}}>
+                  <span style={{fontSize:16,flexShrink:0}}>📰</span>
+                  <div>
+                    <strong style={{color:"#92400e"}}>News / Blog Article</strong>
+                    <span style={{color:"#a16207",marginLeft:6}}>— This feed item is a news article, not a structured PSIRT advisory.</span>
+                    <div style={{color:"#a16207",marginTop:3,fontSize:11}}>
+                      CVE IDs, CVSS scores, and product details may not be available. Click <strong>Official Advisory</strong> below to read the full article at source.
+                    </div>
+                  </div>
+                </div>
+              )}
+              {a.data_quality==="partial"&&!a.isNews&&(
+                <div style={{background:"#fffff5",border:"1px solid #fef08a",borderRadius:7,padding:"7px 12px",marginBottom:12,fontSize:11,color:"#854d0e",display:"flex",gap:8,alignItems:"center"}}>
+                  <span>⚠️</span>
+                  <span>Partial data — some fields were auto-extracted from the advisory text. For complete details, check the official advisory.</span>
+                </div>
+              )}
+
               {/* ── SLA STATUS ── */}
               {sl&&(
                 <div style={{background:sl.overdue?"#fef2f2":sl.urgent?"#fff7ed":"#f0fdf4",border:`1px solid ${sl.overdue?"#fecaca":sl.urgent?"#fed7aa":"#bbf7d0"}`,borderRadius:7,padding:"8px 14px",marginBottom:12,fontSize:12,display:"flex",alignItems:"center",gap:8}}>
@@ -1167,6 +1192,14 @@ function Dashboard({onLogout}){
                   <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</div>
                   <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.published?new Date(a.published).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC":""}</div>
                 </div>
+                {/* Review / Updated date */}
+                {a.updated&&a.updated!==a.published&&(
+                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Last Updated</div>
+                    <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{new Date(a.updated).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{new Date(a.updated).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC"}</div>
+                  </div>
+                )}
                 {/* Source */}
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                   <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Source</div>
@@ -1211,18 +1244,20 @@ function Dashboard({onLogout}){
                 </div>
               )}
 
-              {/* ── ADVISORY / BUG NUMBER ── */}
-              {(()=>{
-                const bugMatch = (a.id||"").match(/^(https?:\/\/)?(?:.*\/)?((?:SA|ADV|GHSA|FG-IR|ASB|MSRC|VMSA|VU#|KB|SEC|INTEL|HPSBST|HPSBHF|cisco-sa|fortinet|juniper)[^\s\/]{3,40})/i);
-                const bugId = bugMatch?.[2] || (a.id && !a.id.startsWith("http") && a.id.length < 60 ? a.id : null);
-                if(!bugId) return null;
-                return(
-                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>🔢 Advisory / Bug Number</div>
-                    <code style={{fontSize:13,fontWeight:700,color:"#1a1a1a",background:"#f5f5f5",padding:"3px 8px",borderRadius:4}}>{bugId}</code>
-                  </div>
-                );
-              })()}
+              {/* ── ADVISORY / BUG NUMBER — from server or fallback ── */}
+              {(a.bug_id||(()=>{
+                const idStr=a.id||"";
+                if(idStr.startsWith("CVE-")||idStr.startsWith("GHSA-")||idStr.startsWith("FG-")||
+                   idStr.startsWith("cisco-")||(!idStr.startsWith("http")&&idStr.length<60)) return idStr;
+                return null;
+              })())&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>🔢 Advisory / Bug Number</div>
+                  <code style={{fontSize:13,fontWeight:700,color:"#1a1a1a",background:"#f5f5f5",padding:"3px 8px",borderRadius:4}}>
+                    {a.bug_id||(a.id||"")}
+                  </code>
+                </div>
+              )}
 
               {/* ── FULL LINK READ-MORE (when no CVE + no description) ── */}
               {!(a.cve||(a.cves&&a.cves[0]))&&!(a.description||a.summary)&&(a.url||a.link)&&(
@@ -1265,19 +1300,31 @@ function Dashboard({onLogout}){
                 </div>
               )}
 
-              {/* ── SOLUTION / PATCH INFO extracted from description ── */}
-              {(()=>{
-                const text = (a.description||a.summary||"");
-                const patchMatch = text.match(/(?:solution|patch|fix|remediation|mitigation|update|upgrade|workaround|recommended action|required action)[:\s]+([^.]{20,400})/i);
-                const patchText = patchMatch?.[1]?.trim();
-                if(!patchText) return null;
-                return(
-                  <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"#15803d",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>🩹 Solution / Patch Information</div>
-                    <div style={{fontSize:12.5,color:"#166534",lineHeight:1.65}}>{patchText}</div>
+              {/* ── AFFECTED VERSIONS ── */}
+              {a.affected_versions?.length>0&&(
+                <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>📌 Affected Versions</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                    {a.affected_versions.map(v=>(
+                      <span key={v} style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:4,padding:"2px 8px",fontSize:11,color:"#dc2626",fontWeight:500}}>{v}</span>
+                    ))}
                   </div>
-                );
-              })()}
+                </div>
+              )}
+
+              {/* ── SOLUTION / PATCH INFO — from server extraction or text mining ── */}
+              {(a.patch_info||(()=>{
+                const text=(a.description||a.summary||"");
+                const m=text.match(/(?:solution|patch|fix|remediation|mitigation|update|upgrade|workaround|recommended action|required action)[:\s]+([^.]{20,400})/i);
+                return m?.[1]?.trim();
+              })())&&(
+                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#15803d",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>🩹 Solution / Patch Information</div>
+                  <div style={{fontSize:12.5,color:"#166534",lineHeight:1.65}}>
+                    {a.patch_info||(()=>{const text=(a.description||a.summary||"");const m=text.match(/(?:solution|patch|fix|remediation|mitigation|update|upgrade|workaround|recommended action|required action)[:\s]+([^.]{20,400})/i);return m?.[1]?.trim();})()}
+                  </div>
+                </div>
+              )}
 
               {/* ── SOURCES REPORTED BY ── */}
               {a.sources_list?.length>1&&(
@@ -1413,6 +1460,7 @@ function Dashboard({onLogout}){
             </span>
           )}
           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
+          <DataQualityBadge q={a.data_quality}/>
         </div>
         <div className="fi-id">{a.id}</div>
         <div className={"fi-title"+(a.isNew&&!ackInfo?" unread":"")}>{a.title}</div>
