@@ -1,5 +1,5 @@
 {
-  "name": "Security Advisory Dashboard — Concentrix GSE",
+  "name": "Security Advisory Dashboard —  GSE",
   "short_name": "CNX SecAdvisory",
   "description": "Real-time security advisory intelligence for Concentrix Endpoint Security & GSE SOC team",
   "start_url": "./index.html",
