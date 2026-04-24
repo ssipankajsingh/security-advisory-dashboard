@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Security Advisory Dashboard</title>
 <link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#ffffff"/>
+<meta name="theme-color" content="#0a1e50"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="SecAdvisory"/>
-<link rel="apple-touch-icon" href="icons/icon-192.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CNX SecAdvisory"/>
+<link rel="apple-touch-icon" href="icon192.png"/>
+<link rel="apple-touch-icon" sizes="192x192" href="icon192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="icon512.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="icon512.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -274,6 +277,22 @@ a:hover{text-decoration:underline}
 .page-btn:hover{border-color:#c0392b;color:#c0392b}
 .page-btn:disabled{opacity:0.4;cursor:not-allowed}
 .page-btn.active{background:#c0392b;color:#fff;border-color:#c0392b}
+
+/* ── PWA INSTALL PROMPT ── */
+.pwa-install-bar{position:fixed;bottom:0;left:0;right:0;background:#0a1e50;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,0.2);animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.pwa-install-bar .pwa-icon{width:36px;height:36px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.pwa-install-bar .pwa-text{flex:1;min-width:0}
+.pwa-install-bar .pwa-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pwa-install-bar .pwa-sub{font-size:11px;opacity:0.7;margin-top:1px}
+.pwa-btn-install{background:#ff6b00;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.pwa-btn-install:hover{background:#e05a00}
+.pwa-btn-dismiss{background:transparent;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px 12px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.pwa-btn-dismiss:hover{background:rgba(255,255,255,0.1);color:#fff}
+/* Install button in top bar */
+.install-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;transition:all 0.15s;white-space:nowrap}
+.install-btn:hover{background:#dbeafe;border-color:#93c5fd}
+.install-btn svg{width:13px;height:13px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -515,6 +534,108 @@ function CountdownTimer({nextRefresh,autoRefresh}){
   return<span style={{color:"#999",fontSize:11}}> · {h}h {String(m).padStart(2,"0")}m {String(s).padStart(2,"0")}s</span>;
 }
 
+// ─── PWA INSTALL ─────────────────────────────────────────────────────────────
+// Captures the beforeinstallprompt event and provides install UI
+let _deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  // Dispatch custom event so React components can react
+  window.dispatchEvent(new CustomEvent("pwa-installable"));
+});
+window.addEventListener("appinstalled", () => {
+  _deferredPrompt = null;
+  window.dispatchEvent(new CustomEvent("pwa-installed"));
+});
+
+function PWAInstallButton(){
+  const [installable, setInstallable] = React.useState(!!_deferredPrompt);
+  const [installed, setInstalled]     = React.useState(false);
+  const [installing, setInstalling]   = React.useState(false);
+
+  React.useEffect(()=>{
+    const onInstallable = () => setInstallable(true);
+    const onInstalled   = () => { setInstallable(false); setInstalled(true); };
+    window.addEventListener("pwa-installable", onInstallable);
+    window.addEventListener("pwa-installed",   onInstalled);
+    return ()=>{ window.removeEventListener("pwa-installable", onInstallable); window.removeEventListener("pwa-installed", onInstalled); };
+  },[]);
+
+  const handleInstall = async () => {
+    if(!_deferredPrompt) return;
+    setInstalling(true);
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    _deferredPrompt = null;
+    setInstalling(false);
+    if(outcome === "accepted") { setInstallable(false); setInstalled(true); }
+  };
+
+  if(installed) return(
+    <span style={{fontSize:11,color:"#15803d",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+      ✅ App installed
+    </span>
+  );
+  if(!installable) return null;
+  return(
+    <button className="install-btn" onClick={handleInstall} disabled={installing} title="Install as desktop/mobile app">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      {installing ? "Installing…" : "Install App"}
+    </button>
+  );
+}
+
+function PWAInstallBanner(){
+  const [show,setShow]         = React.useState(false);
+  const [dismissed,setDismiss] = React.useState(()=>localStorage.getItem("pwa_dismissed")==="1");
+  const [installing,setInst]   = React.useState(false);
+
+  React.useEffect(()=>{
+    if(dismissed) return;
+    // Show banner after 8 seconds if still installable
+    const timer = setTimeout(()=>{ if(_deferredPrompt) setShow(true); }, 8000);
+    const onInstallable = () => { if(!dismissed) setShow(true); };
+    window.addEventListener("pwa-installable", onInstallable);
+    return ()=>{ clearTimeout(timer); window.removeEventListener("pwa-installable", onInstallable); };
+  },[dismissed]);
+
+  const handleInstall = async () => {
+    if(!_deferredPrompt) return;
+    setInst(true);
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    _deferredPrompt = null;
+    setInst(false);
+    setShow(false);
+  };
+
+  const handleDismiss = () => {
+    setShow(false); setDismiss(true);
+    localStorage.setItem("pwa_dismissed","1");
+  };
+
+  if(!show || dismissed) return null;
+  return(
+    <div className="pwa-install-bar">
+      <div className="pwa-icon">
+        <img src="icon192.png" alt="CNX" style={{width:36,height:36,borderRadius:8}}/>
+      </div>
+      <div className="pwa-text">
+        <div className="pwa-title">Install Security Advisory Dashboard</div>
+        <div className="pwa-sub">Add to your desktop or mobile home screen — works offline</div>
+      </div>
+      <button className="pwa-btn-install" onClick={handleInstall} disabled={installing}>
+        {installing ? "Installing…" : "⬇ Install App"}
+      </button>
+      <button className="pwa-btn-dismiss" onClick={handleDismiss}>Not now</button>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginScreen({onLogin,onDenied}){
   const [code,setCode]=useState("");const [error,setError]=useState("");const [loading,setLoading]=useState(false);const [show,setShow]=useState(false);
@@ -533,9 +654,19 @@ function LoginScreen({onLogin,onDenied}){
     <div className="login-wrap">
       <div className="login-card">
         <div className="login-logo">
+          <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:10,marginBottom:14}}>
+            {/* Concentrix pill+C logo */}
+            <svg width="64" height="40" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="64" height="40" rx="20" fill="#00C9B1"/>
+              <circle cx="40" cy="20" r="13" fill="white"/>
+              <circle cx="40" cy="20" r="8" fill="#00C9B1"/>
+              <rect x="40" y="12" width="16" height="16" fill="#00C9B1"/>
+            </svg>
+            <span style={{fontSize:22,fontWeight:800,color:"#0b1f3a",letterSpacing:"-0.5px"}}>Concentrix</span>
+          </div>
           <div className="login-logo-icon">🛡️</div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -2226,13 +2357,27 @@ function Dashboard({onLogout}){
     <div className="app-shell">
       {/* TOP BAR */}
       <div className="top-bar">
-        <div className="tb-logo">🛡️ <span>Security</span> Advisory<span className="tb-sub" style={{marginLeft:8}}>Concentrix GSE · SOC Intelligence</span></div>
+        <div className="tb-logo" style={{display:"flex",alignItems:"center",gap:8}}>
+          {/* Concentrix logo: teal pill + white C on navy */}
+          <svg width="44" height="27" viewBox="0 0 44 27" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="44" height="27" rx="13.5" fill="#00C9B1"/>
+            <circle cx="27" cy="13.5" r="9" fill="white"/>
+            <circle cx="27" cy="13.5" r="5.5" fill="#00C9B1"/>
+            <rect x="27" y="9.5" width="10" height="8" fill="#00C9B1"/>
+          </svg>
+          <span style={{fontSize:13,fontWeight:800,color:"#0b1f3a",letterSpacing:"-0.3px"}}>Concentrix</span>
+          <div style={{width:1,height:18,background:"#e0e0e0",margin:"0 4px"}}/>
+          <span style={{fontSize:12,fontWeight:700,color:"#c0392b"}}>Security Advisory</span>
+          <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE · SOC</span>
+        </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {autoRefresh?(
             <div className="live-pill"><div className="live-dot-green"/><span>Live</span><CountdownTimer nextRefresh={nextRefresh} autoRefresh={autoRefresh}/></div>
           ):(
             <div className="paused-pill"><div className="paused-dot-gray"/><span>Paused</span></div>
           )}
+          {/* PWA Install button — shown when installable */}
+          <PWAInstallButton/>
           <button className="btn btn-secondary" onClick={()=>doRefresh(true)} disabled={fLoad} style={{fontSize:12}}>{fLoad?"⟳ Fetching…":"⟳ Refresh"}</button>
           <button className="btn btn-secondary" onClick={exportCSV} style={{fontSize:12}}>⬇ CSV</button>
           <button className="btn btn-ghost" onClick={onLogout} style={{color:"#dc2626",fontSize:12}}>🔓 Sign Out</button>
@@ -2442,7 +2587,12 @@ function App(){
   const [authState,setAuthState]=useState(()=>getSession()?"authenticated":"login");
   if(authState==="login")  return <LoginScreen onLogin={()=>setAuthState("authenticated")} onDenied={()=>setAuthState("denied")}/>;
   if(authState==="denied") return <AccessDeniedScreen onRetry={()=>setAuthState("login")}/>;
-  return <Dashboard onLogout={()=>{clearSession();setAuthState("login");}}/>;
+  return(
+    <>
+      <Dashboard onLogout={()=>{clearSession();setAuthState("login");}}/>
+      <PWAInstallBanner/>
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
