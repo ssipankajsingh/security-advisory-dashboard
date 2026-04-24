@@ -99,11 +99,11 @@ a:hover{text-decoration:underline}
 .mid-extra-filters{padding:5px 10px;background:#fafafa;border-bottom:1px solid #efefef;flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap}
 .mid-extra-filters select{background:#fff;border:1px solid #e0e0e0;border-radius:5px;padding:3px 6px;font-size:11px;color:#444;cursor:pointer;max-width:120px}
 .mid-list{flex:1;overflow-y:auto;min-height:0}
-.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid transparent;position:relative}
+.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid #e8e8e8;position:relative}
 .feed-item:hover{background:#f5f5f5}
-.feed-item.selected{background:#fdf0ef;border-left-color:#c0392b}
+.feed-item.selected{background:#fdf0ef;border-left-color:#c0392b;border-left-width:4px}
 .feed-item.is-new{background:#fffaf9}
-.feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:nowrap;overflow:hidden}
+.feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:wrap;max-height:40px;overflow:hidden}
 .feed-item .fi-title{font-size:12px;font-weight:700;color:#1a1a1a;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .feed-item .fi-id{font-size:10px;font-weight:700;color:#c0392b;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .feed-item .fi-meta{font-size:10.5px;color:#aaa;display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
@@ -116,7 +116,15 @@ a:hover{text-decoration:underline}
 /* Right reading pane */
 .read-pane{flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 .read-pane-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:12px}
-.read-pane-header{padding:16px 24px 12px;border-bottom:1px solid #efefef;flex-shrink:0}
+.read-pane-header{padding:14px 20px 10px;border-bottom:1px solid #efefef;flex-shrink:0}
+.rph-top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:8px}
+.rph-left{min-width:0}
+.rph-right{display:flex;flex-direction:column;gap:5px;min-width:200px;max-width:240px;flex-shrink:0}
+.rph-cve{font-size:12px;font-weight:800;color:#c0392b;margin:4px 0 5px;letter-spacing:0.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rph-title{font-size:14px;font-weight:700;color:#1a1a1a;line-height:1.45;margin-bottom:0}
+.rph-meta-row{display:flex;align-items:baseline;gap:5px;font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rph-meta-row strong{color:#444;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.rph-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
 .read-pane-body{flex:1;overflow-y:auto;padding:20px 24px}
 .read-pane-actions{padding:12px 24px;border-top:1px solid #efefef;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;background:#fafafa}
 
@@ -136,7 +144,8 @@ a:hover{text-decoration:underline}
 .badge-status-patched{background:#f0fdf4;color:#15803d;border:1px solid #86efac}
 .badge-status-risk{background:#fff7ed;color:#9a3412;border:1px solid #fdba74}
 .badge-status-fp{background:#f5f5f5;color:#888;border:1px solid #e0e0e0}
-.badge-sla-overdue{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;animation:sla-pulse 1.5s ease-in-out infinite}
+.badge-sla-overdue{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.badge-sla-overdue.pulse-on{animation:sla-pulse 1.5s ease-in-out infinite}
 .badge-sla-urgent{background:#fff7ed;color:#ea580c;border:1px solid #fed7aa}
 .badge-cat{border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600}
 .badge-sources{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
@@ -171,12 +180,12 @@ a:hover{text-decoration:underline}
 .stat-group{display:flex;align-items:stretch;border-right:2px solid #e8e8e8}
 .stat-group:last-child{border-right:none}
 .stat-group-label{font-size:9px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:0.8px;writing-mode:vertical-rl;text-orientation:mixed;padding:6px 5px 6px 8px;border-right:1px solid #f0f0f0;background:#fafafa;display:flex;align-items:center;transform:rotate(180deg);user-select:none}
-.stat-item{padding:7px 16px;text-align:center;border-right:1px solid #f0f0f0;flex-shrink:0;cursor:default;transition:background 0.1s;display:flex;flex-direction:column;justify-content:center}
+.stat-item{padding:5px 12px;text-align:center;border-right:1px solid #f0f0f0;flex-shrink:0;cursor:default;transition:background 0.1s;display:flex;flex-direction:column;justify-content:center}
 .stat-item:last-child{border-right:none}
 .stat-item:hover{background:#fafafa}
 .stat-item.clickable{cursor:pointer}
 .stat-item:hover.clickable{background:#fdf0ef}
-.stat-val{font-size:18px;font-weight:700;line-height:1.2}
+.stat-val{font-size:15px;font-weight:700;line-height:1.2}
 .stat-lbl{font-size:9.5px;color:#aaa;font-weight:500;white-space:nowrap;margin-top:1px}
 
 /* Panel tabs (for right pane sub-sections) */
@@ -597,7 +606,7 @@ const SLABadge=({advisory,statuses})=>{
   if(s==="Patched"||s==="Accepted Risk"||s==="False Positive")return null;
   const sl=slaStatus(advisory);
   if(!sl)return null;
-  if(sl.overdue)return<span className="badge badge-sla-overdue">⏰ SLA OVERDUE</span>;
+  if(sl.overdue)return<span className={"badge badge-sla-overdue"+(sl.remainH>sl.limitH?" pulse-on":"")}>SLA OVERDUE — {sl.remainH}h past due</span>;
   if(sl.urgent)return<span className="badge badge-sla-urgent">⚡ {sl.remainH}h left</span>;
   return null;
 };
@@ -1267,7 +1276,9 @@ function Dashboard({onLogout}){
     if(!advisory)return(
       <div className="read-pane">
         <div className="read-pane-empty">
-          <div style={{fontSize:40}}>🛡️</div>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity:0.25}}>
+            <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" stroke="#00C9B1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <div style={{fontSize:14,fontWeight:600,color:"#ccc"}}>Select an advisory to read</div>
           <div style={{fontSize:12,color:"#ddd"}}>{filtered.length} advisories loaded</div>
         </div>
@@ -1281,41 +1292,54 @@ function Dashboard({onLogout}){
     const cc=CAT_COLORS[a.cat]||"#888";
     return(
       <div className="read-pane">
-        {/* Header */}
+        {/* Header — two-column layout */}
         <div className="read-pane-header" style={{background:"#fff"}}>
-          {/* Badge row */}
-          <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap",marginBottom:7}}>
-            <SevBadge sev={a.severity}/>
-            {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
-            {a.zeroDay&&<ZDBadge/>}
-            {a.isNew&&!ackInfo&&<NewBadge/>}
-            {a.isOEM&&<OEMBadge/>}
-            {ackInfo&&<AckBadge by={ackInfo.by}/>}
-            <SourceCountBadge count={a.source_count} sources={a.sources_list}/>
-            <SLABadge advisory={a} statuses={statuses}/>
-            {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
-            {a.cat&&<span className="badge" style={{background:cc+"18",color:cc,border:`1px solid ${cc}33`}}>{a.cat}</span>}
-          </div>
-          {/* Title */}
-          <div style={{fontSize:15,fontWeight:700,color:"#1a1a1a",lineHeight:1.45,marginBottom:8}}>{a.title||a.id}</div>
-          {/* Meta grid */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 16px",fontSize:11,color:"#888",marginBottom:8}}>
-            <span>📡 Source: <strong style={{color:"#444"}}>{a.source||a.vendor||"—"}</strong>
-              {a.isOEM&&<span style={{marginLeft:4,fontSize:9,background:"#f0fdf4",color:"#15803d",border:"1px solid #86efac",borderRadius:3,padding:"1px 4px",fontWeight:700}}>OEM Direct</span>}
-              {!a.isOEM&&(a.source==="CISA KEV"||a.source==="cisa_kev")&&<span style={{marginLeft:4,fontSize:9,background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca",borderRadius:3,padding:"1px 4px",fontWeight:700}} title="Confirmed actively exploited by CISA — vendor patch may be available at official source">KEV Listed</span>}
-            </span>
-            <span>📅 Published: <strong style={{color:"#444"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}</strong></span>
-            {(a.cve||(a.cves&&a.cves[0]))&&<span>🔖 CVE: <strong style={{color:"#c0392b"}}>{a.cve||a.cves[0]}</strong></span>}
-            {a.cvss&&<span>📊 CVSS: <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10 ({a.severity})</strong></span>}
-            {a.fetched_at&&<span>👁 First seen: <strong style={{color:"#2563eb"}}>{fmtTs(a.fetched_at)}</strong></span>}
-            {a.author&&<span>✍️ Author: <strong style={{color:"#444"}}>{a.author}</strong></span>}
-            {a.source_count>1&&(
-              <span title={a.sources_list?`Also reported by: ${a.sources_list.join(", ")}`:`Reported by ${a.source_count} sources`}
-                style={{cursor:"help"}}>
-                📡 Also in: <strong style={{color:"#2563eb"}}>{a.source_count} sources</strong>
-                <span style={{fontSize:9,color:"#aaa",marginLeft:2}}>ⓘ</span>
-              </span>
-            )}
+          <div className="rph-top">
+            {/* LEFT: severity + CVE + title */}
+            <div className="rph-left">
+              <div className="rph-badges">
+                <SevBadge sev={a.severity}/>
+                {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
+                {a.zeroDay&&<ZDBadge/>}
+                {a.isNew&&!ackInfo&&<NewBadge/>}
+                {a.isOEM&&<OEMBadge/>}
+                {ackInfo&&<AckBadge by={ackInfo.by}/>}
+                <SLABadge advisory={a} statuses={statuses}/>
+                {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
+                {a.cat&&<span className="badge" style={{background:cc+"18",color:cc,border:`1px solid ${cc}33`}}>{a.cat}</span>}
+              </div>
+              {(a.cve||(a.cves&&a.cves[0]))&&<div className="rph-cve">{a.cve||a.cves[0]}</div>}
+              <div className="rph-title">{a.title||a.id}</div>
+            </div>
+            {/* RIGHT: metadata */}
+            <div className="rph-right">
+              <div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Source</span>
+                <strong style={{color:"#444"}}>{a.source||a.vendor||"—"}</strong>
+                {a.isOEM&&<span style={{fontSize:9,background:"#f0fdf4",color:"#15803d",border:"1px solid #86efac",borderRadius:3,padding:"1px 4px",fontWeight:700,flexShrink:0}}>OEM</span>}
+                {!a.isOEM&&(a.source==="CISA KEV"||a.source==="cisa_kev")&&<span style={{fontSize:9,background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca",borderRadius:3,padding:"1px 4px",fontWeight:700,flexShrink:0}}>KEV</span>}
+              </div>
+              <div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Published</span>
+                <strong>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</strong>
+              </div>
+              {a.cvss&&<div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>CVSS</span>
+                <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10</strong>
+              </div>}
+              {a.fetched_at&&<div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>First seen</span>
+                <strong style={{color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</strong>
+              </div>}
+              {a.source_count>1&&<div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Also in</span>
+                <strong style={{color:"#2563eb"}} title={a.sources_list?`Also reported by: ${a.sources_list.join(", ")}`:""}>{a.source_count} sources ⓘ</strong>
+              </div>}
+              {a.author&&<div className="rph-meta-row">
+                <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Author</span>
+                <strong>{a.author}</strong>
+              </div>}
+            </div>
           </div>
           {/* Why This Matters — urgency summary line */}
           {(()=>{
@@ -1684,12 +1708,12 @@ function Dashboard({onLogout}){
     const selected=sel===a.id;
     const ackInfo=acks[a.id];
     const statusVal=statuses[a.id];
-    let leftBorder="transparent";
+    const SEV_BORDER={"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"};
+    let leftBorder="#e0e0e0";
     if(ackInfo)leftBorder="#16a34a";
-    else if(a.isOEM)leftBorder="#16a34a";
     else if(a.zeroDay)leftBorder="#9333ea";
-    else if(a.severity==="Critical")leftBorder="#dc2626";
-    else if(a.severity==="High")leftBorder="#ea580c";
+    else if(a.isOEM)leftBorder="#0369a1";
+    else leftBorder=SEV_BORDER[a.severity]||"#d1d5db";
     return(
       <div className={"feed-item"+(selected?" selected":"")+(a.isNew&&!ackInfo?" is-new":"")}
         style={{borderLeftColor:leftBorder}}
@@ -3034,7 +3058,7 @@ function Dashboard({onLogout}){
           <PWAInstallButton/>
           <button className="btn btn-secondary" onClick={()=>doRefresh(true)} disabled={fLoad} style={{fontSize:12}}>{fLoad?"⟳ Fetching…":"⟳ Refresh"}</button>
           <button className="btn btn-secondary" onClick={exportCSV} style={{fontSize:12}}>⬇ CSV</button>
-          <button className="btn btn-ghost" onClick={onLogout} style={{color:"#dc2626",fontSize:12}}>🔓 Sign Out</button>
+          <span style={{width:1,height:20,background:"#e5e5e5",flexShrink:0}}></span><button className="btn btn-ghost" onClick={onLogout} style={{color:"#dc2626",fontSize:12}}>Sign Out</button>
         </div>
       </div>
 
