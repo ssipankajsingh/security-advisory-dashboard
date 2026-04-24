@@ -354,6 +354,21 @@ a:hover{text-decoration:underline}
 .hs-item{display:flex;align-items:center;gap:5px;font-size:12px}
 .health-toolbar{padding:8px 16px;background:#fff;border-bottom:1px solid #efefef;display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap}
 .health-scroll{flex:1;overflow-y:auto;min-height:0}
+
+/* ── HEATMAP ── */
+.heatmap-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fafafa}
+.heatmap-scroll{flex:1;overflow-y:auto;padding:20px;min-height:0}
+.heatmap-grid{display:flex;flex-direction:column;gap:3px}
+.heatmap-row{display:flex;align-items:center;gap:3px}
+.heatmap-cell{width:14px;height:14px;border-radius:2px;cursor:pointer;transition:transform 0.1s;flex-shrink:0}
+.heatmap-cell:hover{transform:scale(1.4);z-index:10}
+.heatmap-month-label{font-size:10px;color:#aaa;width:28px;flex-shrink:0;text-align:right;padding-right:4px}
+.heatmap-day-label{font-size:9px;color:#ccc;width:14px;text-align:center}
+.heatmap-legend{display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;margin-top:12px}
+/* ── WEEKLY REPORT ── */
+.weekly-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fafafa}
+.weekly-scroll{flex:1;overflow-y:auto;padding:20px;min-height:0}
+.weekly-preview{background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
 </style>
 </head>
 <body>
@@ -861,8 +876,24 @@ function Dashboard({onLogout}){
           setAdvisories(prev=>{
             const prevIds=new Set(prev.map(a=>a.id));
             const marked=incoming.map(a=>({...a,isNew:!prevIds.has(a.id)}));
-            const newCnt=marked.filter(a=>a.isNew).length;
-            if(newCnt>0){setNewCount(c=>c+newCnt);sendNotification(marked.filter(a=>a.isNew));}
+            const newItems=marked.filter(a=>a.isNew);
+            const newCnt=newItems.length;
+            if(newCnt>0){
+              setNewCount(c=>c+newCnt);
+              sendNotification(newItems);
+              // Instant alert: send Teams/email for new Critical or Zero-Day
+              const critNew=newItems.filter(a=>a.severity==="Critical"||a.zeroDay);
+              if(critNew.length>0){
+                const wh=localStorage.getItem("sad_teams_webhook")||"";
+                const em=(()=>{try{return JSON.parse(localStorage.getItem("sad_recipients")||"[]")[0]||"";}catch{return "";}})();
+                const fr=localStorage.getItem("sad_sender")||"";
+                if(wh||em){
+                  fetch(`${PROXY_URL}/notify/critical`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
+                    body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix SOC"})})
+                    .catch(()=>{});
+                }
+              }
+            }
             return marked;
           });
           setLastFetchedTs(Date.now());
@@ -1394,6 +1425,18 @@ function Dashboard({onLogout}){
                     <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{new Date(a.updated).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC"}</div>
                   </div>
                 )}
+                {/* EPSS Score */}
+                {a.epss!=null&&(
+                  <div style={{background:"#fff",border:`1px solid ${a.epss>=70?"#e9d5ff":a.epss>=40?"#fed7aa":"#efefef"}`,borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>EPSS Score</div>
+                    <div style={{fontSize:18,fontWeight:800,color:a.epss>=70?"#9333ea":a.epss>=40?"#ea580c":a.epss>=10?"#ca8a04":"#16a34a",lineHeight:1}}>{a.epss}%</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>exploit probability</div>
+                    {a.epss_pct&&<div style={{fontSize:10,color:"#aaa",marginTop:1}}>{a.epss_pct}th percentile</div>}
+                    <div style={{height:4,background:"#f0f0f0",borderRadius:2,marginTop:5,overflow:"hidden"}}>
+                      <div style={{height:"100%",borderRadius:2,width:`${Math.min(a.epss,100)}%`,background:a.epss>=70?"#9333ea":a.epss>=40?"#ea580c":a.epss>=10?"#ca8a04":"#16a34a"}}/>
+                    </div>
+                  </div>
+                )}
                 {/* Source */}
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                   <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Source</div>
@@ -1655,6 +1698,15 @@ function Dashboard({onLogout}){
         <div className="fi-badges">
           <SevBadge sev={a.severity}/>
           {a.zeroDay&&<ZDBadge/>}
+          {a.epss!=null&&a.epss>=20&&(
+            <span title={`EPSS: ${a.epss}% probability of exploitation (${a.epss_pct}th percentile)`}
+              style={{background:a.epss>=70?"#fdf4ff":a.epss>=40?"#fff7ed":"#fefce8",
+                color:a.epss>=70?"#9333ea":a.epss>=40?"#ea580c":"#ca8a04",
+                border:`1px solid ${a.epss>=70?"#e9d5ff":a.epss>=40?"#fed7aa":"#fef08a"}`,
+                borderRadius:4,padding:"1px 5px",fontSize:9,fontWeight:700,flexShrink:0}}>
+              EPSS {a.epss}%
+            </span>
+          )}
           {a.isOEM&&<OEMBadge/>}
           {ackInfo&&<AckBadge by={ackInfo.by}/>}
           {ackInfo?.assigned_to&&ackInfo.assigned_to!=="Unassigned"&&(
@@ -1692,6 +1744,8 @@ function Dashboard({onLogout}){
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
       {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
       {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
+      {id:"heatmap",label:"CVE Heatmap",icon:"🗓️",badge:0},
+      {id:"weekly",label:"Weekly Report",icon:"📊",badge:0},
     ];
     return(
       <div className="sidebar">
@@ -2123,6 +2177,250 @@ function Dashboard({onLogout}){
     );
   }
 
+
+  // ── CVE HEATMAP ──────────────────────────────────────────────────────────────
+  function HeatmapPanel({advisories}){
+    const [tooltip,setTooltip]=useState(null);
+    const [filter,setFilter]=useState("all"); // all|critical|high|zeroday
+
+    // Build day buckets for last 90 days
+    const dayData=useMemo(()=>{
+      const map={};
+      const now=new Date();
+      // Init all 90 days
+      for(let i=89;i>=0;i--){
+        const d=new Date(now);d.setDate(d.getDate()-i);
+        const key=d.toISOString().slice(0,10);
+        map[key]={date:key,total:0,critical:0,high:0,medium:0,low:0,zeroday:0,items:[]};
+      }
+      advisories.forEach(a=>{
+        const pub=(a.published||a.date||"").slice(0,10);
+        if(!map[pub])return;
+        map[pub].total++;
+        map[pub].items.push(a);
+        if(a.severity==="Critical")map[pub].critical++;
+        else if(a.severity==="High")map[pub].high++;
+        else if(a.severity==="Medium")map[pub].medium++;
+        else if(a.severity==="Low")map[pub].low++;
+        if(a.zeroDay)map[pub].zeroday++;
+      });
+      return map;
+    },[advisories]);
+
+    const days=Object.values(dayData).sort((a,b)=>a.date.localeCompare(b.date));
+    const maxCount=Math.max(...days.map(d=>filter==="all"?d.total:filter==="critical"?d.critical:filter==="high"?d.high:d.zeroday),1);
+
+    const getColor=(d)=>{
+      const v=filter==="all"?d.total:filter==="critical"?d.critical:filter==="high"?d.high:d.zeroday;
+      if(v===0)return"#f0f0f0";
+      const intensity=v/maxCount;
+      if(filter==="critical"||filter==="zeroday"){
+        if(intensity>0.7)return"#dc2626";if(intensity>0.4)return"#f87171";return"#fca5a5";
+      }
+      if(intensity>0.7)return"#c0392b";if(intensity>0.4)return"#e07060";if(intensity>0.2)return"#f0a090";return"#f5d0c8";
+    };
+
+    // Build weeks grid (7 rows × ~13 cols)
+    const weeks=[];
+    for(let i=0;i<days.length;i+=7){ weeks.push(days.slice(i,i+7)); }
+
+    const stats={
+      totalDays:days.filter(d=>d.total>0).length,
+      peakDay:days.reduce((a,b)=>b.total>a.total?b:a,days[0]),
+      totalAdvisories:days.reduce((s,d)=>s+d.total,0),
+      avgPerDay:(days.reduce((s,d)=>s+d.total,0)/90).toFixed(1),
+    };
+
+    return(
+      <div className="heatmap-panel">
+        <div style={{padding:"12px 20px",background:"#fff",borderBottom:"1px solid #e8e8e8",flexShrink:0}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:8}}>🗓️ CVE Activity Heatmap — Last 90 Days</div>
+          <div style={{display:"flex",gap:16,fontSize:12,color:"#888",flexWrap:"wrap"}}>
+            <span>📅 <strong style={{color:"#333"}}>{stats.totalDays}</strong> active days</span>
+            <span>📊 <strong style={{color:"#333"}}>{stats.totalAdvisories}</strong> total advisories</span>
+            <span>📈 <strong style={{color:"#333"}}>{stats.avgPerDay}</strong> avg/day</span>
+            {stats.peakDay&&<span>🔥 Peak: <strong style={{color:"#c0392b"}}>{stats.peakDay.date}</strong> ({stats.peakDay.total} advisories)</span>}
+          </div>
+        </div>
+        <div style={{padding:"8px 20px",background:"#fff",borderBottom:"1px solid #efefef",display:"flex",gap:6,flexShrink:0}}>
+          {[["all","All Advisories"],["critical","Critical Only"],["high","High Only"],["zeroday","Zero-Days"]].map(([v,l])=>(
+            <button key={v} className={"filter-chip"+(filter===v?" active":"")} onClick={()=>setFilter(v)} style={{fontSize:11}}>{l}</button>
+          ))}
+        </div>
+        <div className="heatmap-scroll">
+          {/* Day-of-week labels */}
+          <div style={{display:"flex",gap:3,marginBottom:4,paddingLeft:32}}>
+            {["M","T","W","T","F","S","S"].map((d,i)=>(
+              <div key={i} className="heatmap-day-label">{d}</div>
+            ))}
+          </div>
+          {/* Heatmap grid — grouped by week */}
+          <div style={{display:"flex",gap:3}}>
+            {weeks.map((week,wi)=>(
+              <div key={wi} style={{display:"flex",flexDirection:"column",gap:3}}>
+                {week.map((day,di)=>{
+                  const v=filter==="all"?day.total:filter==="critical"?day.critical:filter==="high"?day.high:day.zeroday;
+                  return(
+                    <div key={day.date}
+                      className="heatmap-cell"
+                      style={{background:getColor(day)}}
+                      title={`${day.date}: ${day.total} total, ${day.critical} critical, ${day.zeroday} zero-day`}
+                      onClick={()=>setTooltip(tooltip?.date===day.date?null:day)}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          {/* Legend */}
+          <div className="heatmap-legend">
+            <span>Less</span>
+            {["#f0f0f0","#f5d0c8","#f0a090","#e07060","#c0392b"].map((c,i)=>(
+              <div key={i} style={{width:12,height:12,borderRadius:2,background:c}}/>
+            ))}
+            <span>More</span>
+          </div>
+          {/* Clicked day detail */}
+          {tooltip&&(
+            <div style={{marginTop:16,background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"14px 16px"}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#1a1a1a"}}>
+                📅 {tooltip.date} — {tooltip.total} advisories
+              </div>
+              <div style={{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap",fontSize:12}}>
+                {[["Critical",tooltip.critical,"#dc2626"],["High",tooltip.high,"#ea580c"],["Medium",tooltip.medium,"#ca8a04"],["Low",tooltip.low,"#16a34a"],["Zero-Day",tooltip.zeroday,"#9333ea"]].map(([l,v,c])=>(
+                  v>0&&<span key={l} style={{background:c+"18",color:c,border:`1px solid ${c}33`,borderRadius:4,padding:"2px 8px",fontWeight:600}}>{v} {l}</span>
+                ))}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
+                {tooltip.items.slice(0,10).map(a=>(
+                  <div key={a.id} style={{fontSize:11,color:"#555",display:"flex",gap:6,alignItems:"center"}}>
+                    <span style={{background:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",color:"#fff",borderRadius:3,padding:"0 5px",fontSize:9,fontWeight:700,flexShrink:0}}>{a.severity?.slice(0,4)||"?"}</span>
+                    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.cve||a.id} — {a.title}</span>
+                  </div>
+                ))}
+                {tooltip.items.length>10&&<div style={{fontSize:11,color:"#aaa"}}>+{tooltip.items.length-10} more</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── WEEKLY REPORT PANEL ────────────────────────────────────────────────────
+  function WeeklyReportPanel({advisories,emailRecipients,senderEmail,senderName}){
+    const [sending,setSending]=useState(false);
+    const [status,setStatus]=useState(null);
+    const [previewOpen,setPreviewOpen]=useState(false);
+
+    const stats=useMemo(()=>{
+      const critical=advisories.filter(a=>a.severity==="Critical");
+      const high=advisories.filter(a=>a.severity==="High");
+      const medium=advisories.filter(a=>a.severity==="Medium");
+      const low=advisories.filter(a=>a.severity==="Low");
+      const zeroDays=advisories.filter(a=>a.zeroDay);
+      const oem=advisories.filter(a=>a.isOEM);
+      const withEpss=advisories.filter(a=>a.epss!=null&&a.epss>0);
+      const highEpss=advisories.filter(a=>a.epss>=50);
+      // Top 5 by priority
+      const top5=[...advisories].sort((a,b)=>(b.zeroDay?1:0)-(a.zeroDay?1:0)||({"Critical":4,"High":3,"Medium":2,"Low":1,"Unknown":0}[b.severity]||0)-({"Critical":4,"High":3,"Medium":2,"Low":1,"Unknown":0}[a.severity]||0)).slice(0,5);
+      // Vendor distribution
+      const vendorMap={};
+      advisories.forEach(a=>{const v=a.vendor||a.source||"Unknown";vendorMap[v]=(vendorMap[v]||0)+1;});
+      const topVendors=Object.entries(vendorMap).sort(([,a],[,b])=>b-a).slice(0,5);
+      return{critical,high,medium,low,zeroDays,oem,withEpss,highEpss,top5,topVendors,total:advisories.length};
+    },[advisories]);
+
+    const weekLabel=(()=>{
+      const d=new Date();d.setDate(d.getDate()-7);
+      return`${d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})} – ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}`;
+    })();
+
+    const sendWeekly=async()=>{
+      if(!emailRecipients.length){alert("Add recipients in Email & Notifications first.");return;}
+      setSending(true);setStatus(null);
+      try{
+        const res=await fetch(`${PROXY_URL}/email-weekly`,{method:"POST",
+          headers:{"Content-Type":"application/json",...getAuthHeader()},
+          body:JSON.stringify({to:emailRecipients[0],from:senderEmail,senderName,weekStart:weekLabel})});
+        const data=await res.json();
+        if(data.success)setStatus({ok:true,msg:`✅ Weekly report sent — ${data.total} advisories, ${data.critical} critical, ${data.zero_days} zero-days`});
+        else setStatus({ok:false,msg:`❌ ${data.error||"Send failed"}`});
+      }catch(e){setStatus({ok:false,msg:"❌ "+e.message});}
+      setSending(false);
+    };
+
+    return(
+      <div className="weekly-panel">
+        <div style={{padding:"12px 20px",background:"#fff",borderBottom:"1px solid #e8e8e8",flexShrink:0}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>📊 Weekly Summary Report</div>
+          <div style={{fontSize:12,color:"#888"}}>{weekLabel} · {stats.total} advisories in current view</div>
+        </div>
+        <div className="weekly-scroll">
+          {/* KPI Summary */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8,marginBottom:16}}>
+            {[
+              ["Total",stats.total,"#444"],["Critical",stats.critical.length,"#dc2626"],
+              ["High",stats.high.length,"#ea580c"],["Zero-Days",stats.zeroDays.length,"#9333ea"],
+              ["OEM Direct",stats.oem.length,"#15803d"],["High EPSS",stats.highEpss.length,"#7c3aed"],
+            ].map(([l,v,c])=>(
+              <div key={l} style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:800,color:v>0?c:"#ddd"}}>{v}</div>
+                <div style={{fontSize:10,color:"#aaa",fontWeight:600,textTransform:"uppercase",marginTop:2}}>{l}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Top Advisories */}
+          <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"14px 16px",marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#1a1a1a",marginBottom:10}}>🔥 Top Priority Advisories</div>
+            {stats.top5.map(a=>(
+              <div key={a.id} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"7px 0",borderBottom:"1px solid #f5f5f5"}}>
+                <span className={"badge "+({"Critical":"badge-critical","High":"badge-high","Medium":"badge-medium","Low":"badge-low"}[a.severity]||"badge-unknown")} style={{flexShrink:0,marginTop:1}}>
+                  {a.severity?.toUpperCase()}
+                </span>
+                {a.zeroDay&&<span className="badge badge-zeroday" style={{flexShrink:0,marginTop:1}}>0-DAY</span>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"#1a1a1a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.id}</div>
+                  <div style={{fontSize:11,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                </div>
+                {a.epss!=null&&<span style={{fontSize:10,color:"#9333ea",fontWeight:700,flexShrink:0}}>EPSS {a.epss}%</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Top Vendors */}
+          <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"14px 16px",marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#1a1a1a",marginBottom:10}}>📡 Top Sources This Week</div>
+            {stats.topVendors.map(([v,cnt])=>(
+              <div key={v} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                <div style={{flex:1,fontSize:12,color:"#444",fontWeight:500}}>{v}</div>
+                <div style={{background:"#f0f0f0",borderRadius:3,height:8,flex:2,overflow:"hidden"}}>
+                  <div style={{background:"#c0392b",height:"100%",width:`${(cnt/stats.total)*100}%`,borderRadius:3}}/>
+                </div>
+                <div style={{fontSize:11,color:"#888",fontWeight:600,width:28,textAlign:"right"}}>{cnt}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Send controls */}
+          <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"14px 16px"}}>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>📧 Send Report</div>
+            <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+              Recipients: <strong style={{color:"#333"}}>{emailRecipients.length>0?emailRecipients.join(", "):"None configured"}</strong>
+              {!emailRecipients.length&&<span style={{color:"#dc2626",marginLeft:6,fontSize:11}}>— Add recipients in Email & Notifications</span>}
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className="btn btn-primary" onClick={sendWeekly} disabled={sending||!emailRecipients.length}>
+                {sending?"⟳ Sending…":"📧 Send Weekly Report"}
+              </button>
+            </div>
+            {status&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:status.ok?"#f0fdf4":"#fef2f2",color:status.ok?"#15803d":"#dc2626",fontSize:12}}>{status.msg}</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── FEED HEALTH MONITOR ─────────────────────────────────────────────────────
   function FeedHealthPanel(){
@@ -2935,6 +3233,8 @@ function Dashboard({onLogout}){
         {tab==="settings"&&<SettingsPanel/>}
         {tab==="cvesearch"&&<CVESearchPanel/>}
         {tab==="feedhealth"&&<FeedHealthPanel/>}
+        {tab==="heatmap"&&<HeatmapPanel advisories={advisories}/>}
+        {tab==="weekly"&&<WeeklyReportPanel advisories={advisories} emailRecipients={emailRecipients} senderEmail={senderEmail} senderName={senderName}/>}
       </div>
     </div>
   );
