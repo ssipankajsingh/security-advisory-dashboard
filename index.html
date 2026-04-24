@@ -31,6 +31,25 @@ window.addEventListener('appinstalled', function() {
   window.__pwaPrompt = null;
   window.dispatchEvent(new CustomEvent('pwa-installed'));
 });
+
+// Register Service Worker early — required for PWA install prompt
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    var swUrl = '/security-advisory-dashboard/sw.js';
+    navigator.serviceWorker.register(swUrl, {scope: '/security-advisory-dashboard/'})
+      .then(function(reg) {
+        console.log('[SW] Registered scope:', reg.scope);
+        window.dispatchEvent(new CustomEvent('sw-registered'));
+      })
+      .catch(function(err) {
+        console.warn('[SW] Registration failed:', err);
+        // Fallback: try relative path
+        navigator.serviceWorker.register('./sw.js')
+          .then(function(reg) { console.log('[SW] Fallback registered:', reg.scope); })
+          .catch(function(e2) { console.warn('[SW] Fallback also failed:', e2); });
+      });
+  });
+}
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2013,14 +2032,28 @@ function Dashboard({onLogout}){
               React.useEffect(()=>{
                 window.addEventListener("pwa-installable",()=>setInstallable(true));
                 window.addEventListener("pwa-installed",()=>{setInstalled(true);setInstallable(false);});
-                // Check SW status
+                window.addEventListener("sw-registered",()=>setSwState("registered"));
+                // Check SW status immediately
                 if("serviceWorker" in navigator){
-                  navigator.serviceWorker.getRegistration().then(reg=>{
-                    setSwState(reg?"registered":"none");
+                  navigator.serviceWorker.getRegistration("/security-advisory-dashboard/").then(reg=>{
+                    setSwState(reg?"registered":"pending");
+                    if(!reg){
+                      // Re-attempt registration
+                      navigator.serviceWorker.register("/security-advisory-dashboard/sw.js",{scope:"/security-advisory-dashboard/"})
+                        .then(()=>setSwState("registered")).catch(()=>setSwState("failed"));
+                    }
                   }).catch(()=>setSwState("error"));
                 } else {
                   setSwState("unsupported");
                 }
+                // Poll for prompt
+                let polls=0;
+                const poll=setInterval(()=>{
+                  polls++;
+                  if(window.__pwaPrompt){setInstallable(true);clearInterval(poll);}
+                  if(polls>30)clearInterval(poll);
+                },2000);
+                return()=>clearInterval(poll);
               },[]);
               const handleInstall=async()=>{
                 if(!window.__pwaPrompt){alert("Install prompt not available yet.\n\nIn Chrome/Edge: look for the install icon (⊕) in the address bar, or go to browser menu → 'Install Security Advisory Dashboard'");return;}
@@ -2042,16 +2075,29 @@ function Dashboard({onLogout}){
                       If button doesn't work, use browser menu → Install app
                     </span>}
                   </div>
-                  <div style={{fontSize:11,color:"#aaa",lineHeight:1.6}}>
-                    <strong>Status:</strong>{" "}
-                    {installable?"✅ Ready to install":"⏳ Waiting for browser install prompt"}
-                    {" · SW: "}{swState}
+                  <div style={{fontSize:11,color:"#aaa",lineHeight:1.6,marginBottom:8}}>
+                    <strong style={{color:swState==="registered"?"#15803d":"#ca8a04"}}>
+                      {swState==="registered"?"✅":"⚠️"} Service Worker: {swState}
+                    </strong>
+                    {" · "}
+                    <strong style={{color:installable?"#15803d":"#888"}}>
+                      {installable?"✅ Install prompt: ready":"⏳ Install prompt: waiting"}
+                    </strong>
+                  </div>
+                  <div style={{marginTop:4,fontSize:11,background:"#fffbf0",border:"1px solid #fde68a",borderRadius:6,padding:"8px 10px",lineHeight:1.7}}>
+                    <strong style={{color:"#92400e"}}>⚠️ Important:</strong>
+                    <ul style={{margin:"4px 0 0 14px",color:"#555"}}>
+                      <li><strong>Do not use Incognito/InPrivate mode</strong> — PWA install is blocked by browsers in private mode</li>
+                      <li>Use a normal Chrome or Edge window</li>
+                      <li>The site must be visited at least once in normal mode first</li>
+                    </ul>
                   </div>
                   <div style={{marginTop:8,fontSize:11,color:"#999",background:"#f8f8f8",borderRadius:6,padding:"8px 10px",lineHeight:1.7}}>
-                    <strong>Manual install in Chrome/Edge:</strong><br/>
-                    1. Look for <strong>⊕</strong> icon in the address bar right side<br/>
-                    2. Or: browser menu (⋮) → <strong>"Install Security Advisory Dashboard…"</strong><br/>
-                    3. On mobile: browser menu → <strong>"Add to Home Screen"</strong>
+                    <strong>Manual install (normal window only):</strong><br/>
+                    1. Open <strong>https://ssipankajsingh.github.io/security-advisory-dashboard/</strong> in normal Chrome/Edge<br/>
+                    2. Look for <strong>⊕</strong> install icon in the address bar (right side)<br/>
+                    3. Or: browser menu (⋮) → <strong>"Install Security Advisory Dashboard…"</strong><br/>
+                    4. On mobile Chrome: menu → <strong>"Add to Home Screen"</strong>
                   </div>
                 </div>
               );
@@ -2908,9 +2954,7 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});
-}
+// SW registered early in plain script above
 </script>
 </body>
 </html>
