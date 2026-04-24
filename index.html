@@ -19,6 +19,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script>
+// PWA: capture beforeinstallprompt BEFORE Babel runs (critical timing fix)
+window.__pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window.__pwaPrompt = e;
+  window.dispatchEvent(new CustomEvent('pwa-installable'));
+});
+window.addEventListener('appinstalled', function() {
+  window.__pwaPrompt = null;
+  window.dispatchEvent(new CustomEvent('pwa-installed'));
+});
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{height:100%;overflow:hidden}
@@ -293,6 +306,35 @@ a:hover{text-decoration:underline}
 .install-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;transition:all 0.15s;white-space:nowrap}
 .install-btn:hover{background:#dbeafe;border-color:#93c5fd}
 .install-btn svg{width:13px;height:13px;flex-shrink:0}
+
+/* ── FEED HEALTH MONITOR ── */
+.health-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fafafa}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;padding:16px}
+.health-card{background:#fff;border:1px solid #efefef;border-radius:8px;padding:12px 14px;transition:border-color 0.15s;cursor:default}
+.health-card:hover{border-color:#ddd}
+.health-card.hc-ok{border-left:3px solid #16a34a}
+.health-card.hc-warn{border-left:3px solid #ca8a04}
+.health-card.hc-error{border-left:3px solid #dc2626}
+.health-card.hc-unknown{border-left:3px solid #d1d5db}
+.hc-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.hc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.hc-dot-ok{background:#16a34a}
+.hc-dot-warn{background:#ca8a04}
+.hc-dot-error{background:#dc2626}
+.hc-dot-unknown{background:#d1d5db}
+.hc-name{font-size:12px;font-weight:700;color:#1a1a1a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hc-badge{font-size:9px;font-weight:700;border-radius:3px;padding:2px 6px}
+.hc-badge-ok{background:#f0fdf4;color:#15803d;border:1px solid #86efac}
+.hc-badge-warn{background:#fefce8;color:#854d0e;border:1px solid #fef08a}
+.hc-badge-error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.hc-badge-unknown{background:#f5f5f5;color:#888;border:1px solid #e0e0e0}
+.hc-meta{font-size:10.5px;color:#888;margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap}
+.hc-url{font-size:10px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
+.hc-error-msg{font-size:10.5px;color:#dc2626;margin-top:4px;background:#fef2f2;border-radius:4px;padding:3px 7px}
+.health-summary{padding:10px 16px;background:#fff;border-bottom:1px solid #e8e8e8;display:flex;gap:16px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.hs-item{display:flex;align-items:center;gap:5px;font-size:12px}
+.health-toolbar{padding:8px 16px;background:#fff;border-bottom:1px solid #efefef;display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+.health-scroll{flex:1;overflow-y:auto;min-height:0}
 </style>
 </head>
 <body>
@@ -319,6 +361,7 @@ function getAuthHeader(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
 function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return ts;}}
 function fmtRel(ts){if(!ts)return"";try{const d=Date.now()-new Date(ts).getTime();if(d<3600000)return Math.round(d/60000)+"m ago";if(d<86400000)return Math.round(d/3600000)+"h ago";if(d<604800000)return Math.round(d/86400000)+"d ago";return fmtTs(ts);}catch{return "";}}
+function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch{return "";}}
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
 function slaStatus(a){
@@ -535,21 +578,11 @@ function CountdownTimer({nextRefresh,autoRefresh}){
 }
 
 // ─── PWA INSTALL ─────────────────────────────────────────────────────────────
-// Captures the beforeinstallprompt event and provides install UI
-let _deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  _deferredPrompt = e;
-  // Dispatch custom event so React components can react
-  window.dispatchEvent(new CustomEvent("pwa-installable"));
-});
-window.addEventListener("appinstalled", () => {
-  _deferredPrompt = null;
-  window.dispatchEvent(new CustomEvent("pwa-installed"));
-});
+// Note: beforeinstallprompt is captured in plain <script> above (before Babel).
+// Here we just reference window.__pwaPrompt which was set early.
 
 function PWAInstallButton(){
-  const [installable, setInstallable] = React.useState(!!_deferredPrompt);
+  const [installable, setInstallable] = React.useState(!!window.__pwaPrompt);
   const [installed, setInstalled]     = React.useState(false);
   const [installing, setInstalling]   = React.useState(false);
 
@@ -562,11 +595,11 @@ function PWAInstallButton(){
   },[]);
 
   const handleInstall = async () => {
-    if(!_deferredPrompt) return;
+    if(!window.__pwaPrompt) return;
     setInstalling(true);
-    _deferredPrompt.prompt();
-    const { outcome } = await _deferredPrompt.userChoice;
-    _deferredPrompt = null;
+    window.__pwaPrompt.prompt();
+    const { outcome } = await window.__pwaPrompt.userChoice;
+    window.__pwaPrompt = null;
     setInstalling(false);
     if(outcome === "accepted") { setInstallable(false); setInstalled(true); }
   };
@@ -597,18 +630,18 @@ function PWAInstallBanner(){
   React.useEffect(()=>{
     if(dismissed) return;
     // Show banner after 8 seconds if still installable
-    const timer = setTimeout(()=>{ if(_deferredPrompt) setShow(true); }, 8000);
+    const timer = setTimeout(()=>{ if(window.__pwaPrompt) setShow(true); }, 8000);
     const onInstallable = () => { if(!dismissed) setShow(true); };
     window.addEventListener("pwa-installable", onInstallable);
     return ()=>{ clearTimeout(timer); window.removeEventListener("pwa-installable", onInstallable); };
   },[dismissed]);
 
   const handleInstall = async () => {
-    if(!_deferredPrompt) return;
+    if(!window.__pwaPrompt) return;
     setInst(true);
-    _deferredPrompt.prompt();
-    const { outcome } = await _deferredPrompt.userChoice;
-    _deferredPrompt = null;
+    window.__pwaPrompt.prompt();
+    const { outcome } = await window.__pwaPrompt.userChoice;
+    window.__pwaPrompt = null;
     setInst(false);
     setShow(false);
   };
@@ -662,9 +695,8 @@ function LoginScreen({onLogin,onDenied}){
               <circle cx="40" cy="20" r="8" fill="#00C9B1"/>
               <rect x="40" y="12" width="16" height="16" fill="#00C9B1"/>
             </svg>
-            <span style={{fontSize:22,fontWeight:800,color:"#0b1f3a",letterSpacing:"-0.5px"}}>Concentrix</span>
+
           </div>
-          <div className="login-logo-icon">🛡️</div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
           <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
         </div>
@@ -1214,6 +1246,7 @@ function Dashboard({onLogout}){
             <span>📅 Published: <strong style={{color:"#444"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}</strong></span>
             {(a.cve||(a.cves&&a.cves[0]))&&<span>🔖 CVE: <strong style={{color:"#c0392b"}}>{a.cve||a.cves[0]}</strong></span>}
             {a.cvss&&<span>📊 CVSS: <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10 ({a.severity})</strong></span>}
+            {a.fetched_at&&<span>👁 First seen: <strong style={{color:"#2563eb"}}>{fmtTs(a.fetched_at)}</strong></span>}
             {a.author&&<span>✍️ Author: <strong style={{color:"#444"}}>{a.author}</strong></span>}
             {a.source_count>1&&(
               <span title={a.sources_list?`Also reported by: ${a.sources_list.join(", ")}`:`Reported by ${a.source_count} sources`}
@@ -1338,6 +1371,15 @@ function Dashboard({onLogout}){
                   {a.isOEM&&<div style={{fontSize:10,color:"#15803d",fontWeight:700,marginTop:2}}>✓ OEM Direct</div>}
                   {a.source_count>1&&<div style={{fontSize:10,color:"#2563eb",marginTop:2}}>📡 {a.source_count} sources</div>}
                 </div>
+                {/* First Seen on dashboard */}
+                {a.fetched_at&&(
+                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>First Seen</div>
+                    <div style={{fontSize:12,fontWeight:600,color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
+                    <div style={{fontSize:10,color:"#93c5fd",marginTop:2}}>{new Date(a.fetched_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} UTC</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:1}}>Proxy picked up</div>
+                  </div>
+                )}
               </div>
 
               {/* ── CVE IDs ── */}
@@ -1600,7 +1642,10 @@ function Dashboard({onLogout}){
           <span style={{flexShrink:0}}>·</span>
           <span>{a.vendor||a.source}</span>
           <span>·</span>
-          <span>{fmtRel(a.published||a.date)}</span>
+          <span title={`Vendor published: ${fmtTs(a.published||a.date)}`}>{fmtRel(a.published||a.date)}</span>
+          {a.fetched_at&&a.fetched_at!==a.published&&(
+            <><span>·</span><span style={{color:"#2563eb",fontWeight:500}} title={`First seen on dashboard: ${fmtTs(a.fetched_at)}`}>Seen {fmtSeen(a.fetched_at)}</span></>
+          )}
           {a.cvss&&<><span>·</span><span style={{fontWeight:600}}>CVSS {a.cvss}</span></>}
         </div>
       </div>
@@ -1616,6 +1661,7 @@ function Dashboard({onLogout}){
       {id:"email",label:"Email & Notifications",icon:"📧",badge:0},
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
       {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
+      {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
     ];
     return(
       <div className="sidebar">
@@ -1963,6 +2009,204 @@ function Dashboard({onLogout}){
     );
   }
 
+
+  // ── FEED HEALTH MONITOR ─────────────────────────────────────────────────────
+  function FeedHealthPanel(){
+    const PROXY = PROXY_URL;
+    const [results,setResults]   = useState({});   // {sourceId: {status,latency,itemCount,lastChecked,error,httpCode}}
+    const [checking,setChecking] = useState(false);
+    const [filter,setFilter]     = useState("all"); // all | ok | warn | error | unknown
+    const [catFilter,setCatFilter]= useState("All");
+    const [search,setSearch]     = useState("");
+    const [progress,setProgress] = useState(0);
+    const [lastRun,setLastRun]   = useState(null);
+
+    // Check a single source via the proxy (avoids CORS)
+    const checkSource = async (src) => {
+      if(!src.rss) return {status:"no-rss",latency:null,itemCount:null,error:"No RSS feed configured",httpCode:null};
+      const start = Date.now();
+      try{
+        const res = await fetch(
+          `${PROXY}/feed-check?url=${encodeURIComponent(src.rss)}`,
+          {headers:{"Content-Type":"application/json",...getAuthHeader()},signal:AbortSignal.timeout(15000)}
+        );
+        const latency = Date.now()-start;
+        if(!res.ok){
+          return{status:"error",latency,itemCount:0,error:`HTTP ${res.status}`,httpCode:res.status};
+        }
+        const data = await res.json();
+        const count = data.item_count||0;
+        const status = count>0?"ok":count===0?"warn":"error";
+        return{status,latency,itemCount:count,error:count===0?"Feed reachable but returned 0 items":null,httpCode:200,lastItem:data.last_item_date||null};
+      }catch(e){
+        const latency=Date.now()-start;
+        if(e.name==="TimeoutError"||e.name==="AbortError")
+          return{status:"error",latency,itemCount:0,error:"Timeout after 15s — feed unreachable",httpCode:null};
+        return{status:"error",latency,itemCount:0,error:e.message||"Network error",httpCode:null};
+      }
+    };
+
+    const runCheck = async (sourcesToCheck) => {
+      setChecking(true);setProgress(0);
+      const list = sourcesToCheck||sources.filter(s=>s.enabled&&s.rss);
+      const total = list.length;
+      let done = 0;
+      // Run in batches of 8 to avoid overwhelming the proxy
+      const BATCH = 8;
+      const newResults = {...results};
+      for(let i=0;i<list.length;i+=BATCH){
+        const batch = list.slice(i,i+BATCH);
+        const batchResults = await Promise.all(batch.map(s=>checkSource(s).then(r=>({id:s.id,r}))));
+        batchResults.forEach(({id,r})=>{ newResults[id]={...r,lastChecked:new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}; });
+        done += batch.length;
+        setProgress(Math.round((done/total)*100));
+        setResults({...newResults});
+      }
+      setLastRun(new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}));
+      setChecking(false);setProgress(0);
+    };
+
+    const recheckOne = async (src) => {
+      const r = await checkSource(src);
+      setResults(p=>({...p,[src.id]:{...r,lastChecked:new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}}));
+    };
+
+    const statusOf = (src) => {
+      if(!src.rss) return "no-rss";
+      return results[src.id]?.status||"unknown";
+    };
+
+    const counts = useMemo(()=>{
+      const ok=sources.filter(s=>statusOf(s)==="ok").length;
+      const warn=sources.filter(s=>statusOf(s)==="warn").length;
+      const error=sources.filter(s=>statusOf(s)==="error").length;
+      const norss=sources.filter(s=>!s.rss).length;
+      const unknown=sources.filter(s=>s.rss&&!results[s.id]).length;
+      return{ok,warn,error,norss,unknown,total:sources.length};
+    },[sources,results]);
+
+    const filtered = useMemo(()=>{
+      return sources.filter(s=>{
+        if(catFilter!=="All"&&s.cat!==catFilter) return false;
+        if(search&&![s.name,s.vendor,s.cat].some(f=>f?.toLowerCase().includes(search.toLowerCase()))) return false;
+        const st=statusOf(s);
+        if(filter==="ok"&&st!=="ok") return false;
+        if(filter==="warn"&&st!=="warn") return false;
+        if(filter==="error"&&(st!=="error"&&st!=="no-rss")) return false;
+        if(filter==="unknown"&&st!=="unknown") return false;
+        return true;
+      });
+    },[sources,results,filter,catFilter,search]);
+
+    const dotClass = st => ({ok:"hc-dot-ok",warn:"hc-dot-warn",error:"hc-dot-error","no-rss":"hc-dot-error",unknown:"hc-dot-unknown"}[st]||"hc-dot-unknown");
+    const cardClass = st => ({ok:"hc-ok",warn:"hc-warn",error:"hc-error","no-rss":"hc-error",unknown:"hc-unknown"}[st]||"hc-unknown");
+    const badgeClass = st => ({ok:"hc-badge-ok",warn:"hc-badge-warn",error:"hc-badge-error","no-rss":"hc-badge-error",unknown:"hc-badge-unknown"}[st]||"hc-badge-unknown");
+    const badgeLabel = st => ({ok:"✅ OK",warn:"⚠️ EMPTY",error:"❌ ERROR","no-rss":"— NO RSS",unknown:"? UNCHECKED"}[st]||"? UNCHECKED");
+
+    return(
+      <div className="health-panel">
+        {/* Summary bar */}
+        <div className="health-summary">
+          <span style={{fontWeight:700,fontSize:14,color:"#1a1a1a"}}>🩺 Feed Health Monitor</span>
+          <div className="hs-item"><span style={{color:"#15803d",fontWeight:700}}>{counts.ok}</span><span style={{color:"#888"}}>OK</span></div>
+          <div className="hs-item"><span style={{color:"#ca8a04",fontWeight:700}}>{counts.warn}</span><span style={{color:"#888"}}>Empty</span></div>
+          <div className="hs-item"><span style={{color:"#dc2626",fontWeight:700}}>{counts.error}</span><span style={{color:"#888"}}>Error</span></div>
+          <div className="hs-item"><span style={{color:"#888",fontWeight:700}}>{counts.norss}</span><span style={{color:"#888"}}>No RSS</span></div>
+          <div className="hs-item"><span style={{color:"#d1d5db",fontWeight:700}}>{counts.unknown}</span><span style={{color:"#888"}}>Unchecked</span></div>
+          {lastRun&&<span style={{fontSize:11,color:"#aaa",marginLeft:"auto"}}>Last checked: {lastRun}</span>}
+        </div>
+
+        {/* Toolbar */}
+        <div className="health-toolbar">
+          <button className="btn btn-primary" onClick={()=>runCheck(null)} disabled={checking} style={{fontSize:12}}>
+            {checking?`⟳ Checking… ${progress}%`:"▶ Check All Sources"}
+          </button>
+          <button className="btn btn-secondary" onClick={()=>runCheck(sources.filter(s=>s.rss&&results[s.id]?.status==="error"))} disabled={checking||!Object.keys(results).length} style={{fontSize:11}}>
+            ↻ Recheck Errors ({counts.error})
+          </button>
+          <input placeholder="🔍 Search sources…" value={search} onChange={e=>setSearch(e.target.value)} className="field-input" style={{width:180,fontSize:12}}/>
+          <select value={catFilter} onChange={e=>setCatFilter(e.target.value)} className="field-select" style={{width:"auto",fontSize:12}}>
+            <option value="All">All Categories</option>
+            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+          </select>
+          <div style={{display:"flex",gap:4}}>
+            {[["all","All"],["ok","✅ OK"],["warn","⚠️ Empty"],["error","❌ Error"],["unknown","? Unchecked"]].map(([v,l])=>(
+              <button key={v} className={"filter-chip"+(filter===v?" active":"")} onClick={()=>setFilter(v)} style={{fontSize:11}}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {checking&&(
+          <div style={{height:3,background:"#f0f0f0",flexShrink:0}}>
+            <div style={{height:"100%",background:"#c0392b",width:`${progress}%`,transition:"width 0.3s ease"}}/>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!checking&&Object.keys(results).length===0&&(
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,color:"#bbb"}}>
+            <div style={{fontSize:48}}>🩺</div>
+            <div style={{fontSize:14,fontWeight:600,color:"#ccc"}}>No health checks run yet</div>
+            <div style={{fontSize:12,color:"#ddd",textAlign:"center",maxWidth:300,lineHeight:1.6}}>
+              Click <strong style={{color:"#c0392b"}}>Check All Sources</strong> to test all {sources.filter(s=>s.rss).length} RSS feeds.<br/>
+              The proxy will verify each URL, count items, and flag broken or changed feeds.
+            </div>
+            <button className="btn btn-primary" onClick={()=>runCheck(null)} style={{marginTop:8}}>▶ Start Health Check</button>
+          </div>
+        )}
+
+        {/* Results grid */}
+        {Object.keys(results).length>0&&(
+          <div className="health-scroll">
+            {!checking&&filtered.filter(s=>statusOf(s)!=="ok"&&statusOf(s)!=="unknown").length>0&&(
+              <div style={{margin:"12px 16px 0",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,fontSize:12}}>
+                <strong style={{color:"#dc2626"}}>⚠️ {filtered.filter(s=>statusOf(s)==="error"||statusOf(s)==="no-rss").length} sources need attention</strong>
+                <span style={{color:"#888",marginLeft:8}}>Feeds may have moved, changed format, or become unavailable.</span>
+              </div>
+            )}
+            <div className="health-grid">
+              {filtered.map(src=>{
+                const st=statusOf(src);
+                const r=results[src.id];
+                const cc=CAT_COLORS[src.cat]||"#888";
+                return(
+                  <div key={src.id} className={`health-card ${cardClass(st)}`}>
+                    <div className="hc-header">
+                      <div className={`hc-dot ${dotClass(st)}`}/>
+                      <div className="hc-name" title={src.name}>{src.name}</div>
+                      <span className={`hc-badge ${badgeClass(st)}`}>{badgeLabel(st)}</span>
+                      {src.tier===1&&<span style={{fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:3,padding:"1px 5px"}}>T1</span>}
+                    </div>
+                    <div className="hc-meta">
+                      <span style={{color:cc,fontWeight:600,fontSize:10}}>{src.cat}</span>
+                      <span>·</span>
+                      <span>{src.vendor}</span>
+                      {r?.latency&&<span>· {r.latency}ms</span>}
+                      {r?.itemCount!=null&&r.status==="ok"&&<span>· {r.itemCount} items</span>}
+                      {r?.lastItem&&<span>· last: {new Date(r.lastItem).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>}
+                      {r?.lastChecked&&<span style={{marginLeft:"auto",color:"#ccc"}}>checked {r.lastChecked}</span>}
+                    </div>
+                    {r?.error&&<div className="hc-error-msg">⚠ {r.error}</div>}
+                    <div className="hc-url" title={src.rss||"No RSS configured"}>{src.rss||<em>No RSS feed — portal only</em>}</div>
+                    <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+                      {src.rss&&(
+                        <button className="btn btn-ghost" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>recheckOne(src)} disabled={checking}>
+                          ↻ Recheck
+                        </button>
+                      )}
+                      {src.url&&<a href={src.url} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{fontSize:10,padding:"3px 8px"}}>↗ Portal</a>}
+                      {src.rss&&<a href={src.rss} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{fontSize:10,padding:"3px 8px"}}>↗ RSS</a>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // ── CVE SEARCH PANEL (NVD API) ────────────────────────────────────────────
   function CVESearchPanel(){
@@ -2365,8 +2609,6 @@ function Dashboard({onLogout}){
             <circle cx="27" cy="13.5" r="5.5" fill="#00C9B1"/>
             <rect x="27" y="9.5" width="10" height="8" fill="#00C9B1"/>
           </svg>
-          <span style={{fontSize:13,fontWeight:800,color:"#0b1f3a",letterSpacing:"-0.3px"}}>Concentrix</span>
-          <div style={{width:1,height:18,background:"#e0e0e0",margin:"0 4px"}}/>
           <span style={{fontSize:12,fontWeight:700,color:"#c0392b"}}>Security Advisory</span>
           <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE · SOC</span>
         </div>
@@ -2578,6 +2820,7 @@ function Dashboard({onLogout}){
         {tab==="email"&&<EmailPanel/>}
         {tab==="settings"&&<SettingsPanel/>}
         {tab==="cvesearch"&&<CVESearchPanel/>}
+        {tab==="feedhealth"&&<FeedHealthPanel/>}
       </div>
     </div>
   );
