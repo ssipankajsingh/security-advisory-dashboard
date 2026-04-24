@@ -591,7 +591,13 @@ function PWAInstallButton(){
     const onInstalled   = () => { setInstallable(false); setInstalled(true); };
     window.addEventListener("pwa-installable", onInstallable);
     window.addEventListener("pwa-installed",   onInstalled);
-    return ()=>{ window.removeEventListener("pwa-installable", onInstallable); window.removeEventListener("pwa-installed", onInstalled); };
+    // Poll every 2s in case event was missed (Babel timing)
+    const poll = setInterval(()=>{ if(window.__pwaPrompt) { setInstallable(true); clearInterval(poll); } }, 2000);
+    return ()=>{
+      window.removeEventListener("pwa-installable", onInstallable);
+      window.removeEventListener("pwa-installed", onInstalled);
+      clearInterval(poll);
+    };
   },[]);
 
   const handleInstall = async () => {
@@ -629,11 +635,16 @@ function PWAInstallBanner(){
 
   React.useEffect(()=>{
     if(dismissed) return;
-    // Show banner after 8 seconds if still installable
-    const timer = setTimeout(()=>{ if(window.__pwaPrompt) setShow(true); }, 8000);
     const onInstallable = () => { if(!dismissed) setShow(true); };
     window.addEventListener("pwa-installable", onInstallable);
-    return ()=>{ clearTimeout(timer); window.removeEventListener("pwa-installable", onInstallable); };
+    // Poll every 3s for 60s in case event was missed
+    let polls = 0;
+    const poll = setInterval(()=>{
+      polls++;
+      if(window.__pwaPrompt && !dismissed){ setShow(true); clearInterval(poll); }
+      if(polls > 20) clearInterval(poll);
+    }, 3000);
+    return ()=>{ clearInterval(poll); window.removeEventListener("pwa-installable", onInstallable); };
   },[dismissed]);
 
   const handleInstall = async () => {
@@ -1988,6 +1999,63 @@ function Dashboard({onLogout}){
                 ))}
               </div>
             )}
+          </div>
+          <div className="section-card">
+            <div className="section-title">📲 Install App</div>
+            <div style={{color:"#888",fontSize:12,marginBottom:12,lineHeight:1.6}}>
+              Install as a desktop or mobile app for quick access — works offline.
+            </div>
+            {(()=>{
+              const [installable,setInstallable]=React.useState(!!window.__pwaPrompt);
+              const [installed,setInstalled]=React.useState(false);
+              const [installing,setInstalling]=React.useState(false);
+              const [swState,setSwState]=React.useState("checking");
+              React.useEffect(()=>{
+                window.addEventListener("pwa-installable",()=>setInstallable(true));
+                window.addEventListener("pwa-installed",()=>{setInstalled(true);setInstallable(false);});
+                // Check SW status
+                if("serviceWorker" in navigator){
+                  navigator.serviceWorker.getRegistration().then(reg=>{
+                    setSwState(reg?"registered":"none");
+                  }).catch(()=>setSwState("error"));
+                } else {
+                  setSwState("unsupported");
+                }
+              },[]);
+              const handleInstall=async()=>{
+                if(!window.__pwaPrompt){alert("Install prompt not available yet.\n\nIn Chrome/Edge: look for the install icon (⊕) in the address bar, or go to browser menu → 'Install Security Advisory Dashboard'");return;}
+                setInstalling(true);
+                window.__pwaPrompt.prompt();
+                const{outcome}=await window.__pwaPrompt.userChoice;
+                window.__pwaPrompt=null;
+                setInstalling(false);
+                if(outcome==="accepted"){setInstalled(true);setInstallable(false);}
+              };
+              if(installed) return<div style={{color:"#15803d",fontSize:13,fontWeight:600}}>✅ App installed successfully!</div>;
+              return(
+                <div>
+                  <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                    <button onClick={handleInstall} disabled={installing} className="btn btn-primary">
+                      {installing?"Installing…":"⬇ Install as App"}
+                    </button>
+                    {!installable&&<span style={{fontSize:11,color:"#aaa",alignSelf:"center"}}>
+                      If button doesn't work, use browser menu → Install app
+                    </span>}
+                  </div>
+                  <div style={{fontSize:11,color:"#aaa",lineHeight:1.6}}>
+                    <strong>Status:</strong>{" "}
+                    {installable?"✅ Ready to install":"⏳ Waiting for browser install prompt"}
+                    {" · SW: "}{swState}
+                  </div>
+                  <div style={{marginTop:8,fontSize:11,color:"#999",background:"#f8f8f8",borderRadius:6,padding:"8px 10px",lineHeight:1.7}}>
+                    <strong>Manual install in Chrome/Edge:</strong><br/>
+                    1. Look for <strong>⊕</strong> icon in the address bar right side<br/>
+                    2. Or: browser menu (⋮) → <strong>"Install Security Advisory Dashboard…"</strong><br/>
+                    3. On mobile: browser menu → <strong>"Add to Home Screen"</strong>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <div className="section-card">
             <div className="section-title">🔐 Session</div>
