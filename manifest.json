@@ -1,13 +1,56 @@
 {
-  "name": "Security Advisory Dashboard",
-  "short_name": "SecAdvisory",
-  "description": "Real-time security advisories — Concentrix Endpoint Security",
-  "start_url": "./",
+  "name": "Security Advisory Dashboard — Concentrix GSE",
+  "short_name": "CNX SecAdvisory",
+  "description": "Real-time security advisory intelligence for Concentrix Endpoint Security & GSE SOC team",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#0d1117",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#0a1e50",
+  "categories": ["security", "productivity", "business"],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icon512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Security Advisory Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Advisory Feed",
+      "short_name": "Feed",
+      "description": "View latest security advisories",
+      "url": "./index.html",
+      "icons": [{ "src": "icon192.png", "sizes": "192x192" }]
+    }
   ]
 }
