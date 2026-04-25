@@ -97,6 +97,10 @@ a:hover{text-decoration:underline}
 .feed-tab-btn.active-news .feed-tab-count{background:#6b7280;color:#fff}
 .feed-tab-btn:not(.active-adv):not(.active-news) .feed-tab-count{background:#f0f0f0;color:#888}
 .coverage-badge{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:default;flex-shrink:0}
+.patch-available{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#f0fdf4;color:#15803d;border:1px solid #86efac}
+.patch-workaround{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.patch-nofix{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.kev-due{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff}
 .mid-title{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .mid-filters{display:flex;gap:4px;flex-wrap:wrap}
 .filter-chip{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;border:1px solid #e0e0e0;background:#fff;color:#555;cursor:pointer;transition:all 0.1s;white-space:nowrap}
@@ -1448,6 +1452,10 @@ function Dashboard({onLogout}){
                 {ackInfo&&<AckBadge by={ackInfo.by}/>}
                 <SLABadge advisory={a} statuses={statuses}/>
                 {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
+                {a.patch_status==="available"&&<span className="patch-available">✅ Patch Available</span>}
+                {a.patch_status==="workaround"&&<span className="patch-workaround">⚠️ Workaround Only</span>}
+                {a.patch_status==="no_fix"&&<span className="patch-nofix">❌ No Patch</span>}
+                {a.kev_due_date&&<span className="kev-due" title={`CISA KEV remediation deadline: ${a.kev_due_date}`}>⏰ KEV Due: {a.kev_due_date}</span>}
                 {a.cat&&<span className="badge" style={{background:cc+"18",color:cc,border:`1px solid ${cc}33`}}>{a.cat}</span>}
               </div>
               {(a.cve||(a.cves&&a.cves[0]))&&<div className="rph-cve">{a.cve||a.cves[0]}</div>}
@@ -1492,7 +1500,13 @@ function Dashboard({onLogout}){
             const text=a.description||a.summary||"";
             if(/exploit|actively exploit|in the wild/i.test(text))reasons.push({icon:"💣",text:"Exploit available",color:"#9333ea"});
             if(/internet.?facing|remote|unauthenticated|no auth/i.test(text))reasons.push({icon:"🌐",text:"Remote / unauthenticated",color:"#2563eb"});
-            if(/patch|update|available|fixed in/i.test(text))reasons.push({icon:"🩹",text:"Patch available",color:"#15803d"});
+            if(a.patch_status==="available")reasons.push({icon:"🩹",text:"Patch available",color:"#15803d"});
+            else if(a.patch_status==="no_fix")reasons.push({icon:"🚫",text:"No patch yet",color:"#dc2626"});
+            else if(a.patch_status==="workaround")reasons.push({icon:"🔧",text:"Workaround available",color:"#92400e"});
+            else if(/patch|update|available|fixed in/i.test(text))reasons.push({icon:"🩹",text:"Patch available",color:"#15803d"});
+            if(a.kev_due_date){const daysLeft=Math.ceil((new Date(a.kev_due_date)-Date.now())/86400000);
+              if(daysLeft<=7)reasons.push({icon:"🗓",text:`KEV due in ${daysLeft}d`,color:"#7e22ce"});
+            }
             if(/identity|active directory|auth|credential|ldap|kerberos/i.test(text))reasons.push({icon:"🔐",text:"Identity service",color:"#7c3aed"});
             if(/ransomware|nation.?state|apt|threat actor/i.test(text))reasons.push({icon:"☠️",text:"Nation-state / ransomware threat",color:"#dc2626"});
             const vendor=(a.vendor||a.source||"").toLowerCase();
@@ -1526,6 +1540,26 @@ function Dashboard({onLogout}){
           {readPane==="detail"&&(
             <div className="scroll-area">
               {ackInfo?.note&&<div className="pane-ack-note">📝 {ackInfo.note}</div>}
+              {a.required_action&&(
+                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#14532d"}}>
+                  <span style={{fontWeight:700,marginRight:6}}>✅ Required Action:</span>{a.required_action}
+                </div>
+              )}
+              {a.kev_notes&&(
+                <div style={{background:"#fdf4ff",border:"1px solid #e9d5ff",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#581c87"}}>
+                  <span style={{fontWeight:700,marginRight:6}}>🔍 KEV Notes:</span>{a.kev_notes}
+                </div>
+              )}
+              {a.required_action&&(
+                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#14532d"}}>
+                  <span style={{fontWeight:700,marginRight:6}}>✅ Required Action:</span>{a.required_action}
+                </div>
+              )}
+              {a.kev_notes&&(
+                <div style={{background:"#fdf4ff",border:"1px solid #e9d5ff",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#581c87"}}>
+                  <span style={{fontWeight:700,marginRight:6}}>🔍 KEV Notes:</span>{a.kev_notes}
+                </div>
+              )}
 
               {/* ── DATA QUALITY BANNER for thin/news articles ── */}
               {(a.data_quality==="thin"||a.isNews)&&(
@@ -2184,8 +2218,17 @@ function Dashboard({onLogout}){
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><span style={{fontSize:18}}>💬</span><div className="section-title" style={{marginBottom:0}}>Microsoft Teams Notifications</div></div>
             <div className="field-label" style={{marginBottom:4}}>Teams Incoming Webhook URL</div>
             <input placeholder="https://your-org.webhook.office.com/…" value={teamsWebhook} onChange={e=>{setTeamsWebhook(e.target.value);setTeamsStatus(null);}} className="field-input" style={{marginBottom:10}}/>
-            <button onClick={sendTeamsNow} disabled={teamsSending||!teamsWebhook.trim()} className={"btn "+(teamsWebhook.trim()?"btn-teams":"btn-secondary")} style={{width:"100%",justifyContent:"center"}}>
+            <button onClick={sendTeamsNow} disabled={teamsSending||!teamsWebhook.trim()} className={"btn "+(teamsWebhook.trim()?"btn-teams":"btn-secondary")} style={{width:"100%",justifyContent:"center",marginBottom:8}}>
               {teamsSending?"⟳ Sending…":"💬 Send to Teams Now"}
+            </button>
+            <button onClick={async()=>{
+              try{
+                const r=await fetch(`${PROXY_URL}/handover-report?send=true`,{headers:getAuthHeader()});
+                const d=await r.json();
+                alert(`✅ Handover report sent!\nNew: ${d.report?.new_total||0} | Critical: ${d.report?.new_critical||0} | SLA Overdue: ${d.report?.sla_overdue||0}`);
+              }catch(e){alert("❌ "+e.message);}
+            }} className="btn btn-secondary" style={{width:"100%",justifyContent:"center"}}>
+              🔄 Send Handover Report Now
             </button>
             {teamsStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:teamsStatus.ok?"#f0fdf4":"#fef2f2",color:teamsStatus.ok?"#15803d":"#dc2626",fontSize:12}}>{teamsStatus.msg}</div>}
           </div>
