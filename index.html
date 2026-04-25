@@ -1126,6 +1126,7 @@ function Dashboard({onLogout}){
     if(fNew)list=list.filter(a=>{const aTs=new Date(a.published||a.date||0).getTime();return lastFetchedTs===0?a.isNew:aTs>=lastFetchedTs-3600000;});
     if(fAck==="Acknowledged")list=list.filter(a=>acks[a.id]);
     if(fAck==="Unacknowledged")list=list.filter(a=>!acks[a.id]);
+    if(fAck==="HasNote")list=list.filter(a=>acks[a.id]?.note&&acks[a.id].note.trim().length>0);
     if(fStatus!=="All")list=list.filter(a=>(statuses[a.id]||"New")===fStatus);
     if(fAssignee==="me")list=list.filter(a=>acks[a.id]?.assigned_to===userName);
     else if(fAssignee!=="All")list=list.filter(a=>acks[a.id]?.assigned_to===fAssignee);
@@ -3312,6 +3313,7 @@ function Dashboard({onLogout}){
                   <option value="All">All</option>
                   <option value="Acknowledged">✅ Acked</option>
                   <option value="Unacknowledged">⬜ Unacked</option>
+                  <option value="HasNote">💬 Has Note</option>
                 </select>
                 <select value={fStatus} onChange={e=>setFStatus(e.target.value)}>
                   <option value="All">All Status</option>
