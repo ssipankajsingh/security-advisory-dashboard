@@ -3371,14 +3371,14 @@ function Dashboard({onLogout}){
               {/* Old data warning */}
               {advisories.length>0&&(()=>{
                 const oldCount=advisories.filter(a=>{
-                  try{const d=new Date(a.published||a.date);return !isNaN(d)&&(Date.now()-d.getTime())>30*24*3600000;}catch{return false;}
+                  try{const d=new Date(a.published||a.date);return !isNaN(d)&&(Date.now()-d.getTime())>90*24*3600000;}catch{return false;}
                 }).length;
-                if(oldCount<50)return null; // raised threshold — ignore small residuals from unparseable dates
+                if(oldCount<50)return null; // only warn if significant number older than 90 days
                 return(
                   <div style={{padding:"5px 10px",background:"#fff7ed",borderBottom:"1px solid #fed7aa",display:"flex",alignItems:"center",justifyContent:"space-between",gap:7,fontSize:11,color:"#92400e",flexShrink:0}}>
                     <span style={{display:"flex",alignItems:"center",gap:5}}>
                       <span>⚠️</span>
-                      <span><strong>{oldCount} advisories</strong> older than 30 days in cache</span>
+                      <span><strong>{oldCount} advisories</strong> older than 90 days in cache</span>
                     </span>
                     <button
                       onClick={()=>{if(confirm("Reset & Refresh? Clears cache and re-fetches live feeds.")){setAdvisories([]);setNewCount(0);setVisibleCount(50);fetch(`${PROXY_URL}/cache/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});setTimeout(()=>doRefresh(true),500);}}}
