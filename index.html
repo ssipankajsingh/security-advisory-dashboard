@@ -1952,6 +1952,8 @@ function Dashboard({onLogout}){
       {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
       {id:"heatmap",label:"CVE Heatmap",icon:"🗓️",badge:0},
       {id:"weekly",label:"Weekly Report",icon:"📊",badge:0},
+      {id:"archive",label:"Advisory Archive",icon:"🗄️",badge:0},
+      {id:"savedsearches",label:"Saved Searches",icon:"🔖",badge:0},
     ];
     return(
       <div className="sidebar">
@@ -2534,6 +2536,178 @@ function Dashboard({onLogout}){
   }
 
   // ── WEEKLY REPORT PANEL ────────────────────────────────────────────────────
+  function ArchivePanel(){
+    const [items,setItems]=React.useState([]);
+    const [loading,setLoading]=React.useState(false);
+    const [severity,setSeverity]=React.useState("");
+    const [days,setDays]=React.useState(365);
+    const [sel,setSel]=React.useState(null);
+    const load=React.useCallback(async()=>{
+      setLoading(true);
+      try{
+        const p=new URLSearchParams({limit:500,days});
+        if(severity)p.set("severity",severity);
+        const r=await fetch(`${PROXY_URL}/archive?${p}`,{headers:getAuthHeader()});
+        const d=await r.json();
+        setItems(d.advisories||[]);
+      }catch(e){console.error(e);}
+      setLoading(false);
+    },[days,severity]);
+    React.useEffect(()=>{load();},[load]);
+    const crit=items.filter(a=>a.severity==="Critical").length;
+    const zd=items.filter(a=>a.zeroDay).length;
+    const fmtDate=d=>{try{return new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"});}catch{return"—";}};
+    return(
+      <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%"}}>
+        <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🗄️ Advisory Archive</div></div>
+        <div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"10px 20px",fontSize:12,color:"#1e40af",flexShrink:0}}>
+          Archived advisories — older than 90 days, within 1-year retention. Fully searchable.
+        </div>
+        <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
+          <select value={severity} onChange={e=>setSeverity(e.target.value)} className="field-select" style={{width:130}}>
+            <option value="">All Severity</option>
+            {["Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}
+          </select>
+          <select value={days} onChange={e=>setDays(Number(e.target.value))} className="field-select" style={{width:130}}>
+            <option value={90}>Last 90 days</option>
+            <option value={180}>Last 180 days</option>
+            <option value={365}>Last 365 days</option>
+          </select>
+          <button onClick={load} disabled={loading} className="btn btn-secondary">{loading?"⟳ Loading…":"⟳ Refresh"}</button>
+          <div style={{marginLeft:"auto",display:"flex",gap:12,fontSize:12,color:"#888"}}>
+            <span style={{color:"#dc2626",fontWeight:600}}>{crit} Critical</span>
+            <span style={{color:"#7c3aed",fontWeight:600}}>{zd} Zero-Days</span>
+            <span>{items.length} total</span>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:sel?"1fr 1fr":"1fr",flex:1,overflow:"hidden"}}>
+          <div style={{overflowY:"auto",borderRight:sel?"1px solid #f0f0f0":"none"}}>
+            {loading&&<div style={{padding:32,textAlign:"center",color:"#aaa",fontSize:13}}>Loading archive…</div>}
+            {!loading&&items.length===0&&<div style={{padding:32,textAlign:"center",color:"#aaa",fontSize:13}}>No archived advisories found.</div>}
+            {items.map(a=>(
+              <div key={a.id} onClick={()=>setSel(sel?.id===a.id?null:a)}
+                style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",
+                  background:sel?.id===a.id?"#f0f9ff":"transparent",transition:"background 0.1s"}}>
+                <div style={{display:"flex",gap:5,marginBottom:3}}>
+                  <span style={{background:a.severity==="Critical"?"#dc2626":a.severity==="High"?"#ea580c":"#888",
+                    color:"#fff",fontSize:10,fontWeight:700,padding:"1px 5px",borderRadius:3}}>{a.severity||"?"}</span>
+                  {a.zeroDay&&<span style={{background:"#7c3aed",color:"#fff",fontSize:10,padding:"1px 5px",borderRadius:3}}>0-DAY</span>}
+                  {a.isOEM&&<span style={{background:"#059669",color:"#fff",fontSize:10,padding:"1px 5px",borderRadius:3}}>OEM</span>}
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:"#1a1a1a",marginBottom:2}}>{a.cve||a.id}</div>
+                <div style={{fontSize:11,color:"#555",marginBottom:2,lineHeight:1.4}}>{(a.title||"").substring(0,75)}</div>
+                <div style={{fontSize:10,color:"#999"}}>{a.source} · {fmtDate(a.published)}</div>
+              </div>
+            ))}
+          </div>
+          {sel&&(
+            <div style={{overflowY:"auto",padding:16}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>{sel.cve||sel.id}</div>
+              <div style={{fontSize:12,color:"#555",marginBottom:10,lineHeight:1.6}}>{sel.title}</div>
+              <table style={{width:"100%",fontSize:12,borderCollapse:"collapse"}}>
+                {[["Severity",sel.severity],["Source",sel.source],["Published",fmtDate(sel.published)],
+                  ["CVSS",sel.cvss||"N/A"],["EPSS",sel.epss?`${sel.epss}%`:"N/A"],["Patch",sel.patch_status||"unknown"]
+                ].map(([k,v])=>(
+                  <tr key={k}><td style={{padding:"3px 0",color:"#999",width:80,fontSize:11}}>{k}</td><td style={{padding:"3px 0",fontWeight:500}}>{v}</td></tr>
+                ))}
+              </table>
+              {sel.summary&&<div style={{marginTop:10,fontSize:12,color:"#444",lineHeight:1.6,background:"#f8f9fa",padding:10,borderRadius:6}}>{sel.summary}</div>}
+              <div style={{marginTop:10,display:"flex",gap:6}}>
+                {sel.cve&&<a href={`https://nvd.nist.gov/vuln/detail/${sel.cve}`} target="_blank" rel="noreferrer"
+                  style={{fontSize:11,padding:"3px 10px",background:"#0f62fe",color:"#fff",borderRadius:4,textDecoration:"none"}}>NVD ↗</a>}
+                {sel.link&&<a href={sel.link} target="_blank" rel="noreferrer"
+                  style={{fontSize:11,padding:"3px 10px",background:"#dc2626",color:"#fff",borderRadius:4,textDecoration:"none"}}>Official ↗</a>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function SavedSearchesPanel(){
+    const [searches,setSearches]=React.useState([]);
+    const [loading,setLoading]=React.useState(false);
+    const [name,setName]=React.useState("");
+    const [owner,setOwner]=React.useState(()=>localStorage.getItem("sad_username")||"Pankaj Singh");
+    const [isShared,setIsShared]=React.useState(false);
+    const [status,setStatus]=React.useState(null);
+    const members=["Pankaj Singh","Wisnu","Ganesh","Sai","Unassigned"];
+    const load=React.useCallback(async()=>{
+      setLoading(true);
+      try{
+        const r=await fetch(`${PROXY_URL}/saved-searches?owner=${encodeURIComponent(owner)}`,{headers:getAuthHeader()});
+        const d=await r.json();
+        setSearches(d.searches||[]);
+      }catch(e){}
+      setLoading(false);
+    },[owner]);
+    React.useEffect(()=>{load();},[load]);
+    const save=async()=>{
+      if(!name.trim()){setStatus({ok:false,msg:"Enter a search name"});return;}
+      try{
+        const r=await fetch(`${PROXY_URL}/saved-searches`,{method:"POST",
+          headers:{"Content-Type":"application/json",...getAuthHeader()},
+          body:JSON.stringify({name,owner,filters:{},is_shared:isShared})});
+        const d=await r.json();
+        if(d.success){setStatus({ok:true,msg:"✅ Saved!"});setName("");load();}
+        else setStatus({ok:false,msg:"❌ Failed"});
+      }catch(e){setStatus({ok:false,msg:"❌ "+e.message});}
+    };
+    const del=async(id)=>{
+      await fetch(`${PROXY_URL}/saved-searches/${id}`,{method:"DELETE",headers:getAuthHeader()});
+      setSearches(p=>p.filter(s=>s.id!==id));
+    };
+    return(
+      <div className="read-pane" style={{background:"#fafafa"}}>
+        <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🔖 Saved Searches</div></div>
+        <div className="tab-content"><div className="scroll-area" style={{maxWidth:560}}>
+          <div className="section-card">
+            <div className="section-title">Save a Search</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,marginBottom:8}}>
+              <input placeholder="e.g. All Cisco Critical — unassigned" value={name}
+                onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()}
+                className="field-input"/>
+              <button onClick={save} className="btn btn-primary">Save</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div><div className="field-label">Owner</div>
+                <select value={owner} onChange={e=>setOwner(e.target.value)} className="field-select">
+                  {members.map(m=><option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div style={{display:"flex",alignItems:"flex-end",paddingBottom:4}}>
+                <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}>
+                  <input type="checkbox" checked={isShared} onChange={e=>setIsShared(e.target.checked)}/>
+                  Share with whole team
+                </label>
+              </div>
+            </div>
+            {status&&<div style={{marginTop:8,padding:"6px 10px",borderRadius:6,fontSize:12,
+              background:status.ok?"#f0fdf4":"#fef2f2",color:status.ok?"#15803d":"#dc2626"}}>{status.msg}</div>}
+          </div>
+          <div className="section-card">
+            <div className="section-title">Saved Searches {loading&&<span style={{fontWeight:400,fontSize:11,color:"#aaa"}}>(loading…)</span>}</div>
+            {searches.length===0&&!loading&&<div style={{color:"#aaa",fontSize:12}}>No saved searches yet.</div>}
+            {searches.map(s=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                padding:"10px 12px",background:"#f8f8f8",borderRadius:6,marginBottom:6,border:"0.5px solid #efefef"}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600}}>{s.name}</div>
+                  <div style={{fontSize:11,color:"#888",marginTop:2}}>
+                    {s.owner} · {s.is_shared?"🌐 Team":"🔒 Private"} · {new Date(s.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <button onClick={()=>del(s.id)}
+                  style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:16,padding:"0 4px"}}>✕</button>
+              </div>
+            ))}
+          </div>
+        </div></div>
+      </div>
+    );
+  }
+
   function WeeklyReportPanel({advisories,emailRecipients,senderEmail,senderName}){
     const [sending,setSending]=useState(false);
     const [status,setStatus]=useState(null);
@@ -3481,6 +3655,8 @@ function Dashboard({onLogout}){
         {tab==="feedhealth"&&<FeedHealthPanel/>}
         {tab==="heatmap"&&<HeatmapPanel advisories={advisories}/>}
         {tab==="weekly"&&<WeeklyReportPanel advisories={advisories} emailRecipients={emailRecipients} senderEmail={senderEmail} senderName={senderName}/>}
+        {tab==="archive"&&<ArchivePanel/>}
+        {tab==="savedsearches"&&<SavedSearchesPanel/>}
       </div>
     </div>
   );
