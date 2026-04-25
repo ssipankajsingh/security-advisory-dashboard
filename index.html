@@ -426,9 +426,9 @@ async function saveSourceConfig(proxyUrl,authHeader,sourceId,enabled){
   catch{}
 }
 
-function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch{return ts;}}
+function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});}catch{return ts;}}
 function fmtRel(ts){if(!ts)return"";try{const d=Date.now()-new Date(ts).getTime();if(d<3600000)return Math.round(d/60000)+"m ago";if(d<86400000)return Math.round(d/3600000)+"h ago";if(d<604800000)return Math.round(d/86400000)+"d ago";return fmtTs(ts);}catch{return "";}}
-function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch{return "";}}
+function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});}catch{return "";}}
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
 function slaStatus(a){
@@ -999,7 +999,7 @@ function Dashboard({onLogout}){
       }
     }
     const now=new Date();
-    const ts=now.toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+    const ts=now.toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});
     setLastFetched(ts);
     setNextRefresh(Date.now()+INTERVALS[refreshInterval]);
     setRefreshLog(prev=>[{time:ts,manual,live:!!PROXY_URL},...prev].slice(0,20));
@@ -1251,7 +1251,7 @@ function Dashboard({onLogout}){
           <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:7,padding:"10px 12px",marginBottom:14,fontSize:12}}>
             <div style={{fontWeight:700,color:"#15803d",marginBottom:4,display:"flex",justifyContent:"space-between"}}>
               <span>📋 Last saved by {existing.by||ackInfo?.by||"team"}</span>
-              <span style={{color:"#aaa",fontWeight:400}}>{existing.at?new Date(existing.at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""}</span>
+              <span style={{color:"#aaa",fontWeight:400}}>{existing.at?new Date(existing.at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}):""}</span>
             </div>
             {existing.note&&<div style={{color:"#166534",marginBottom:existing.impact||existing.action?4:0}}>{existing.note}</div>}
             {existing.impact&&<div style={{color:"#555",fontSize:11}}><strong>Impact:</strong> {existing.impact}</div>}
@@ -1463,7 +1463,7 @@ function Dashboard({onLogout}){
               </div>
               <div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Published</span>
-                <strong>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</strong>
+                <strong>{a.published?new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}</strong>
               </div>
               {a.cvss&&<div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>CVSS</span>
@@ -1471,7 +1471,7 @@ function Dashboard({onLogout}){
               </div>}
               {a.fetched_at&&<div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>First seen</span>
-                <strong style={{color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</strong>
+                <strong style={{color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"})}</strong>
               </div>}
               {a.source_count>1&&<div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Also in</span>
@@ -1580,15 +1580,15 @@ function Dashboard({onLogout}){
                 {/* Published */}
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                   <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Published</div>
-                  <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{a.published?new Date(a.published).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"—"}</div>
-                  <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.published?new Date(a.published).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC":""}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{a.published?new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}</div>
+                  <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.published?new Date(a.published).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"})+" IST":""}</div>
                 </div>
                 {/* Review / Updated date */}
                 {a.updated&&a.updated!==a.published&&(
                   <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                     <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Last Updated</div>
-                    <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{new Date(a.updated).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
-                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{new Date(a.updated).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})+" UTC"}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{new Date(a.updated).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"})}</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{new Date(a.updated).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"})+" IST"}</div>
                   </div>
                 )}
                 {/* EPSS Score */}
@@ -1614,8 +1614,8 @@ function Dashboard({onLogout}){
                 {a.fetched_at&&(
                   <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                     <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>First Seen</div>
-                    <div style={{fontSize:12,fontWeight:600,color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
-                    <div style={{fontSize:10,color:"#93c5fd",marginTop:2}}>{new Date(a.fetched_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} UTC</div>
+                    <div style={{fontSize:12,fontWeight:600,color:"#2563eb"}}>{new Date(a.fetched_at).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"})}</div>
+                    <div style={{fontSize:10,color:"#93c5fd",marginTop:2}}>{new Date(a.fetched_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"})} IST</div>
                     <div style={{fontSize:10,color:"#bbb",marginTop:1}}>Proxy picked up</div>
                   </div>
                 )}
@@ -2659,7 +2659,7 @@ function Dashboard({onLogout}){
         setProgress(Math.round((done/total)*100));
         setResults({...newResults});
       }
-      setLastRun(new Date().toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}));
+      setLastRun(new Date().toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"}));
       setChecking(false);setProgress(0);
     };
 
