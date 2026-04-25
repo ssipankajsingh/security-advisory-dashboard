@@ -87,6 +87,16 @@ a:hover{text-decoration:underline}
 .mid-panel-resize{width:4px;background:transparent;cursor:col-resize;flex-shrink:0;transition:background 0.15s}
 .mid-panel-resize:hover{background:#e0e0e0}
 .mid-header{padding:8px 12px 6px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.feed-tab-bar{display:flex;gap:0;padding:0 10px;background:#fff;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.feed-tab-btn{padding:6px 14px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;color:#888;border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:all 0.15s;display:flex;align-items:center;gap:5px}
+.feed-tab-btn:hover{color:#444}
+.feed-tab-btn.active-adv{color:#c0392b;border-bottom-color:#c0392b;font-weight:600}
+.feed-tab-btn.active-news{color:#6b7280;border-bottom-color:#6b7280;font-weight:600}
+.feed-tab-count{font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;line-height:1.4}
+.feed-tab-btn.active-adv .feed-tab-count{background:#c0392b;color:#fff}
+.feed-tab-btn.active-news .feed-tab-count{background:#6b7280;color:#fff}
+.feed-tab-btn:not(.active-adv):not(.active-news) .feed-tab-count{background:#f0f0f0;color:#888}
+.coverage-badge{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:default;flex-shrink:0}
 .mid-title{font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .mid-filters{display:flex;gap:4px;flex-wrap:wrap}
 .filter-chip{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;border:1px solid #e0e0e0;background:#fff;color:#555;cursor:pointer;transition:all 0.1s;white-space:nowrap}
@@ -1136,8 +1146,31 @@ function Dashboard({onLogout}){
     return list;
   },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,userName,resolveAdvisoryCat]);
 
+  // ── Feed tab: advisories (CVEs/PSIRTs) | news (articles/intel) ─────────────
+  const [feedTab,setFeedTab]=useState(()=>{try{return sessionStorage.getItem("sf_feedtab")||"advisories";}catch{return"advisories";}});
+  useEffect(()=>{try{sessionStorage.setItem("sf_feedtab",feedTab);}catch{}},[feedTab]);
+  const filteredAdvisories=useMemo(()=>filtered.filter(a=>!a.isNews&&a.cat!=="News"),[filtered]);
+  const filteredNews=useMemo(()=>filtered.filter(a=>a.isNews||a.cat==="News"),[filtered]);
+  // CVEs in the advisory tab that also have news coverage
+  const coveredCVEs=useMemo(()=>{
+    const cveSet=new Set(filteredAdvisories.map(a=>a.cve||a.id).filter(Boolean));
+    const covered=new Set();
+    filteredNews.forEach(n=>{(n.cves||[n.cve]).filter(Boolean).forEach(cve=>{if(cveSet.has(cve))covered.add(cve);});});
+    return covered;
+  },[filteredAdvisories,filteredNews]);
+  // Active list: advisories tab | news tab (threat intel first, then chrono)
+  const activeFiltered=useMemo(()=>{
+    if(feedTab==="advisories")return filteredAdvisories;
+    return [...filteredNews].sort((a,b)=>{
+      const intel=x=>["Threat Intel","Aggregator"].includes(x.cat);
+      if(intel(a)&&!intel(b))return -1;
+      if(!intel(a)&&intel(b))return 1;
+      return new Date(b.published||0)-new Date(a.published||0);
+    });
+  },[feedTab,filteredAdvisories,filteredNews]);
+
   const [visibleCount,setVisibleCount]=useState(50);
-  useEffect(()=>{setVisibleCount(50);},[sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
+  useEffect(()=>{setVisibleCount(50);},[feedTab,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
 
   const stats=useMemo(()=>({
     critical:advisories.filter(a=>a.severity==="Critical").length,
@@ -1848,6 +1881,7 @@ function Dashboard({onLogout}){
           )}
           {a.isOEM&&<OEMBadge/>}
           {ackInfo&&<AckBadge by={ackInfo.by}/>}
+          {coveredCVEs.has(a.cve||a.id)&&feedTab==="advisories"&&<span className="coverage-badge" title="News articles cover this CVE">📰</span>}
           {ackInfo?.assigned_to&&ackInfo.assigned_to!=="Unassigned"&&(
             <span style={{background:"#f0f9ff",color:"#0369a1",border:"1px solid #bae6fd",borderRadius:4,padding:"1px 5px",fontSize:9,fontWeight:700}}>
               👤 {ackInfo.assigned_to===userName?"Me":ackInfo.assigned_to.split(" ")[0]}
@@ -3270,7 +3304,7 @@ function Dashboard({onLogout}){
               <div className="mid-header">
                 <div className="mid-title">
                   {fAssignee==="me"?"My Work":fAssignee!=="All"?`Assigned: ${fAssignee}`:sideFilter==="all"?"All Advisories":sideFilter}
-                  <span style={{background:"#f0f0f0",color:"#888",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:600}}>{filtered.length}</span>
+                  <span style={{background:"#f0f0f0",color:"#888",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:600}}>{activeFiltered.length}</span>
                   {fAssignee!=="All"&&(
                     <button onClick={()=>setFAssignee("All")} style={{marginLeft:"auto",background:"none",border:"none",color:"#aaa",cursor:"pointer",fontSize:13,padding:"0 2px"}} title="Clear assignee filter">✕</button>
                   )}
@@ -3283,6 +3317,15 @@ function Dashboard({onLogout}){
                   <button className={"filter-chip"+(fZD?" active":"")} onClick={()=>setFZD(v=>!v)}>0-Day</button>
                   <button className={"filter-chip"+(fNew?" active":"")} onClick={()=>setFNew(v=>!v)}>New</button>
                 </div>
+              </div>
+              {/* Feed type tab bar */}
+              <div className="feed-tab-bar">
+                <button className={"feed-tab-btn"+(feedTab==="advisories"?" active-adv":"")} onClick={()=>{setFeedTab("advisories");setVisibleCount(50);}}>
+                  🛡 Advisories <span className="feed-tab-count">{filteredAdvisories.length}</span>
+                </button>
+                <button className={"feed-tab-btn"+(feedTab==="news"?" active-news":"")} onClick={()=>{setFeedTab("news");setVisibleCount(50);}}>
+                  📰 News & Intel <span className="feed-tab-count">{filteredNews.length}</span>
+                </button>
               </div>
               {/* Old data warning */}
               {advisories.length>0&&(()=>{
@@ -3358,16 +3401,16 @@ function Dashboard({onLogout}){
                 {fLoad&&advisories.length===0&&(
                   <div className="empty-state"><div className="em-icon">⟳</div><div style={{fontSize:13}}>Loading advisories…</div></div>
                 )}
-                {!fLoad&&filtered.length===0&&advisories.length>0&&(
-                  <div className="empty-state"><div className="em-icon">🔍</div><div>No advisories match filters</div></div>
+                {!fLoad&&activeFiltered.length===0&&advisories.length>0&&(
+                  <div className="empty-state"><div className="em-icon">🔍</div><div>{feedTab==="news"?"No news items match filters":"No advisories match filters"}</div></div>
                 )}
                 {!fLoad&&advisories.length===0&&(
                   <div className="empty-state"><div className="em-icon">🛡️</div><div>No advisories loaded yet</div><div style={{fontSize:11,marginTop:6}}>Click Refresh to fetch live data</div></div>
                 )}
-                {filtered.slice(0,visibleCount).map(a=><FeedItem key={a.id} a={a}/>)}
-                {filtered.length>visibleCount&&(
+                {activeFiltered.slice(0,visibleCount).map(a=><FeedItem key={a.id} a={a}/>)}
+                {activeFiltered.length>visibleCount&&(
                   <button className="load-more-btn" onClick={()=>setVisibleCount(c=>c+50)}>
-                    Load more — {visibleCount} of {filtered.length} shown
+                    Load more — {visibleCount} of {activeFiltered.length} shown
                   </button>
                 )}
               </div>
