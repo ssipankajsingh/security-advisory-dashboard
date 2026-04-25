@@ -1550,16 +1550,6 @@ function Dashboard({onLogout}){
                   <span style={{fontWeight:700,marginRight:6}}>🔍 KEV Notes:</span>{a.kev_notes}
                 </div>
               )}
-              {a.required_action&&(
-                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#14532d"}}>
-                  <span style={{fontWeight:700,marginRight:6}}>✅ Required Action:</span>{a.required_action}
-                </div>
-              )}
-              {a.kev_notes&&(
-                <div style={{background:"#fdf4ff",border:"1px solid #e9d5ff",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#581c87"}}>
-                  <span style={{fontWeight:700,marginRight:6}}>🔍 KEV Notes:</span>{a.kev_notes}
-                </div>
-              )}
 
               {/* ── DATA QUALITY BANNER for thin/news articles ── */}
               {(a.data_quality==="thin"||a.isNews)&&(
