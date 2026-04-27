@@ -1647,6 +1647,16 @@ function Dashboard({onLogout}){
                   {a.isOEM&&<div style={{fontSize:10,color:"#15803d",fontWeight:700,marginTop:2}}>✓ OEM Direct</div>}
                   {a.source_count>1&&<div style={{fontSize:10,color:"#2563eb",marginTop:2}}>📡 {a.source_count} sources</div>}
                 </div>
+                {/* CWE Classification */}
+                {a.cwe&&(
+                  <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Weakness (CWE)</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#7e22ce"}}>{a.cwe}</div>
+                    <div style={{fontSize:10,color:"#bbb",marginTop:2}}>
+                      {{"CWE-79":"Cross-site Scripting","CWE-89":"SQL Injection","CWE-78":"OS Command Injection","CWE-22":"Path Traversal","CWE-787":"Out-of-bounds Write","CWE-125":"Out-of-bounds Read","CWE-416":"Use After Free","CWE-190":"Integer Overflow","CWE-476":"NULL Pointer Dereference","CWE-20":"Improper Input Validation","CWE-287":"Improper Authentication","CWE-200":"Info Disclosure","CWE-502":"Deserialization of Untrusted Data","CWE-434":"Unrestricted Upload","CWE-611":"XXE Injection","CWE-918":"SSRF"}[a.cwe]||"Vulnerability class"}
+                    </div>
+                  </div>
+                )}
                 {/* First Seen on dashboard */}
                 {a.fetched_at&&(
                   <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
