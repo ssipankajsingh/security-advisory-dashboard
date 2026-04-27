@@ -409,6 +409,10 @@ a:hover{text-decoration:underline}
 .weekly-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fafafa}
 .weekly-scroll{flex:1;overflow-y:auto;padding:20px;min-height:0}
 .weekly-preview{background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+  @media(max-width:768px){.sidebar{display:none}.main-layout,.content-area{flex-direction:column;height:auto}.app-header{padding:6px 10px;flex-wrap:wrap;gap:6px}.stats-bar{padding:4px 8px;gap:4px;overflow-x:auto;flex-wrap:nowrap}.stat-item{min-width:52px;padding:4px 6px}.stat-num{font-size:18px}.stat-label{font-size:9px}.mid-panel{width:100%!important;min-width:0;border-right:none}.mid-filters,.mid-extra-filters{flex-wrap:wrap;gap:4px}.feed-item{padding:10px 12px}.fi-title{font-size:13px}.fi-meta{font-size:11px}.read-pane{position:fixed;bottom:0;left:0;right:0;height:70vh;z-index:100;border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.15);background:#fff}.panel-tabs{overflow-x:auto;flex-wrap:nowrap}.panel-tab{white-space:nowrap;font-size:12px;padding:8px 12px}.health-grid{grid-template-columns:1fr!important}.mid-panel-resize{display:none}body{padding-bottom:60px}.mobile-nav{display:flex!important}}
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #efefef;z-index:200;padding:6px 0 env(safe-area-inset-bottom,4px)}
+  .mobile-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;cursor:pointer;font-size:9px;color:#888;border:none;background:none}
+  .mobile-nav-item.active{color:#c0392b}.mobile-nav-item span:first-child{font-size:18px}
 </style>
 </head>
 <body>
@@ -900,6 +904,28 @@ function Dashboard({onLogout}){
   const [statuses,setStatuses]=useState(()=>ls("sad_statuses")||{});
   const [userName,setUserName]=useState(()=>localStorage.getItem("sad_username")||"");
   const [ackingId,setAckingId]=useState(null);
+  const [selectedIds,setSelectedIds]=useState(new Set());
+  const [bulkStatus,setBulkStatus]=useState("In Review");
+  const [bulking,setBulking]=useState(false);
+  const toggleSel=React.useCallback((id,e)=>{e.stopPropagation();setSelectedIds(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});},[]);
+  const clearSel=()=>setSelectedIds(new Set());
+  const doBulkAck=async()=>{
+    if(!selectedIds.size) return;
+    setBulking(true);
+    try{
+      const r=await fetch(`${PROXY_URL}/ack/bulk`,{method:"POST",
+        headers:{"Content-Type":"application/json",...getAuthHeader()},
+        body:JSON.stringify({ids:[...selectedIds],by:userName||"Team",status:bulkStatus})});
+      const d=await r.json();
+      if(d.success){
+        const upd={};
+        selectedIds.forEach(id=>{upd[id]={by:userName||"Team",at:new Date().toISOString(),note:"",status:bulkStatus};});
+        setAcks(p=>({...p,...upd}));
+        clearSel();
+      }
+    }catch(e){console.error(e);}
+    setBulking(false);
+  };
   const [showAssignPanel,setShowAssignPanel]=useState(false);
   const [fAssignee,setFAssignee]=useState("All"); // "All" | "me" | any team member name
   const [showAllWorkload,setShowAllWorkload]=useState(false);
@@ -1903,6 +1929,7 @@ function Dashboard({onLogout}){
     const selected=sel===a.id;
     const ackInfo=acks[a.id];
     const statusVal=statuses[a.id];
+    const isChecked=selectedIds.has(a.id);
     const SEV_BORDER={"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"};
     let leftBorder="#e0e0e0";
     if(ackInfo)leftBorder="#16a34a";
@@ -1914,6 +1941,11 @@ function Dashboard({onLogout}){
         style={{borderLeftColor:leftBorder,opacity:(a.isNews&&readItems.has(a.id)&&!selected)?0.45:1}}
         onClick={()=>{setSel(a.id);setReadPane("detail");}}>
         {a.isNew&&!ackInfo&&<div className="unread-dot"/>}
+        <div style={{display:"flex",alignItems:"flex-start",gap:6}}>
+        <input type="checkbox" checked={isChecked}
+          onChange={e=>toggleSel(a.id,e)} onClick={e=>e.stopPropagation()}
+          style={{marginTop:4,flexShrink:0,accentColor:"#1a3a7a",cursor:"pointer"}}/>
+        <div style={{flex:1,minWidth:0}}>
         <div className="fi-badges">
           <SevBadge sev={a.severity}/>
           {a.zeroDay&&<ZDBadge/>}
@@ -1958,6 +1990,8 @@ function Dashboard({onLogout}){
           const color=sl.overdue?"#dc2626":pct>80?"#ea580c":pct>50?"#ca8a04":"#16a34a";
           return<div className="sla-bar" style={{width:`${pct}%`,background:color,opacity:0.7}}/>;
         })()}
+        </div>
+        </div>
       </div>
     );
   }
@@ -2847,13 +2881,63 @@ function Dashboard({onLogout}){
   // ── FEED HEALTH MONITOR ─────────────────────────────────────────────────────
   function FeedHealthPanel(){
     const PROXY = PROXY_URL;
-    const [results,setResults]   = useState({});   // {sourceId: {status,latency,itemCount,lastChecked,error,httpCode}}
+    const [results,setResults]   = useState({});
     const [checking,setChecking] = useState(false);
-    const [filter,setFilter]     = useState("all"); // all | ok | warn | error | unknown
+    const [filter,setFilter]     = useState("all");
     const [catFilter,setCatFilter]= useState("All");
     const [search,setSearch]     = useState("");
     const [progress,setProgress] = useState(0);
     const [lastRun,setLastRun]   = useState(null);
+    const [sparklines,setSparklines] = useState({});  // {sourceId: [{fetched_at,item_count,success}]}
+    const [sparkLoaded,setSparkLoaded] = useState(false);
+
+    // Load 7-day sparkline history from feed_metrics table
+    React.useEffect(()=>{
+      const loadSparklines=async()=>{
+        try{
+          const r=await fetch(`${PROXY}/feed-metrics-history`,{headers:getAuthHeader()});
+          if(!r.ok) return;
+          const d=await r.json();
+          // Group by source_id
+          const grouped={};
+          (d.metrics||[]).forEach(row=>{
+            if(!grouped[row.source_id]) grouped[row.source_id]=[];
+            grouped[row.source_id].push(row);
+          });
+          setSparklines(grouped);
+          setSparkLoaded(true);
+        }catch(e){}
+      };
+      loadSparklines();
+    },[]);
+
+    // Sparkline SVG component — 7 dots showing daily success/fail
+    const Sparkline=({data})=>{
+      if(!data||data.length===0) return <span style={{fontSize:10,color:"#ddd"}}>no history</span>;
+      // Group by day, take last 7 days
+      const byDay={};
+      data.forEach(r=>{
+        const day=r.fetched_at?.slice(0,10)||"";
+        if(!byDay[day]) byDay[day]={total:0,ok:0,items:0};
+        byDay[day].total++;
+        if(r.success) byDay[day].ok++;
+        byDay[day].items=Math.max(byDay[day].items,r.item_count||0);
+      });
+      const days=Object.keys(byDay).sort().slice(-7);
+      const maxItems=Math.max(...days.map(d=>byDay[d].items),1);
+      return(
+        <div style={{display:"flex",gap:2,alignItems:"flex-end",height:24}}>
+          {days.map(day=>{
+            const {total,ok,items}=byDay[day];
+            const rate=total>0?ok/total:0;
+            const h=Math.max(4,Math.round((items/maxItems)*22));
+            const col=rate>=0.8?"#16a34a":rate>=0.5?"#ca8a04":"#dc2626";
+            return<div key={day} title={`${day}: ${ok}/${total} ok, ${items} items`}
+              style={{width:6,height:h,background:col,borderRadius:2,flexShrink:0}}/>;
+          })}
+        </div>
+      );
+    };
 
     // Check a single source via the proxy (avoids CORS)
     const checkSource = async (src) => {
@@ -3021,6 +3105,15 @@ function Dashboard({onLogout}){
                       {r?.lastItem&&<span>· last: {new Date(r.lastItem).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>}
                       {r?.lastChecked&&<span style={{marginLeft:"auto",color:"#ccc"}}>checked {r.lastChecked}</span>}
                     </div>
+                    {sparklines[src.id]&&(
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+                        <span style={{fontSize:9,color:"#bbb",whiteSpace:"nowrap"}}>7d:</span>
+                        <Sparkline data={sparklines[src.id]}/>
+                        <span style={{fontSize:9,color:"#bbb",marginLeft:4}}>
+                          {Math.round((sparklines[src.id].filter(r=>r.success).length/sparklines[src.id].length)*100)}% uptime
+                        </span>
+                      </div>
+                    )}
                     {r?.error&&<div className="hc-error-msg">⚠ {r.error}</div>}
                     <div className="hc-url" title={src.rss||"No RSS configured"}>{src.rss||<em>No RSS feed — portal only</em>}</div>
                     <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
@@ -3634,6 +3727,31 @@ function Dashboard({onLogout}){
                   <input type="date" value={fDateTo} onChange={e=>setFDateTo(e.target.value)} className="field-input" style={{flex:1,padding:"3px 7px",fontSize:11}}/>
                 </div>
               )}
+              {selectedIds.size>0&&(
+                <div style={{background:"#1a3a7a",color:"#fff",padding:"8px 14px",
+                  display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flexShrink:0}}>
+                  <span style={{fontSize:12,fontWeight:600}}>✓ {selectedIds.size} selected</span>
+                  <select value={bulkStatus} onChange={e=>setBulkStatus(e.target.value)}
+                    style={{fontSize:11,padding:"3px 8px",borderRadius:4,border:"none",
+                      background:"rgba(255,255,255,0.2)",color:"#fff"}}>
+                    {["In Review","Assigned","Patched","Accepted Risk","False Positive"].map(s=>
+                      <option key={s} style={{color:"#000"}}>{s}</option>)}
+                  </select>
+                  <button onClick={doBulkAck} disabled={bulking}
+                    style={{background:"#fff",color:"#1a3a7a",border:"none",padding:"4px 14px",
+                      borderRadius:4,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                    {bulking?"Updating…":"✓ Apply"}
+                  </button>
+                  <button onClick={()=>setSelectedIds(new Set(activeFiltered.map(a=>a.id)))}
+                    style={{background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",
+                      padding:"4px 10px",borderRadius:4,fontSize:11,cursor:"pointer"}}>
+                    Select All ({activeFiltered.length})
+                  </button>
+                  <button onClick={clearSel}
+                    style={{background:"none",color:"rgba(255,255,255,0.6)",border:"none",
+                      fontSize:16,cursor:"pointer",marginLeft:"auto"}}>✕</button>
+                </div>
+              )}
               <div className="mid-list">
                 {fLoad&&advisories.length===0&&(
                   <div className="empty-state"><div className="em-icon">⟳</div><div style={{fontSize:13}}>Loading advisories…</div></div>
@@ -3680,8 +3798,14 @@ function Dashboard({onLogout}){
         {tab==="archive"&&<ArchivePanel/>}
         {tab==="savedsearches"&&<SavedSearchesPanel/>}
       </div>
+      <MobileNav tab={tab} setTab={setTab}/>
     </div>
   );
+}
+
+function MobileNav({tab,setTab}){
+  const its=[{id:"feed",icon:"📋",label:"Feed"},{id:"feedhealth",icon:"🩺",label:"Health"},{id:"weekly",icon:"📊",label:"Report"},{id:"archive",icon:"🗄",label:"Archive"},{id:"settings",icon:"⚙",label:"More"}];
+  return <div className="mobile-nav">{its.map(it=><button key={it.id} className={"mobile-nav-item"+(tab===it.id?" active":"")} onClick={()=>setTab(it.id)}><span>{it.icon}</span><span>{it.label}</span></button>)}</div>;
 }
 
 function App(){
