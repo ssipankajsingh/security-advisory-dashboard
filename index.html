@@ -33,6 +33,18 @@ window.addEventListener('appinstalled', function() {
 });
 
 // Register Service Worker early — required for PWA install prompt
+// Listen for SW update messages — show reload banner when new version deployed
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'SW_UPDATED') {
+      const banner = document.createElement('div');
+      banner.id = 'sw-update-banner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a3a7a;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
+      banner.innerHTML = '<span>🔄 <strong>New dashboard version available</strong> — click to get the latest updates</span><button onclick="window.location.reload(true)" style="background:#fff;color:#1a3a7a;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px">Reload Now</button>';
+      document.body.prepend(banner);
+    }
+  });
+}
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     var swUrl = '/security-advisory-dashboard/sw.js';
