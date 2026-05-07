@@ -633,7 +633,7 @@ const SOURCE_LIBRARY=[
 const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
 
 // ─── MINI COMPONENTS ─────────────────────────────────────────────────────────
-const SevBadge=({sev})=><span className={"badge "+(SEV_BADGE_CLS[sev]||"badge-unknown")}>{(sev||"UNK").toUpperCase()}</span>;
+const SevBadge=({sev,title})=><span className={"badge "+(SEV_BADGE_CLS[sev]||"badge-unknown")} title={title||undefined}>{(sev||"UNK").toUpperCase()}</span>;
 const DataQualityBadge=({q})=>{
   if(q==="rich")   return null; // rich data needs no label
   if(q==="partial")return<span title="Partial data — some fields extracted from text" style={{fontSize:9,fontWeight:600,color:"#ca8a04",background:"#fefce8",border:"1px solid #fef08a",borderRadius:3,padding:"1px 5px",flexShrink:0}}>PARTIAL</span>;
@@ -1483,7 +1483,7 @@ function Dashboard({onLogout}){
             {/* LEFT: severity + CVE + title */}
             <div className="rph-left">
               <div className="rph-badges">
-                <SevBadge sev={a.severity}/>
+                <SevBadge sev={a.severity} title={a.severity==="Critical"&&a.cvss&&a.cvss<7.5?(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source)||a.zeroDay)?"⚠️ Severity elevated to Critical — actively exploited (KEV / Zero-Day). CVSS base score: "+a.cvss:undefined:undefined}/>
                 {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
                 {a.zeroDay&&<ZDBadge/>}
                 {a.isNew&&!ackInfo&&<NewBadge/>}
@@ -1510,8 +1510,16 @@ function Dashboard({onLogout}){
               </div>
               <div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Published</span>
-                <strong>{a.published?new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}</strong>
+                <strong title={a.nvd_published?"NVD original publication date":undefined}>
+                  {(a.nvd_published||a.published)?new Date(a.nvd_published||a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}
+                </strong>
               </div>
+              {(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source))&&a.published&&(
+                <div className="rph-meta-row">
+                  <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>Added to KEV</span>
+                  <strong style={{color:"#dc2626"}}>{new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"})}</strong>
+                </div>
+              )}
               {a.cvss&&<div className="rph-meta-row">
                 <span style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.4px",flexShrink:0}}>CVSS</span>
                 <strong style={{color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}>{a.cvss}/10</strong>
@@ -1643,9 +1651,17 @@ function Dashboard({onLogout}){
                 {/* Published */}
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                   <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Published</div>
-                  <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{a.published?new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}</div>
-                  <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.published?new Date(a.published).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"})+" IST":""}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#333"}}>{(a.nvd_published||a.published)?new Date(a.nvd_published||a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}):"—"}</div>
+                  <div style={{fontSize:10,color:"#bbb",marginTop:2}}>{a.nvd_published?"NVD original date":a.published?new Date(a.published).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"})+" IST":""}</div>
                 </div>
+                {/* Added to KEV — only when KEV source and date differs from nvd_published */}
+                {(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source))&&a.published&&(
+                  <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#dc2626",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Added to KEV</div>
+                    <div style={{fontSize:12,fontWeight:600,color:"#dc2626"}}>{new Date(a.published).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"})}</div>
+                    <div style={{fontSize:10,color:"#fca5a5",marginTop:2}}>Active exploitation confirmed</div>
+                  </div>
+                )}
                 {/* Review / Updated date */}
                 {a.updated&&a.updated!==a.published&&(
                   <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
@@ -1947,7 +1963,7 @@ function Dashboard({onLogout}){
           style={{marginTop:4,flexShrink:0,accentColor:"#1a3a7a",cursor:"pointer"}}/>
         <div style={{flex:1,minWidth:0}}>
         <div className="fi-badges">
-          <SevBadge sev={a.severity}/>
+          <SevBadge sev={a.severity} title={a.severity==="Critical"&&a.cvss&&a.cvss<7.5?(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source)||a.zeroDay)?"⚠️ Severity elevated to Critical — actively exploited (KEV / Zero-Day). CVSS base score: "+a.cvss:undefined:undefined}/>
           {a.zeroDay&&<ZDBadge/>}
           {a.epss!=null&&a.epss>=20&&(
             <span title={`EPSS: ${a.epss}% probability of exploitation (${a.epss_pct}th percentile)`}
