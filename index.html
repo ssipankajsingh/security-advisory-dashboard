@@ -634,6 +634,16 @@ const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
 
 // ─── MINI COMPONENTS ─────────────────────────────────────────────────────────
 const SevBadge=({sev,title})=><span className={"badge "+(SEV_BADGE_CLS[sev]||"badge-unknown")} title={title||undefined}>{(sev||"UNK").toUpperCase()}</span>;
+// Helper: explain why severity may differ from raw CVSS
+const sevTooltip=(a)=>{
+  if(!a||!a.cvss) return undefined;
+  const kevSrc=["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source)||a.isKev;
+  if(a.severity==="Critical"&&a.cvss<7.0&&(kevSrc||a.zeroDay))
+    return `⚠️ Severity elevated to Critical — actively exploited (KEV / Zero-Day). CVSS base score: ${a.cvss}`;
+  if(a.severity_corrected_by_nvd)
+    return `ℹ️ Severity corrected by NVD — feed labelled higher; NVD CVSS: ${a.cvss} (${a.severity})`;
+  return undefined;
+};
 const DataQualityBadge=({q})=>{
   if(q==="rich")   return null; // rich data needs no label
   if(q==="partial")return<span title="Partial data — some fields extracted from text" style={{fontSize:9,fontWeight:600,color:"#ca8a04",background:"#fefce8",border:"1px solid #fef08a",borderRadius:3,padding:"1px 5px",flexShrink:0}}>PARTIAL</span>;
@@ -1483,7 +1493,7 @@ function Dashboard({onLogout}){
             {/* LEFT: severity + CVE + title */}
             <div className="rph-left">
               <div className="rph-badges">
-                <SevBadge sev={a.severity} title={a.severity==="Critical"&&a.cvss&&a.cvss<7.5?(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source)||a.zeroDay)?"⚠️ Severity elevated to Critical — actively exploited (KEV / Zero-Day). CVSS base score: "+a.cvss:undefined:undefined}/>
+                <SevBadge sev={a.severity} title={sevTooltip(a)}/>
                 {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
                 {a.zeroDay&&<ZDBadge/>}
                 {a.isNew&&!ackInfo&&<NewBadge/>}
@@ -1647,6 +1657,7 @@ function Dashboard({onLogout}){
                   <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Severity</div>
                   <div style={{fontSize:16,fontWeight:700,color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a","Unknown":"#888"}[a.severity])||"#888"}}>{a.severity||"Unknown"}</div>
                   {a.zeroDay&&<div style={{fontSize:10,color:"#9333ea",fontWeight:700,marginTop:2}}>🔴 Zero-Day</div>}
+                  {a.severity_corrected_by_nvd&&<div style={{fontSize:9,color:"#2563eb",marginTop:2}} title="Feed labelled this higher; NVD CVSS was used instead">ℹ️ NVD-corrected</div>}
                 </div>
                 {/* Published */}
                 <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
@@ -1963,7 +1974,7 @@ function Dashboard({onLogout}){
           style={{marginTop:4,flexShrink:0,accentColor:"#1a3a7a",cursor:"pointer"}}/>
         <div style={{flex:1,minWidth:0}}>
         <div className="fi-badges">
-          <SevBadge sev={a.severity} title={a.severity==="Critical"&&a.cvss&&a.cvss<7.5?(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source)||a.zeroDay)?"⚠️ Severity elevated to Critical — actively exploited (KEV / Zero-Day). CVSS base score: "+a.cvss:undefined:undefined}/>
+          <SevBadge sev={a.severity} title={sevTooltip(a)}/>
           {a.zeroDay&&<ZDBadge/>}
           {a.epss!=null&&a.epss>=20&&(
             <span title={`EPSS: ${a.epss}% probability of exploitation (${a.epss_pct}th percentile)`}
