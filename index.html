@@ -452,10 +452,13 @@ function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
 function slaStatus(a){
-  const pub=new Date(a.published||a.date||0);
+  // For KEV items: use nvd_published (original CVE date) for SLA age calculation.
+  // a.published = dateAdded to KEV catalogue — can make a 2019 CVE look brand-new.
+  // nvd_published = actual CVE disclosure date — correct baseline for remediation SLA.
+  const dateStr = a.nvd_published || a.published || a.date;
+  const pub=new Date(dateStr||0);
   if(isNaN(pub.getTime()))return null;
   // P11: Only show SLA badge for advisories published in the last 30 days
-  // Older items are historical — no SLA noise for Dec 2025 items in April 2026
   const ageH=(Date.now()-pub.getTime())/3600000;
   if(ageH>30*24)return null;
   const limitH=SLA_HOURS[a.severity]||720;
@@ -1235,18 +1238,18 @@ function Dashboard({onLogout}){
   useEffect(()=>{setVisibleCount(50);},[feedTab,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
 
   const stats=useMemo(()=>({
-    critical:advisories.filter(a=>a.severity==="Critical").length,
-    high:advisories.filter(a=>a.severity==="High").length,
-    medium:advisories.filter(a=>a.severity==="Medium").length,
-    low:advisories.filter(a=>a.severity==="Low").length,
-    zeroDay:advisories.filter(a=>a.zeroDay).length,
-    total:advisories.length,
-    newItems:advisories.filter(a=>a.isNew).length,
-    slaOverdue:advisories.filter(a=>{const sl=slaStatus(a);const st=statuses[a.id];return sl&&sl.overdue&&st!=="Patched"&&st!=="Accepted Risk"&&st!=="False Positive";}).length,
-    assignedToMe:advisories.filter(a=>userName&&acks[a.id]?.assigned_to===userName).length,
-    assigned:advisories.filter(a=>acks[a.id]?.assigned_to&&acks[a.id].assigned_to!=="Unassigned").length,
-    unassigned:advisories.filter(a=>acks[a.id]&&(!acks[a.id].assigned_to||acks[a.id].assigned_to==="Unassigned")).length,
-  }),[advisories,statuses,acks,userName]);
+    critical:filteredAdvisories.filter(a=>a.severity==="Critical").length,
+    high:filteredAdvisories.filter(a=>a.severity==="High").length,
+    medium:filteredAdvisories.filter(a=>a.severity==="Medium").length,
+    low:filteredAdvisories.filter(a=>a.severity==="Low").length,
+    zeroDay:filteredAdvisories.filter(a=>a.zeroDay).length,
+    total:filteredAdvisories.length,
+    newItems:advisories.filter(a=>a.isNew).length,  // isNew spans all items
+    slaOverdue:filteredAdvisories.filter(a=>{const sl=slaStatus(a);const st=statuses[a.id];return sl&&sl.overdue&&st!=="Patched"&&st!=="Accepted Risk"&&st!=="False Positive";}).length,
+    assignedToMe:filteredAdvisories.filter(a=>userName&&acks[a.id]?.assigned_to===userName).length,
+    assigned:filteredAdvisories.filter(a=>acks[a.id]?.assigned_to&&acks[a.id].assigned_to!=="Unassigned").length,
+    unassigned:filteredAdvisories.filter(a=>acks[a.id]&&(!acks[a.id].assigned_to||acks[a.id].assigned_to==="Unassigned")).length,
+  }),[filteredAdvisories,advisories,statuses,acks,userName]);
   // Per-member assignment counts for the assignee dropdown
   const assigneeCounts=useMemo(()=>{
     const m={};
