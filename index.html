@@ -1243,13 +1243,15 @@ function Dashboard({onLogout}){
     medium:filteredAdvisories.filter(a=>a.severity==="Medium").length,
     low:filteredAdvisories.filter(a=>a.severity==="Low").length,
     zeroDay:filteredAdvisories.filter(a=>a.zeroDay).length,
-    total:filteredAdvisories.length,
-    newItems:advisories.filter(a=>a.isNew).length,  // isNew spans all items
+    total:advisories.length,  // all loaded items (advisories + news) for header total
+    advisoryCount:filteredAdvisories.length,  // advisory-only count
+    newsCount:filteredNews.length,
+    newItems:advisories.filter(a=>a.isNew).length,
     slaOverdue:filteredAdvisories.filter(a=>{const sl=slaStatus(a);const st=statuses[a.id];return sl&&sl.overdue&&st!=="Patched"&&st!=="Accepted Risk"&&st!=="False Positive";}).length,
     assignedToMe:filteredAdvisories.filter(a=>userName&&acks[a.id]?.assigned_to===userName).length,
     assigned:filteredAdvisories.filter(a=>acks[a.id]?.assigned_to&&acks[a.id].assigned_to!=="Unassigned").length,
     unassigned:filteredAdvisories.filter(a=>acks[a.id]&&(!acks[a.id].assigned_to||acks[a.id].assigned_to==="Unassigned")).length,
-  }),[filteredAdvisories,advisories,statuses,acks,userName]);
+  }),[filteredAdvisories,filteredNews,advisories,statuses,acks,userName]);
   // Per-member assignment counts for the assignee dropdown
   const assigneeCounts=useMemo(()=>{
     const m={};
