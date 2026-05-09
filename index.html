@@ -429,8 +429,11 @@ const STATUS_OPTIONS = ["New","In Review","Patched","Accepted Risk","False Posit
 const STATUS_COLORS  = {"New":"#1d4ed8","In Review":"#854d0e","Patched":"#15803d","Accepted Risk":"#9a3412","False Positive":"#6b7280"};
 const STATUS_BADGE_CLS = {"New":"badge-status-new","In Review":"badge-status-review","Patched":"badge-status-patched","Accepted Risk":"badge-status-risk","False Positive":"badge-status-fp"};
 const SLA_HOURS = {"Critical":24,"High":72,"Medium":168,"Low":720,"Unknown":720};
+// Research sources (ZDI, Exploit-DB) get relaxed SLA — vendor patch may not exist yet
+// SLA here = awareness/triage window, not remediation deadline
+const SLA_HOURS_RESEARCH = {"Critical":168,"High":336,"Medium":720,"Low":720,"Unknown":720};
 const TEAM_MEMBERS = ["Unassigned","Pankaj Singh","Wisnu","Ganesh","Sai"];
-const CAT_COLORS={"Aggregator":"#ff6b35","Government":"#7c3aed","CVE Database":"#dc2626","OS & Platform":"#2563eb","Network":"#059669","Endpoint":"#ea580c","Cloud":"#0284c7","Browser/Middleware":"#d97706","Your Stack":"#9333ea","Threat Intel":"#db2777","News":"#6b7280"};
+const CAT_COLORS={"Aggregator":"#ff6b35","Government":"#7c3aed","CVE Database":"#dc2626","OS & Platform":"#2563eb","Network":"#059669","Endpoint":"#ea580c","Cloud":"#0284c7","Browser/Middleware":"#d97706","Your Stack":"#9333ea","Threat Intel":"#db2777","Research":"#0891b2","News":"#6b7280"};
 const SEV_BADGE_CLS={"Critical":"badge-critical","High":"badge-high","Medium":"badge-medium","Low":"badge-low","Unknown":"badge-unknown"};
 
 function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
@@ -452,18 +455,16 @@ function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
 function slaStatus(a){
-  // For KEV items: use nvd_published (original CVE date) for SLA age calculation.
-  // a.published = dateAdded to KEV catalogue — can make a 2019 CVE look brand-new.
-  // nvd_published = actual CVE disclosure date — correct baseline for remediation SLA.
   const dateStr = a.nvd_published || a.published || a.date;
   const pub=new Date(dateStr||0);
   if(isNaN(pub.getTime()))return null;
-  // P11: Only show SLA badge for advisories published in the last 30 days
   const ageH=(Date.now()-pub.getTime())/3600000;
   if(ageH>30*24)return null;
-  const limitH=SLA_HOURS[a.severity]||720;
+  // Research sources (ZDI, Exploit-DB) use relaxed SLA — patch may not exist yet
+  const hours = a.isResearch ? SLA_HOURS_RESEARCH : SLA_HOURS;
+  const limitH=hours[a.severity]||720;
   const remainH=limitH-ageH;
-  return{overdue:remainH<0,urgent:remainH>=0&&remainH<limitH*0.1,remainH:Math.round(Math.abs(remainH)),limitH};
+  return{overdue:remainH<0,urgent:remainH>=0&&remainH<limitH*0.1,remainH:Math.round(Math.abs(remainH)),limitH,isResearch:a.isResearch};
 }
 
 // ─── SOURCE LIBRARY (86 sources) ─────────────────────────────────────────────
@@ -484,9 +485,9 @@ const SOURCE_LIBRARY=[
   {id:"cert_in",name:"CERT-In India Vulnerability Notes",vendor:"CERT-In",cat:"Government",tier:1,enabled:true,rss:"https://www.cert-in.org.in/RSS/Vulnerability_Notes.xml",url:"https://www.cert-in.org.in"},
   {id:"sans_isc",name:"SANS Internet Storm Center",vendor:"SANS",cat:"Government",tier:2,enabled:true,rss:"https://isc.sans.edu/rssfeed.xml",url:"https://isc.sans.edu"},
   {id:"nvd",name:"NIST NVD — Recent CVEs",vendor:"NIST",cat:"CVE Database",tier:1,enabled:true,rss:"https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss-analyzed.xml",url:"https://nvd.nist.gov/vuln/search"},
-  {id:"exploit_db",name:"Exploit-DB Public Exploits",vendor:"Exploit-DB",cat:"CVE Database",tier:1,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
-  {id:"zdi_published",name:"Zero Day Initiative (ZDI) Published",vendor:"ZDI",cat:"CVE Database",tier:1,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
-  {id:"zdi_upcoming",name:"Zero Day Initiative (ZDI) Upcoming",vendor:"ZDI",cat:"CVE Database",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
+  {id:"exploit_db",name:"Exploit-DB Public Exploits",vendor:"Exploit-DB",cat:"Research",tier:1,enabled:true,rss:"https://www.exploit-db.com/rss.xml",url:"https://www.exploit-db.com"},
+  {id:"zdi_published",name:"Zero Day Initiative (ZDI) Published",vendor:"ZDI",cat:"Research",tier:1,enabled:true,rss:"https://www.zerodayinitiative.com/rss/published/",url:"https://www.zerodayinitiative.com"},
+  {id:"zdi_upcoming",name:"Zero Day Initiative (ZDI) Upcoming",vendor:"ZDI",cat:"Research",tier:2,enabled:false,rss:"https://www.zerodayinitiative.com/rss/upcoming/",url:"https://www.zerodayinitiative.com"},
   {id:"vuldb",name:"VulDB Recent Vulnerabilities",vendor:"VulDB",cat:"CVE Database",tier:2,enabled:true,rss:"https://vuldb.com/?rss.recent",url:"https://vuldb.com"},
   {id:"packetstorm",name:"Packet Storm Security",vendor:"Packet Storm",cat:"CVE Database",tier:1,enabled:true,rss:"https://rss.packetstormsecurity.com/files/",url:"https://packetstormsecurity.com"},
   {id:"msrc",name:"Microsoft Security Response Center",vendor:"Microsoft",cat:"OS & Platform",tier:1,enabled:true,rss:"https://api.msrc.microsoft.com/update-guide/rss",url:"https://msrc.microsoft.com"},
@@ -656,6 +657,7 @@ const DataQualityBadge=({q,isOEM})=>{
 const ZDBadge=()=><span className="badge badge-zeroday">0-DAY</span>;
 const NewBadge=()=><span className="badge badge-new fade-in">NEW</span>;
 const OEMBadge=()=><span className="badge badge-oem">OEM</span>;
+const ResearchBadge=()=><span title="Research disclosure — vendor patch may not yet exist. Relaxed SLA applies." style={{fontSize:9,fontWeight:700,color:"#0891b2",background:"#e0f2fe",border:"1px solid #7dd3fc",borderRadius:3,padding:"1px 5px",flexShrink:0}}>RESEARCH</span>;
 const AckBadge=({by})=><span className="badge badge-acked">✓ {by}</span>;
 const StatusBadge=({status})=><span className={"badge "+(STATUS_BADGE_CLS[status]||"badge-unknown")}>{status}</span>;
 const SourceCountBadge=({count,sources})=>{if(!count||count<2)return null;return<span className="badge badge-sources" title={sources?sources.join(", "):`${count} sources`}>📡 {count}</span>;};
@@ -1511,7 +1513,7 @@ function Dashboard({onLogout}){
                 {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
                 {a.zeroDay&&<ZDBadge/>}
                 {a.isNew&&!ackInfo&&<NewBadge/>}
-                {a.isOEM&&<OEMBadge/>}
+                {a.isOEM&&<OEMBadge/>}{a.isResearch&&<ResearchBadge/>}
                 {ackInfo&&<AckBadge by={ackInfo.by}/>}
                 <SLABadge advisory={a} statuses={statuses}/>
                 {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
@@ -1651,7 +1653,7 @@ function Dashboard({onLogout}){
                 <div style={{background:sl.overdue?"#fef2f2":sl.urgent?"#fff7ed":"#f0fdf4",border:`1px solid ${sl.overdue?"#fecaca":sl.urgent?"#fed7aa":"#bbf7d0"}`,borderRadius:7,padding:"8px 14px",marginBottom:12,fontSize:12,display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:16}}>{sl.overdue?"⏰":sl.urgent?"⚡":"✅"}</span>
                   <span style={{color:sl.overdue?"#dc2626":sl.urgent?"#ea580c":"#15803d"}}>
-                    <strong>SLA {sl.overdue?"OVERDUE":"OK"}</strong> — {SLA_HOURS[a.severity]}h limit for {a.severity} severity
+                    <strong>SLA {sl.overdue?"OVERDUE":"OK"}</strong> — {(a.isResearch?SLA_HOURS_RESEARCH:SLA_HOURS)[a.severity]}h limit for {a.severity} severity{a.isResearch?" (research disclosure)":""}
                     {sl.overdue?<span> · <strong>{sl.remainH}h past due</strong></span>:<span> · {sl.remainH}h remaining</span>}
                   </span>
                 </div>
@@ -2003,7 +2005,7 @@ function Dashboard({onLogout}){
               EPSS {a.epss}%
             </span>
           )}
-          {a.isOEM&&<OEMBadge/>}
+          {a.isOEM&&<OEMBadge/>}{a.isResearch&&<ResearchBadge/>}
           {ackInfo&&<AckBadge by={ackInfo.by}/>}
           {coveredCVEs.has(a.cve||a.id)&&feedTab==="advisories"&&<span className="coverage-badge" title="News articles cover this CVE">📰</span>}
           {ackInfo?.assigned_to&&ackInfo.assigned_to!=="Unassigned"&&(
