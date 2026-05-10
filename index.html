@@ -1254,16 +1254,18 @@ function Dashboard({onLogout}){
     assigned:filteredAdvisories.filter(a=>acks[a.id]?.assigned_to&&acks[a.id].assigned_to!=="Unassigned").length,
     unassigned:filteredAdvisories.filter(a=>acks[a.id]&&(!acks[a.id].assigned_to||acks[a.id].assigned_to==="Unassigned")).length,
   }),[filteredAdvisories,filteredNews,advisories,statuses,acks,userName]);
-  // Per-member assignment counts for the assignee dropdown
+  // Per-member assignment counts — only count advisories (not news items)
   const assigneeCounts=useMemo(()=>{
     const m={};
-    Object.values(acks).forEach(ack=>{
-      if(ack.assigned_to&&ack.assigned_to!=="Unassigned"){
+    // Build set of advisory IDs (non-news) for cross-check
+    const advIds=new Set(advisories.filter(a=>!a.isNews&&a.cat!=="News").map(a=>a.id));
+    Object.entries(acks).forEach(([id,ack])=>{
+      if(ack.assigned_to&&ack.assigned_to!=="Unassigned"&&advIds.has(id)){
         m[ack.assigned_to]=(m[ack.assigned_to]||0)+1;
       }
     });
     return m;
-  },[acks]);
+  },[acks,advisories]);
   const srcStats={total:sources.length,enabled:sources.filter(s=>s.enabled).length,withRSS:sources.filter(s=>s.rss&&s.enabled).length};
 
   // Sidebar category counts — use resolver so sidebar shows correct counts
@@ -2097,7 +2099,7 @@ function Dashboard({onLogout}){
               {TEAM_MEMBERS.filter(m=>m!=="Unassigned").filter(m=>showAllWorkload||(assigneeCounts[m]||0)>0).map(member=>(
                 <div key={member}
                   className={"sidebar-item"+(fAssignee===member?" active":"")}
-                  onClick={()=>{if((assigneeCounts[member]||0)>0){setTab("feed");setSideFilter("all");setFAssignee(member);}}}
+                  onClick={()=>{if((assigneeCounts[member]||0)>0){setTab("feed");setSideFilter("all");setFAssignee(member);setFeedTab("advisories");setFSev("All");setFCat("All");setFStatus("All");setFAck("All");setSearch("");}}}
                   style={{opacity:(assigneeCounts[member]||0)>0?1:0.38,cursor:(assigneeCounts[member]||0)>0?"pointer":"default"}}>
                   <span style={{fontSize:12,width:18,flexShrink:0}}>👤</span>
                   <span className="si-name" style={{fontSize:12}}>{member}{member===userName?" (me)":""}</span>
