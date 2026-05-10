@@ -1510,7 +1510,7 @@ function Dashboard({onLogout}){
             <div className="rph-left">
               <div className="rph-badges">
                 <SevBadge sev={a.severity} title={sevTooltip(a)}/>
-                {a.cvss&&<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>}
+                {a.cvss?<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>:<span style={{background:"#f8fafc",color:"#94a3b8",border:"1px dashed #cbd5e1",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}} title="CVSS pending NVD enrichment">CVSS —</span>}
                 {a.zeroDay&&<ZDBadge/>}
                 {a.isNew&&!ackInfo&&<NewBadge/>}
                 {a.isOEM&&<OEMBadge/>}{a.isResearch&&<ResearchBadge/>}
@@ -1662,7 +1662,7 @@ function Dashboard({onLogout}){
               {/* ── KEY METRICS ROW ── */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8,marginBottom:12}}>
                 {/* CVSS Score */}
-                {a.cvss&&(
+                {a.cvss?(
                   <div style={{background:"#fff",border:"1px solid #efefef",borderRadius:8,padding:"10px 12px"}}>
                     <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>CVSS Score</div>
                     <div style={{fontSize:22,fontWeight:800,color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",lineHeight:1}}>{a.cvss}</div>
@@ -1670,6 +1670,12 @@ function Dashboard({onLogout}){
                     <div style={{height:4,background:"#f0f0f0",borderRadius:2,marginTop:5,overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:2,width:`${(a.cvss/10)*100}%`,background:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888"}}/>
                     </div>
+                  </div>
+                ):(
+                  <div style={{background:"#f8fafc",border:"1px dashed #cbd5e1",borderRadius:8,padding:"10px 12px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>CVSS Score</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#94a3b8"}}>Pending</div>
+                    <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>NVD enrichment in progress</div>
                   </div>
                 )}
                 {/* Severity */}
