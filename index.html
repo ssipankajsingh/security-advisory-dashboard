@@ -2653,6 +2653,7 @@ function Dashboard({onLogout}){
     const [severity,setSeverity]=React.useState("");
     const [days,setDays]=React.useState(365);
     const [sel,setSel]=React.useState(null);
+    const [archSearch,setArchSearch]=React.useState("");
     const load=React.useCallback(async()=>{
       setLoading(true);
       try{
@@ -2665,8 +2666,13 @@ function Dashboard({onLogout}){
       setLoading(false);
     },[days,severity]);
     React.useEffect(()=>{load();},[load]);
-    const crit=items.filter(a=>a.severity==="Critical").length;
-    const zd=items.filter(a=>a.zeroDay).length;
+    const archFiltered=React.useMemo(()=>{
+      if(!archSearch.trim()) return items;
+      const q=archSearch.toLowerCase();
+      return items.filter(a=>[a.id,a.cve,a.title,a.source,a.summary].some(f=>f?.toLowerCase().includes(q)));
+    },[items,archSearch]);
+    const crit=archFiltered.filter(a=>a.severity==="Critical").length;
+    const zd=archFiltered.filter(a=>a.zeroDay).length;
     const fmtDate=d=>{try{return new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"});}catch{return"—";}};
     return(
       <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%"}}>
@@ -2675,6 +2681,8 @@ function Dashboard({onLogout}){
           Archived advisories — older than 90 days, within 1-year retention. Fully searchable.
         </div>
         <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
+          <input placeholder="Search ID, title, CVE..." value={archSearch||""} onChange={e=>setArchSearch(e.target.value)}
+            style={{flex:"1 1 160px",padding:"5px 9px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:5,minWidth:120}}/>
           <select value={severity} onChange={e=>setSeverity(e.target.value)} className="field-select" style={{width:130}}>
             <option value="">All Severity</option>
             {["Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}
@@ -2688,14 +2696,14 @@ function Dashboard({onLogout}){
           <div style={{marginLeft:"auto",display:"flex",gap:12,fontSize:12,color:"#888"}}>
             <span style={{color:"#dc2626",fontWeight:600}}>{crit} Critical</span>
             <span style={{color:"#7c3aed",fontWeight:600}}>{zd} Zero-Days</span>
-            <span>{items.length} total</span>
+            <span>{archSearch?`${archFiltered.length} of ${items.length}`:items.length} total</span>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:sel?"1fr 1fr":"1fr",flex:1,overflow:"hidden"}}>
           <div style={{overflowY:"auto",borderRight:sel?"1px solid #f0f0f0":"none"}}>
             {loading&&<div style={{padding:32,textAlign:"center",color:"#aaa",fontSize:13}}>Loading archive…</div>}
-            {!loading&&items.length===0&&<div style={{padding:32,textAlign:"center",color:"#aaa",fontSize:13}}>No archived advisories found.</div>}
-            {items.map(a=>(
+            {!loading&&archFiltered.length===0&&<div style={{padding:32,textAlign:"center",color:"#aaa",fontSize:13}}>{archSearch?"No archived advisories match your search.":"No archived advisories found."}</div>}
+            {archFiltered.map(a=>(
               <div key={a.id} onClick={()=>setSel(sel?.id===a.id?null:a)}
                 style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",
                   background:sel?.id===a.id?"#f0f9ff":"transparent",transition:"background 0.1s"}}>
