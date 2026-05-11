@@ -10,25 +10,25 @@
   "theme_color": "#0a1e50",
   "icons": [
     {
-      "src": "/security-advisory-dashboard/icon192.png",
+      "src": "/security-advisory-dashboard/icons/icon192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/security-advisory-dashboard/icon192.png",
+      "src": "/security-advisory-dashboard/icons/icon192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/security-advisory-dashboard/icon512.png",
+      "src": "/security-advisory-dashboard/icons/icon512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/security-advisory-dashboard/icon512.png",
+      "src": "/security-advisory-dashboard/icons/icon512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
