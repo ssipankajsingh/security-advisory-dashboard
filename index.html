@@ -33,29 +33,55 @@ window.addEventListener('appinstalled', function() {
 });
 
 // Register Service Worker early — required for PWA install prompt
-// Listen for SW update messages — show reload banner when new version deployed
+// Service Worker: auto-reload when new version deployed
+// New SW activates immediately (skipWaiting) and notifies all tabs
 if ('serviceWorker' in navigator) {
+  // Handle SW_UPDATED message — auto reload after short delay
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data && e.data.type === 'SW_UPDATED') {
+      // Remove any existing banner
+      const old = document.getElementById('sw-update-banner');
+      if (old) old.remove();
       const banner = document.createElement('div');
       banner.id = 'sw-update-banner';
       banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a3a7a;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
-      banner.innerHTML = '<span>🔄 <strong>New dashboard version available</strong> — click to get the latest updates</span><button onclick="window.location.reload(true)" style="background:#fff;color:#1a3a7a;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px">Reload Now</button>';
+      banner.innerHTML = '<span>🔄 <strong>Dashboard updated (' + (e.data.version||'new version') + ')</strong> — reloading in 3 seconds...</span><button onclick="window.location.reload(true)" style="background:#fff;color:#1a3a7a;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:600;font-size:12px">Reload Now</button>';
       document.body.prepend(banner);
+      // Auto-reload after 3 seconds — no action needed from user
+      setTimeout(() => window.location.reload(true), 3000);
     }
   });
-}
-if ('serviceWorker' in navigator) {
+
+  // When SW controller changes (new SW took over), reload immediately
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('[SW] Controller changed — new version active, reloading');
+    window.location.reload(true);
+  });
+
   window.addEventListener('load', function() {
     var swUrl = '/security-advisory-dashboard/sw.js';
     navigator.serviceWorker.register(swUrl, {scope: '/security-advisory-dashboard/'})
       .then(function(reg) {
         console.log('[SW] Registered scope:', reg.scope);
         window.dispatchEvent(new CustomEvent('sw-registered'));
+        // Check for waiting SW (already installed but waiting)
+        if (reg.waiting) {
+          reg.waiting.postMessage({type:'SKIP_WAITING'});
+        }
+        // Check for updates on every page load
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          if (newSW) {
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                newSW.postMessage({type:'SKIP_WAITING'});
+              }
+            });
+          }
+        });
       })
       .catch(function(err) {
         console.warn('[SW] Registration failed:', err);
-        // Fallback: try relative path
         navigator.serviceWorker.register('./sw.js')
           .then(function(reg) { console.log('[SW] Fallback registered:', reg.scope); })
           .catch(function(e2) { console.warn('[SW] Fallback also failed:', e2); });
@@ -910,6 +936,7 @@ function Dashboard({onLogout}){
   const ss=(k,d)=>{try{const v=sessionStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}};
   const [fSev,setFSev]=useState(()=>ss("sf_sev","All"));
   const [fCat,setFCat]=useState(()=>ss("sf_cat","All"));
+  const [fCnxTier,setFCnxTier]=useState("All"); // CNX Stack tier sub-filter: All | network | server | endpoint | app | eol
   const [fZD,setFZD]=useState(()=>ss("sf_zd",false));
   const [fNew,setFNew]=useState(false);
   const [fAck,setFAck]=useState(()=>ss("sf_ack","All"));
@@ -1223,6 +1250,11 @@ function Dashboard({onLogout}){
     let list=advisories;
     if(sideFilter==="cnxstack") list=list.filter(a=>a.cnxStack);
     else if(sideFilter!=="all")list=list.filter(a=>resolveAdvisoryCat(a)===sideFilter);
+    // CNX tier sub-filter (only active when in CNX Stack view)
+    if(sideFilter==="cnxstack"&&fCnxTier!=="All"){
+      if(fCnxTier==="eol") list=list.filter(a=>a.cnxEol);
+      else list=list.filter(a=>a.cnxTier===fCnxTier);
+    }
     if(fSev!=="All")list=list.filter(a=>a.severity===fSev);
     if(fCat!=="All")list=list.filter(a=>a.cat===fCat);
     if(fZD)list=list.filter(a=>a.zeroDay);
@@ -1237,7 +1269,7 @@ function Dashboard({onLogout}){
     if(fDateRange!=="all"&&fDateRange!=="custom"){const days=dateRanges[fDateRange];if(days){const cutoff=new Date(nowTs-days*86400000);list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=cutoff;});}}
     if(fDateRange==="custom"){if(fDateFrom)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d>=new Date(fDateFrom);});if(fDateTo)list=list.filter(a=>{const d=new Date(a.published||a.date);return!isNaN(d)&&d<=new Date(fDateTo+"T23:59:59");});}
     return list;
-  },[advisories,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,userName,resolveAdvisoryCat]);
+  },[advisories,sideFilter,fSev,fCat,fCnxTier,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo,lastFetchedTs,acks,statuses,userName,resolveAdvisoryCat]);
 
   // ── Feed tab: advisories (CVEs/PSIRTs) | news (articles/intel) ─────────────
   const [feedTab,setFeedTab]=useState(()=>{try{return sessionStorage.getItem("sf_feedtab")||"advisories";}catch{return"advisories";}});
@@ -1271,7 +1303,7 @@ function Dashboard({onLogout}){
   },[feedTab,filteredAdvisories,filteredNews]);
 
   const [visibleCount,setVisibleCount]=useState(50);
-  useEffect(()=>{setVisibleCount(50);},[feedTab,sideFilter,fSev,fCat,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
+  useEffect(()=>{setVisibleCount(50);},[feedTab,sideFilter,fSev,fCat,fCnxTier,fZD,fNew,fAck,fStatus,fAssignee,search,fDateRange,fDateFrom,fDateTo]);
 
   const stats=useMemo(()=>({
     critical:filteredAdvisories.filter(a=>a.severity==="Critical").length,
@@ -2149,7 +2181,7 @@ function Dashboard({onLogout}){
           )}
           {/* CNX Stack quick filter */}
           <div className={"sidebar-item"+(tab==="feed"&&sideFilter==="cnxstack"?" active":"")}
-            onClick={()=>{setTab("feed");setSideFilter("cnxstack");setFSev("All");setFCat("All");setFStatus("All");setFAck("All");setSearch("");setFAssignee("All");setSel(null);}}>
+            onClick={()=>{setTab("feed");setSideFilter("cnxstack");setFSev("All");setFCat("All");setFStatus("All");setFAck("All");setSearch("");setFAssignee("All");setFCnxTier("All");setSel(null);}}>
             <span style={{fontSize:14,width:18,flexShrink:0}}>🏷️</span>
             <span className="si-name" style={{fontWeight:600}}>CNX Stack</span>
             {stats.cnxStackCount>0&&<span className="si-count" style={{background:"#6366f1"}}>{stats.cnxStackCount}</span>}
@@ -3785,12 +3817,31 @@ function Dashboard({onLogout}){
                 )}
                 {/* Severity row */}
                 <div className="mid-filter-row">
-                  {["All","Critical","High","Medium","Low"].map(s=>(
-                    <button key={s} className={"filter-chip"+(fSev===s?" active":"")} onClick={()=>setFSev(s)}>{s}</button>
+                  {[["All","All"],["Critical","Critical"],["High","High"],["Medium","Medium"],["Low","Low"]].map(([s,l])=>(
+                    <button key={s} className={"filter-chip"+(fSev===s?" active":"")} onClick={()=>setFSev(s)}>{l}</button>
                   ))}
                   <button className={"filter-chip"+(fZD?" active":"")} onClick={()=>setFZD(v=>!v)}>0-Day</button>
                   <button className={"filter-chip"+(fNew?" active":"")} onClick={()=>setFNew(v=>!v)}>New</button>
                 </div>
+                {/* CNX Tier sub-filter — only shown in CNX Stack view */}
+                {sideFilter==="cnxstack"&&(
+                  <div className="mid-filter-row" style={{borderTop:"1px solid #f0f0f0",paddingTop:6,marginTop:2}}>
+                    <span style={{fontSize:10,color:"#aaa",fontWeight:600,marginRight:4,flexShrink:0}}>TIER:</span>
+                    {[
+                      ["All","All",null],
+                      ["network","🌐 Network","#059669"],
+                      ["server","🖧 Server","#2563eb"],
+                      ["endpoint","🖥️ Endpoint","#ea580c"],
+                      ["app","📦 App","#7c3aed"],
+                      ["eol","⚠️ EOL Only","#dc2626"],
+                    ].map(([t,l,c])=>(
+                      <button key={t} className={"filter-chip"+(fCnxTier===t?" active":"")}
+                        style={fCnxTier===t&&c?{background:c,borderColor:c,color:"#fff"}:{}}
+                        onClick={()=>setFCnxTier(t)}>{l}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {/* Feed type tab bar */}
               <div className="feed-tab-bar">
@@ -3861,7 +3912,7 @@ function Dashboard({onLogout}){
                   <option value="custom">Custom…</option>
                 </select>
                 {(fSev!=="All"||fZD||fNew||fAck!=="All"||fStatus!=="All"||fAssignee!=="All"||fCat!=="All"||fDateRange!=="all"||search)&&(
-                  <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFAssignee("All");setFCat("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
+                  <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFAssignee("All");setFCat("All");setFCnxTier("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
                 )}
               </div>
               {fDateRange==="custom"&&(
