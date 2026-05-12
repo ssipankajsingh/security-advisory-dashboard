@@ -871,6 +871,33 @@ function Dashboard({onLogout}){
   const [tab,setTab]=useState("feed");          // feed | sources | autorefresh | email | settings
   const [sideFilter,setSideFilter]=useState("all"); // "all" | category name
   const [sources,setSources]=useState(()=>ls("sad_sources")||SOURCE_LIBRARY);
+
+  // P3 Fix: load source enabled/disabled state from Supabase on startup
+  // This ensures all browsers see the same active source set
+  useEffect(()=>{
+    fetch(`${PROXY_URL}/source-config`,{headers:getAuthHeader()})
+      .then(r=>r.ok?r.json():null)
+      .then(cfg=>{
+        if(!cfg||!Array.isArray(cfg)||cfg.length===0) return;
+        const cfgMap={};
+        cfg.forEach(c=>{if(c.source_id)cfgMap[c.source_id]=c.enabled!==false;});
+        setSources(prev=>prev.map(s=>cfgMap.hasOwnProperty(s.id)?{...s,enabled:cfgMap[s.id]}:s));
+      })
+      .catch(()=>{});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  // Persist sources to localStorage AND sync enabled state changes to Supabase
+  useEffect(()=>{
+    localStorage.setItem("sad_sources",JSON.stringify(sources));
+  },[sources]);
+
+  const toggleSource=React.useCallback((id,enabled)=>{
+    setSources(prev=>prev.map(s=>s.id===id?{...s,enabled}:s));
+    // Sync to Supabase so all browsers see the same state
+    saveSourceConfig(PROXY_URL,getAuthHeader(),id,enabled).catch(()=>{});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
   const [advisories,setAdvisories]=useState([]);
   const [fLoad,setFLoad]=useState(false);
   const [proxyHealth,setProxyHealth]=useState("ok"); // "ok" | "reconnecting" | "error"
@@ -3885,7 +3912,7 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 
-// SW registered early in plain script above-code
+// SW registered early in plain script above
 </script>
 </body>
 </html>
