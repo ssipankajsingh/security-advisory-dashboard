@@ -151,8 +151,8 @@ a:hover{text-decoration:underline}
 .mid-extra-filters{padding:5px 10px;background:#fafafa;border-bottom:1px solid #efefef;flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap}
 .mid-extra-filters select{background:#fff;border:1px solid #e0e0e0;border-radius:5px;padding:3px 6px;font-size:11px;color:#444;cursor:pointer;max-width:120px}
 .mid-list{flex:1;overflow-y:auto;min-height:0}
-.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid #e8e8e8;position:relative}
-.feed-item:hover{background:#f5f5f5}
+.feed-item{padding:8px 12px 8px 16px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:4px solid #e8e8e8;position:relative;box-sizing:border-box}
+.feed-item:hover{background:#f9f9f9}
 .feed-item.selected{background:#fdf0ef;border-left-color:#c0392b;border-left-width:4px}
 .feed-item.is-new{background:#fffaf9}
 .feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:wrap;max-height:40px;overflow:hidden}
@@ -162,7 +162,7 @@ a:hover{text-decoration:underline}
 .feed-item .fi-meta span{overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .feed-item.unread .fi-title{font-weight:700;color:#111}
 .unread-dot{width:6px;height:6px;border-radius:50%;background:#c0392b;position:absolute;right:10px;top:11px;flex-shrink:0}
-.sla-bar{position:absolute;bottom:0;left:0;height:2px;border-radius:0;pointer-events:none}
+.sla-bar{position:absolute;bottom:0;left:4px;right:0;height:2px;border-radius:0;pointer-events:none}
 .load-more-btn{width:100%;padding:10px;text-align:center;font-size:11px;color:#888;background:#f8f8f8;border:none;border-top:1px solid #efefef;cursor:pointer}
 .load-more-btn:hover{background:#f0f0f0;color:#555}
 
@@ -463,9 +463,11 @@ const CAT_COLORS={"Aggregator":"#ff6b35","Government":"#7c3aed","CVE Database":"
 
 // CNX Stack tier colours
 const CNX_TIER_COLORS={"network":"#059669","endpoint":"#ea580c","server":"#2563eb","app":"#7c3aed"};
+const CNX_TIER_BG={"network":"#f0fdf4","endpoint":"#fff7ed","server":"#eff6ff","app":"#faf5ff"};
+const CNX_TIER_BORDER={"network":"#86efac","endpoint":"#fed7aa","server":"#bfdbfe","app":"#e9d5ff"};
 const CNX_TIER_LABELS={"network":"🌐 Network","endpoint":"🖥️ Endpoint","server":"🖧 Server","app":"📦 App"};
-const CnxStackBadge=({tier})=><span title={`Affects CNX ${CNX_TIER_LABELS[tier]||"Stack"} — in Concentrix asset inventory`} style={{fontSize:9,fontWeight:700,color:"#fff",background:CNX_TIER_COLORS[tier]||"#6366f1",borderRadius:3,padding:"1px 6px",flexShrink:0,letterSpacing:"0.3px"}}>CNX {(tier||"STACK").toUpperCase()}</span>;
-const EolBadge=({products})=><span title={`End-of-Life product — cannot be patched. Affected: ${(products||[]).join(", ")}`} style={{fontSize:9,fontWeight:700,color:"#fff",background:"#dc2626",border:"1px solid #991b1b",borderRadius:3,padding:"1px 6px",flexShrink:0,animation:"pulse 2s infinite"}}>⚠️ EOL</span>;
+const CnxStackBadge=({tier})=><span title={`Affects CNX ${CNX_TIER_LABELS[tier]||"Stack"} — in Concentrix asset inventory`} style={{fontSize:9,fontWeight:700,color:CNX_TIER_COLORS[tier]||"#6366f1",background:CNX_TIER_BG[tier]||"#eef2ff",border:`1px solid ${CNX_TIER_BORDER[tier]||"#c7d2fe"}`,borderRadius:3,padding:"1px 5px",flexShrink:0,letterSpacing:"0.2px"}}>CNX {(tier||"STACK").toUpperCase()}</span>;
+const EolBadge=({products})=><span title={`End-of-Life product — cannot be patched. Affected: ${(products||[]).join(", ")}`} style={{fontSize:9,fontWeight:700,color:"#991b1b",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:3,padding:"1px 5px",flexShrink:0,animation:"pulse 2s infinite"}}>⚠️ EOL</span>;
 const SEV_BADGE_CLS={"Critical":"badge-critical","High":"badge-high","Medium":"badge-medium","Low":"badge-low","Unknown":"badge-unknown"};
 
 function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
@@ -1903,7 +1905,7 @@ function Dashboard({onLogout}){
                     🏷️ CNX Stack Impact {a.cnxEol&&"⚠️ EOL ASSET"}
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:a.cnxEol?8:0}}>
-                    <span style={{background:CNX_TIER_COLORS[a.cnxTier]||"#6366f1",color:"#fff",borderRadius:4,padding:"2px 10px",fontSize:11,fontWeight:600}}>
+                    <span style={{background:CNX_TIER_BG[a.cnxTier]||"#eef2ff",color:CNX_TIER_COLORS[a.cnxTier]||"#6366f1",border:`1px solid ${CNX_TIER_BORDER[a.cnxTier]||"#c7d2fe"}`,borderRadius:4,padding:"2px 10px",fontSize:11,fontWeight:700}}>
                       {CNX_TIER_LABELS[a.cnxTier]||"CNX Stack"}
                     </span>
                     {(a.cnxVendors||[]).map(v=>(
@@ -2516,7 +2518,7 @@ function Dashboard({onLogout}){
             <div className="section-title">🏷️ CNX Stack Asset Manager</div>
             <div style={{color:"#888",fontSize:12,marginBottom:12,lineHeight:1.6}}>
               Manage the asset inventory used to tag advisories affecting Concentrix's environment.
-              Changes take effect on the next feed refresh. Stored in Database — shared across all browsers.
+              Changes take effect on the next feed refresh. Stored in Supabase — shared across all browsers.
             </div>
             {React.createElement(()=>{
               const [stack,setStack]=React.useState([]);
@@ -3956,15 +3958,15 @@ function Dashboard({onLogout}){
                   <div className="mid-filter-row" style={{borderTop:"1px solid #f0f0f0",paddingTop:6,marginTop:2}}>
                     <span style={{fontSize:10,color:"#aaa",fontWeight:600,marginRight:4,flexShrink:0}}>TIER:</span>
                     {[
-                      ["All","All",null],
-                      ["network","🌐 Network","#059669"],
-                      ["server","🖧 Server","#2563eb"],
-                      ["endpoint","🖥️ Endpoint","#ea580c"],
-                      ["app","📦 App","#7c3aed"],
-                      ["eol","⚠️ EOL Only","#dc2626"],
-                    ].map(([t,l,c])=>(
+                      ["All","All",null,null],
+                      ["network","🌐 Network","#059669","#f0fdf4"],
+                      ["server","🖧 Server","#2563eb","#eff6ff"],
+                      ["endpoint","🖥️ Endpoint","#ea580c","#fff7ed"],
+                      ["app","📦 App","#7c3aed","#faf5ff"],
+                      ["eol","⚠️ EOL Only","#dc2626","#fef2f2"],
+                    ].map(([t,l,c,bg])=>(
                       <button key={t} className={"filter-chip"+(fCnxTier===t?" active":"")}
-                        style={fCnxTier===t&&c?{background:c,borderColor:c,color:"#fff"}:{}}
+                        style={fCnxTier===t&&c?{background:bg,borderColor:c,color:c,fontWeight:700}:{}}
                         onClick={()=>setFCnxTier(t)}>{l}
                       </button>
                     ))}
