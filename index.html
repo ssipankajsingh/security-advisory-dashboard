@@ -2892,13 +2892,13 @@ function Dashboard({onLogout}){
     const [items,setItems]=React.useState([]);
     const [loading,setLoading]=React.useState(false);
     const [severity,setSeverity]=React.useState("");
-    const [days,setDays]=React.useState(365);
+    const [days,setDays]=React.useState(30);  // complement main feed 30d window
     const [sel,setSel]=React.useState(null);
     const [archSearch,setArchSearch]=React.useState("");
     const load=React.useCallback(async()=>{
       setLoading(true);
       try{
-        const p=new URLSearchParams({limit:500,days});
+        const p=new URLSearchParams({limit:1000,days});
         if(severity)p.set("severity",severity);
         const r=await fetch(`${PROXY_URL}/archive?${p}`,{headers:getAuthHeader()});
         const d=await r.json();
@@ -2919,7 +2919,7 @@ function Dashboard({onLogout}){
       <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🗄️ Advisory Archive</div></div>
         <div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"10px 20px",fontSize:12,color:"#1e40af",flexShrink:0}}>
-          Archived advisories — older than 90 days, within 1-year retention. Fully searchable.
+          Archived advisories — main feed shows last 30 days (+ all KEV/Zero-Day up to 90 days). Advisories older than 30 days are here, fully searchable up to 1 year.
         </div>
         <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
           <input placeholder="Search ID, title, CVE..." value={archSearch||""} onChange={e=>setArchSearch(e.target.value)}
@@ -2929,6 +2929,8 @@ function Dashboard({onLogout}){
             {["Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}
           </select>
           <select value={days} onChange={e=>setDays(Number(e.target.value))} className="field-select" style={{width:130}}>
+            <option value={30}>Last 30 days</option>
+            <option value={60}>Last 60 days</option>
             <option value={90}>Last 90 days</option>
             <option value={180}>Last 180 days</option>
             <option value={365}>Last 365 days</option>
