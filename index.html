@@ -488,6 +488,18 @@ function fmtRel(ts){if(!ts)return"";try{const d=Date.now()-new Date(ts).getTime(
 function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});}catch{return "";}}
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
 
+// Returns the best Official Advisory URL — fixes vendor-specific 404 patterns
+function getAdvisoryUrl(a){
+  if(!a) return "#";
+  const cveId = a.cve||(a.cves&&a.cves[0]);
+  const src   = (a.source||"").toLowerCase();
+  const vendor= (a.vendor||"").toLowerCase();
+  // MSRC: /en-US/vulnerability/ is canonical — feed link uses /vulnerability/ which 404s for some CVEs
+  if((src.includes("msrc")||vendor.includes("microsoft")) && cveId)
+    return `https://msrc.microsoft.com/update-guide/en-US/vulnerability/${cveId}`;
+  return a.url||a.link||"#";
+}
+
 function slaStatus(a){
   const dateStr = a.nvd_published || a.published || a.date;
   const pub=new Date(dateStr||0);
@@ -1875,7 +1887,7 @@ function Dashboard({onLogout}){
                   <div style={{fontSize:28,marginBottom:8}}>📰</div>
                   <div style={{fontSize:13,fontWeight:600,color:"#333",marginBottom:4}}>Full content available at source</div>
                   <div style={{fontSize:11,color:"#aaa",marginBottom:12,wordBreak:"break-all"}}>{(a.url||a.link)}</div>
-                  <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:12}}>
+                  <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:12}}>
                     🔗 Read Full Advisory at Source
                   </a>
                   <div style={{fontSize:10,color:"#bbb",marginTop:8}}>This advisory's full content is on the vendor's portal. Click to open in a new tab.</div>
@@ -1892,7 +1904,7 @@ function Dashboard({onLogout}){
                   {/* If description is very short, prompt to check source */}
                   {(a.description||a.summary||"").replace(/<[^>]+>/g," ").trim().length<120&&(
                     <div style={{marginTop:8,padding:"6px 10px",background:"#f8f8f8",borderRadius:5,fontSize:11,color:"#888",display:"flex",alignItems:"center",gap:6}}>
-                      ℹ️ Summary is brief — <a href={a.url||a.link} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontWeight:600}}>read full advisory at source ↗</a>
+                      ℹ️ Summary is brief — <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontWeight:600}}>read full advisory at source ↗</a>
                     </div>
                   )}
                 </div>
@@ -2059,7 +2071,7 @@ function Dashboard({onLogout}){
 
         {/* Action bar */}
         <div className="read-pane-actions" style={{flexWrap:"wrap",gap:6}}>
-          <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:11}}>🔗 Official Advisory</a>
+          <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:11}}>🔗 Official Advisory</a>
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://nvd.nist.gov/vuln/detail/${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>🔍 NVD</a>}
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.exploit-db.com/search?cve=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>💣 Exploit-DB</a>}
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.cve.org/CVERecord?id=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>📋 CVE.org</a>}
