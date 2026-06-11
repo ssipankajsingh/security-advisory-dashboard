@@ -151,8 +151,8 @@ a:hover{text-decoration:underline}
 .mid-extra-filters{padding:5px 10px;background:#fafafa;border-bottom:1px solid #efefef;flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap}
 .mid-extra-filters select{background:#fff;border:1px solid #e0e0e0;border-radius:5px;padding:3px 6px;font-size:11px;color:#444;cursor:pointer;max-width:120px}
 .mid-list{flex:1;overflow-y:auto;min-height:0}
-.feed-item{padding:8px 12px 8px 16px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:4px solid #e8e8e8;position:relative;box-sizing:border-box}
-.feed-item:hover{background:#f9f9f9}
+.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid #e8e8e8;position:relative}
+.feed-item:hover{background:#f5f5f5}
 .feed-item.selected{background:#fdf0ef;border-left-color:#c0392b;border-left-width:4px}
 .feed-item.is-new{background:#fffaf9}
 .feed-item .fi-badges{display:flex;gap:3px;align-items:center;margin-bottom:4px;flex-wrap:wrap;max-height:40px;overflow:hidden}
@@ -162,7 +162,7 @@ a:hover{text-decoration:underline}
 .feed-item .fi-meta span{overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .feed-item.unread .fi-title{font-weight:700;color:#111}
 .unread-dot{width:6px;height:6px;border-radius:50%;background:#c0392b;position:absolute;right:10px;top:11px;flex-shrink:0}
-.sla-bar{position:absolute;bottom:0;left:4px;right:0;height:2px;border-radius:0;pointer-events:none}
+.sla-bar{position:absolute;bottom:0;left:0;height:2px;border-radius:0;pointer-events:none}
 .load-more-btn{width:100%;padding:10px;text-align:center;font-size:11px;color:#888;background:#f8f8f8;border:none;border-top:1px solid #efefef;cursor:pointer}
 .load-more-btn:hover{background:#f0f0f0;color:#555}
 
@@ -463,11 +463,9 @@ const CAT_COLORS={"Aggregator":"#ff6b35","Government":"#7c3aed","CVE Database":"
 
 // CNX Stack tier colours
 const CNX_TIER_COLORS={"network":"#059669","endpoint":"#ea580c","server":"#2563eb","app":"#7c3aed"};
-const CNX_TIER_BG={"network":"#f0fdf4","endpoint":"#fff7ed","server":"#eff6ff","app":"#faf5ff"};
-const CNX_TIER_BORDER={"network":"#86efac","endpoint":"#fed7aa","server":"#bfdbfe","app":"#e9d5ff"};
 const CNX_TIER_LABELS={"network":"🌐 Network","endpoint":"🖥️ Endpoint","server":"🖧 Server","app":"📦 App"};
-const CnxStackBadge=({tier})=><span title={`Affects CNX ${CNX_TIER_LABELS[tier]||"Stack"} — in Concentrix asset inventory`} style={{fontSize:9,fontWeight:700,color:CNX_TIER_COLORS[tier]||"#6366f1",background:CNX_TIER_BG[tier]||"#eef2ff",border:`1px solid ${CNX_TIER_BORDER[tier]||"#c7d2fe"}`,borderRadius:3,padding:"1px 5px",flexShrink:0,letterSpacing:"0.2px"}}>CNX {(tier||"STACK").toUpperCase()}</span>;
-const EolBadge=({products})=><span title={`End-of-Life product — cannot be patched. Affected: ${(products||[]).join(", ")}`} style={{fontSize:9,fontWeight:700,color:"#991b1b",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:3,padding:"1px 5px",flexShrink:0,animation:"pulse 2s infinite"}}>⚠️ EOL</span>;
+const CnxStackBadge=({tier})=><span title={`Affects CNX ${CNX_TIER_LABELS[tier]||"Stack"} — in Concentrix asset inventory`} style={{fontSize:9,fontWeight:700,color:"#fff",background:CNX_TIER_COLORS[tier]||"#6366f1",borderRadius:3,padding:"1px 6px",flexShrink:0,letterSpacing:"0.3px"}}>CNX {(tier||"STACK").toUpperCase()}</span>;
+const EolBadge=({products})=><span title={`End-of-Life product — cannot be patched. Affected: ${(products||[]).join(", ")}`} style={{fontSize:9,fontWeight:700,color:"#fff",background:"#dc2626",border:"1px solid #991b1b",borderRadius:3,padding:"1px 6px",flexShrink:0,animation:"pulse 2s infinite"}}>⚠️ EOL</span>;
 const SEV_BADGE_CLS={"Critical":"badge-critical","High":"badge-high","Medium":"badge-medium","Low":"badge-low","Unknown":"badge-unknown"};
 
 function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY));if(s&&s.expiry>Date.now())return s;localStorage.removeItem(SESSION_KEY);}catch{}return null;}
@@ -487,18 +485,6 @@ function fmtTs(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-IN
 function fmtRel(ts){if(!ts)return"";try{const d=Date.now()-new Date(ts).getTime();if(d<3600000)return Math.round(d/60000)+"m ago";if(d<86400000)return Math.round(d/3600000)+"h ago";if(d<604800000)return Math.round(d/86400000)+"d ago";return fmtTs(ts);}catch{return "";}}
 function fmtSeen(ts){if(!ts)return"";try{return new Date(ts).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});}catch{return "";}}
 function catDotClass(cat){return"dot-"+(cat||"").toLowerCase().replace(/[^a-z]/g,"");}
-
-// Returns the best Official Advisory URL — fixes vendor-specific 404 patterns
-function getAdvisoryUrl(a){
-  if(!a) return "#";
-  const cveId = a.cve||(a.cves&&a.cves[0]);
-  const src   = (a.source||"").toLowerCase();
-  const vendor= (a.vendor||"").toLowerCase();
-  // MSRC: /en-US/vulnerability/ is canonical — feed link uses /vulnerability/ which 404s for some CVEs
-  if((src.includes("msrc")||vendor.includes("microsoft")) && cveId)
-    return `https://msrc.microsoft.com/update-guide/en-US/vulnerability/${cveId}`;
-  return a.url||a.link||"#";
-}
 
 function slaStatus(a){
   const dateStr = a.nvd_published || a.published || a.date;
@@ -694,8 +680,11 @@ const sevTooltip=(a)=>{
     return `ℹ️ Severity corrected by NVD — feed labelled higher; NVD CVSS: ${a.cvss} (${a.severity})`;
   return undefined;
 };
-const DataQualityBadge=({q,isOEM})=>{
-  if(q==="rich")   return null;
+const CVE_AUTHORITY_SOURCES=new Set(["cvelist_github","ghsa","osv","mitre_cve","vulncheck_nvd","vulncheck_kev","cisa_kev","nvd"]);
+const DataQualityBadge=({q,isOEM,source})=>{
+  if(q==="rich") return null;
+  // Authoritative CVE sources never show NEWS/THIN — they ARE the source of truth
+  if(source&&CVE_AUTHORITY_SOURCES.has(source)) return null;
   if(q==="partial")return<span title="Partial data — some fields extracted from text" style={{fontSize:9,fontWeight:600,color:"#ca8a04",background:"#fefce8",border:"1px solid #fef08a",borderRadius:3,padding:"1px 5px",flexShrink:0}}>PARTIAL</span>;
   if(isOEM)return<span title="Thin data — limited fields in vendor feed. Check Official Advisory for full details." style={{fontSize:9,fontWeight:600,color:"#6b7280",background:"#f3f4f6",border:"1px solid #d1d5db",borderRadius:3,padding:"1px 5px",flexShrink:0}}>THIN</span>;
   return<span title="Thin data — news/blog article. Full details at source." style={{fontSize:9,fontWeight:600,color:"#888",background:"#f5f5f5",border:"1px solid #e0e0e0",borderRadius:3,padding:"1px 5px",flexShrink:0}}>NEWS</span>;
@@ -1887,7 +1876,7 @@ function Dashboard({onLogout}){
                   <div style={{fontSize:28,marginBottom:8}}>📰</div>
                   <div style={{fontSize:13,fontWeight:600,color:"#333",marginBottom:4}}>Full content available at source</div>
                   <div style={{fontSize:11,color:"#aaa",marginBottom:12,wordBreak:"break-all"}}>{(a.url||a.link)}</div>
-                  <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:12}}>
+                  <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:12}}>
                     🔗 Read Full Advisory at Source
                   </a>
                   <div style={{fontSize:10,color:"#bbb",marginTop:8}}>This advisory's full content is on the vendor's portal. Click to open in a new tab.</div>
@@ -1904,7 +1893,7 @@ function Dashboard({onLogout}){
                   {/* If description is very short, prompt to check source */}
                   {(a.description||a.summary||"").replace(/<[^>]+>/g," ").trim().length<120&&(
                     <div style={{marginTop:8,padding:"6px 10px",background:"#f8f8f8",borderRadius:5,fontSize:11,color:"#888",display:"flex",alignItems:"center",gap:6}}>
-                      ℹ️ Summary is brief — <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontWeight:600}}>read full advisory at source ↗</a>
+                      ℹ️ Summary is brief — <a href={a.url||a.link} target="_blank" rel="noreferrer" style={{color:"#2563eb",fontWeight:600}}>read full advisory at source ↗</a>
                     </div>
                   )}
                 </div>
@@ -1917,7 +1906,7 @@ function Dashboard({onLogout}){
                     🏷️ CNX Stack Impact {a.cnxEol&&"⚠️ EOL ASSET"}
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:a.cnxEol?8:0}}>
-                    <span style={{background:CNX_TIER_BG[a.cnxTier]||"#eef2ff",color:CNX_TIER_COLORS[a.cnxTier]||"#6366f1",border:`1px solid ${CNX_TIER_BORDER[a.cnxTier]||"#c7d2fe"}`,borderRadius:4,padding:"2px 10px",fontSize:11,fontWeight:700}}>
+                    <span style={{background:CNX_TIER_COLORS[a.cnxTier]||"#6366f1",color:"#fff",borderRadius:4,padding:"2px 10px",fontSize:11,fontWeight:600}}>
                       {CNX_TIER_LABELS[a.cnxTier]||"CNX Stack"}
                     </span>
                     {(a.cnxVendors||[]).map(v=>(
@@ -2071,7 +2060,7 @@ function Dashboard({onLogout}){
 
         {/* Action bar */}
         <div className="read-pane-actions" style={{flexWrap:"wrap",gap:6}}>
-          <a href={getAdvisoryUrl(a)} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:11}}>🔗 Official Advisory</a>
+          <a href={a.url||a.link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{fontSize:11}}>🔗 Official Advisory</a>
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://nvd.nist.gov/vuln/detail/${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>🔍 NVD</a>}
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.exploit-db.com/search?cve=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>💣 Exploit-DB</a>}
           {(a.cve||(a.cves&&a.cves[0]))&&<a href={`https://www.cve.org/CVERecord?id=${a.cve||a.cves[0]}`} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{fontSize:11}}>📋 CVE.org</a>}
@@ -2128,7 +2117,7 @@ function Dashboard({onLogout}){
             </span>
           )}
           {statusVal&&statusVal!=="New"&&<StatusBadge status={statusVal}/>}
-          <DataQualityBadge q={a.data_quality} isOEM={a.isOEM}/>
+          <DataQualityBadge q={a.data_quality} isOEM={a.isOEM} source={a.source}/>
         </div>
         <div className="fi-id">{a.id}</div>
         <div className={"fi-title"+(a.isNew&&!ackInfo?" unread":"")}>{a.title}</div>
@@ -2525,134 +2514,6 @@ function Dashboard({onLogout}){
               </div>
             )}
           </div>
-          {/* ── CNX STACK MANAGER ── */}
-          <div className="section-card">
-            <div className="section-title">🏷️ CNX Stack Asset Manager</div>
-            <div style={{color:"#888",fontSize:12,marginBottom:12,lineHeight:1.6}}>
-              Manage the asset inventory used to tag advisories affecting Concentrix's environment.
-              Changes take effect on the next feed refresh. Stored in Supabase — shared across all browsers.
-            </div>
-            {React.createElement(()=>{
-              const [stack,setStack]=React.useState([]);
-              const [loading,setLoading]=React.useState(false);
-              const [saving,setSaving]=React.useState(false);
-              const [editRow,setEditRow]=React.useState(null); // {vendor_key, tier, products, eol_products, notes}
-              const [showAdd,setShowAdd]=React.useState(false);
-              const [newRow,setNewRow]=React.useState({vendor_key:"",tier:"endpoint",products:"",eol_products:"",notes:""});
-              const [msg,setMsg]=React.useState("");
-
-              const load=React.useCallback(async()=>{
-                setLoading(true);
-                try{
-                  const r=await fetch(`${PROXY_URL}/cnx-stack`,{headers:getAuthHeader()});
-                  if(r.ok) setStack(await r.json());
-                  else setMsg("Failed to load");
-                }catch(e){setMsg("Load error: "+e.message);}
-                setLoading(false);
-              },[]);
-
-              React.useEffect(()=>{load();},[]);
-
-              const save=async(row)=>{
-                setSaving(true);
-                try{
-                  const body={...row,
-                    products:(typeof row.products==="string"?row.products.split(",").map(p=>p.trim()).filter(Boolean):row.products),
-                    eol_products:(typeof row.eol_products==="string"?row.eol_products.split(",").map(p=>p.trim()).filter(Boolean):row.eol_products),
-                    code:ACCESS_CODE
-                  };
-                  const r=await fetch(`${PROXY_URL}/cnx-stack`,{method:"POST",headers:{...getAuthHeader(),"Content-Type":"application/json"},body:JSON.stringify(body)});
-                  if(r.ok){setMsg("✅ Saved: "+row.vendor_key);setEditRow(null);setShowAdd(false);setNewRow({vendor_key:"",tier:"endpoint",products:"",eol_products:"",notes:""});load();}
-                  else setMsg("Save failed");
-                }catch(e){setMsg("Error: "+e.message);}
-                setSaving(false);
-              };
-
-              const del=async(vendor_key)=>{
-                if(!confirm(`Remove ${vendor_key} from CNX Stack?`)) return;
-                try{
-                  const r=await fetch(`${PROXY_URL}/cnx-stack/${vendor_key}?code=${ACCESS_CODE}`,{method:"DELETE",headers:getAuthHeader()});
-                  if(r.ok){setMsg("✅ Removed: "+vendor_key);load();}
-                  else setMsg("Delete failed");
-                }catch(e){setMsg("Error: "+e.message);}
-              };
-
-              const TIER_OPTS=[["network","🌐 Network"],["server","🖧 Server"],["endpoint","🖥️ Endpoint"],["app","📦 App"]];
-              const tierColor={"network":"#059669","server":"#2563eb","endpoint":"#ea580c","app":"#7c3aed"};
-
-              return(
-                <div>
-                  {msg&&<div style={{background:msg.startsWith("✅")?"#f0fdf4":"#fef2f2",border:`1px solid ${msg.startsWith("✅")?"#86efac":"#fca5a5"}`,borderRadius:6,padding:"6px 10px",fontSize:11,color:msg.startsWith("✅")?"#16a34a":"#dc2626",marginBottom:8}}>{msg}<button onClick={()=>setMsg("")} style={{float:"right",background:"none",border:"none",cursor:"pointer",fontSize:12}}>✕</button></div>}
-                  <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
-                    <button onClick={load} className="btn btn-secondary" style={{fontSize:11}} disabled={loading}>{loading?"Loading…":"⟳ Refresh"}</button>
-                    <button onClick={()=>setShowAdd(v=>!v)} className="btn btn-primary" style={{fontSize:11}}>+ Add Vendor</button>
-                    <span style={{marginLeft:"auto",fontSize:11,color:"#888"}}>{stack.length} vendors · {stack.reduce((a,v)=>a+(v.products||[]).length,0)} products · {stack.reduce((a,v)=>a+(v.eol_products||[]).length,0)} EOL</span>
-                  </div>
-
-                  {/* Add new row */}
-                  {showAdd&&(
-                    <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:12,marginBottom:10}}>
-                      <div style={{fontWeight:600,fontSize:12,marginBottom:8}}>Add New Vendor</div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        <input placeholder="vendor_key (e.g. cisco)" value={newRow.vendor_key} onChange={e=>setNewRow(p=>({...p,vendor_key:e.target.value.toLowerCase().replace(/\s+/g,"_")}))} style={{padding:"5px 8px",fontSize:11,border:"1px solid #e0e0e0",borderRadius:4}}/>
-                        <select value={newRow.tier} onChange={e=>setNewRow(p=>({...p,tier:e.target.value}))} style={{padding:"5px 8px",fontSize:11,border:"1px solid #e0e0e0",borderRadius:4}}>
-                          {TIER_OPTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-                        </select>
-                        <input placeholder="Products (comma separated)" value={newRow.products} onChange={e=>setNewRow(p=>({...p,products:e.target.value}))} style={{padding:"5px 8px",fontSize:11,border:"1px solid #e0e0e0",borderRadius:4,gridColumn:"1/-1"}}/>
-                        <input placeholder="EOL products (comma separated, subset of above)" value={newRow.eol_products} onChange={e=>setNewRow(p=>({...p,eol_products:e.target.value}))} style={{padding:"5px 8px",fontSize:11,border:"1px solid #e0e0e0",borderRadius:4,gridColumn:"1/-1"}}/>
-                        <input placeholder="Notes (optional)" value={newRow.notes} onChange={e=>setNewRow(p=>({...p,notes:e.target.value}))} style={{padding:"5px 8px",fontSize:11,border:"1px solid #e0e0e0",borderRadius:4,gridColumn:"1/-1"}}/>
-                      </div>
-                      <div style={{display:"flex",gap:6,marginTop:8}}>
-                        <button onClick={()=>save(newRow)} className="btn btn-primary" style={{fontSize:11}} disabled={saving||!newRow.vendor_key}>{saving?"Saving…":"Save"}</button>
-                        <button onClick={()=>setShowAdd(false)} className="btn btn-secondary" style={{fontSize:11}}>Cancel</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Stack table */}
-                  <div style={{border:"1px solid #e0e0e0",borderRadius:8,overflow:"hidden",fontSize:11}}>
-                    {/* Header */}
-                    <div style={{display:"grid",gridTemplateColumns:"130px 90px 1fr 1fr 60px",background:"#f8fafc",padding:"6px 10px",fontWeight:600,color:"#555",borderBottom:"1px solid #e0e0e0",gap:8}}>
-                      <span>Vendor</span><span>Tier</span><span>Products</span><span>EOL Products</span><span></span>
-                    </div>
-                    {loading&&<div style={{padding:16,textAlign:"center",color:"#aaa"}}>Loading…</div>}
-                    {!loading&&stack.map(row=>(
-                      editRow?.vendor_key===row.vendor_key?(
-                        /* Edit row inline */
-                        <div key={row.vendor_key} style={{padding:10,background:"#fffbeb",borderBottom:"1px solid #fde68a"}}>
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
-                            <div style={{fontWeight:600,fontSize:12,color:"#92400e"}}>Editing: {row.vendor_key}</div>
-                            <select value={editRow.tier} onChange={e=>setEditRow(p=>({...p,tier:e.target.value}))} style={{padding:"4px 6px",fontSize:11,border:"1px solid #fde68a",borderRadius:4}}>
-                              {TIER_OPTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-                            </select>
-                            <input value={editRow.products} onChange={e=>setEditRow(p=>({...p,products:e.target.value}))} style={{padding:"4px 6px",fontSize:11,border:"1px solid #fde68a",borderRadius:4,gridColumn:"1/-1"}} placeholder="Products (comma separated)"/>
-                            <input value={editRow.eol_products} onChange={e=>setEditRow(p=>({...p,eol_products:e.target.value}))} style={{padding:"4px 6px",fontSize:11,border:"1px solid #fde68a",borderRadius:4,gridColumn:"1/-1"}} placeholder="EOL products (comma separated)"/>
-                            <input value={editRow.notes} onChange={e=>setEditRow(p=>({...p,notes:e.target.value}))} style={{padding:"4px 6px",fontSize:11,border:"1px solid #fde68a",borderRadius:4,gridColumn:"1/-1"}} placeholder="Notes"/>
-                          </div>
-                          <div style={{display:"flex",gap:6}}>
-                            <button onClick={()=>save(editRow)} className="btn btn-primary" style={{fontSize:10}} disabled={saving}>{saving?"Saving…":"✓ Save"}</button>
-                            <button onClick={()=>setEditRow(null)} className="btn btn-secondary" style={{fontSize:10}}>Cancel</button>
-                          </div>
-                        </div>
-                      ):(
-                        <div key={row.vendor_key} style={{display:"grid",gridTemplateColumns:"130px 90px 1fr 1fr 60px",padding:"7px 10px",borderBottom:"1px solid #f0f0f0",alignItems:"center",gap:8,":hover":{background:"#f9f9f9"}}}>
-                          <span style={{fontWeight:600,color:"#333"}}>{row.vendor_key}</span>
-                          <span><span style={{background:tierColor[row.tier]||"#888",color:"#fff",borderRadius:3,padding:"1px 6px",fontSize:9,fontWeight:700}}>{row.tier?.toUpperCase()}</span></span>
-                          <span style={{color:"#555",fontSize:10,lineHeight:1.5}}>{(row.products||[]).slice(0,5).join(", ")}{(row.products||[]).length>5&&` +${(row.products||[]).length-5} more`}</span>
-                          <span style={{color:row.eol_products?.length>0?"#dc2626":"#aaa",fontSize:10}}>{(row.eol_products||[]).length>0?`⚠️ ${(row.eol_products||[]).join(", ")}`:"None"}</span>
-                          <span style={{display:"flex",gap:4}}>
-                            <button onClick={()=>setEditRow({...row,products:(row.products||[]).join(", "),eol_products:(row.eol_products||[]).join(", ")})} style={{background:"none",border:"1px solid #e0e0e0",borderRadius:3,padding:"2px 6px",cursor:"pointer",fontSize:10}}>✏️</button>
-                            <button onClick={()=>del(row.vendor_key)} style={{background:"none",border:"1px solid #fca5a5",borderRadius:3,padding:"2px 6px",cursor:"pointer",fontSize:10,color:"#dc2626"}}>🗑</button>
-                          </span>
-                        </div>
-                      )
-                    ))}
-                    {!loading&&stack.length===0&&<div style={{padding:16,textAlign:"center",color:"#aaa",fontSize:11}}>No assets loaded. <button onClick={()=>fetch(`${PROXY_URL}/cnx-stack/seed`,{method:"POST",headers:{...getAuthHeader(),"Content-Type":"application/json"},body:JSON.stringify({code:ACCESS_CODE})}).then(()=>load())} style={{background:"none",border:"none",color:"#6366f1",cursor:"pointer",textDecoration:"underline"}}>Seed from defaults</button></div>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
           <div className="section-card">
             <div className="section-title">📲 Install App</div>
             <div style={{color:"#888",fontSize:12,marginBottom:12,lineHeight:1.6}}>
@@ -2892,13 +2753,13 @@ function Dashboard({onLogout}){
     const [items,setItems]=React.useState([]);
     const [loading,setLoading]=React.useState(false);
     const [severity,setSeverity]=React.useState("");
-    const [days,setDays]=React.useState(30);  // complement main feed 30d window
+    const [days,setDays]=React.useState(365);
     const [sel,setSel]=React.useState(null);
     const [archSearch,setArchSearch]=React.useState("");
     const load=React.useCallback(async()=>{
       setLoading(true);
       try{
-        const p=new URLSearchParams({limit:1000,days});
+        const p=new URLSearchParams({limit:500,days});
         if(severity)p.set("severity",severity);
         const r=await fetch(`${PROXY_URL}/archive?${p}`,{headers:getAuthHeader()});
         const d=await r.json();
@@ -2919,7 +2780,7 @@ function Dashboard({onLogout}){
       <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🗄️ Advisory Archive</div></div>
         <div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"10px 20px",fontSize:12,color:"#1e40af",flexShrink:0}}>
-          Archived advisories — main feed shows last 30 days (+ all KEV/Zero-Day up to 90 days). Advisories older than 30 days are here, fully searchable up to 1 year.
+          Archived advisories — older than 90 days, within 1-year retention. Fully searchable.
         </div>
         <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
           <input placeholder="Search ID, title, CVE..." value={archSearch||""} onChange={e=>setArchSearch(e.target.value)}
@@ -2929,8 +2790,6 @@ function Dashboard({onLogout}){
             {["Critical","High","Medium","Low"].map(s=><option key={s}>{s}</option>)}
           </select>
           <select value={days} onChange={e=>setDays(Number(e.target.value))} className="field-select" style={{width:130}}>
-            <option value={30}>Last 30 days</option>
-            <option value={60}>Last 60 days</option>
             <option value={90}>Last 90 days</option>
             <option value={180}>Last 180 days</option>
             <option value={365}>Last 365 days</option>
@@ -3972,15 +3831,15 @@ function Dashboard({onLogout}){
                   <div className="mid-filter-row" style={{borderTop:"1px solid #f0f0f0",paddingTop:6,marginTop:2}}>
                     <span style={{fontSize:10,color:"#aaa",fontWeight:600,marginRight:4,flexShrink:0}}>TIER:</span>
                     {[
-                      ["All","All",null,null],
-                      ["network","🌐 Network","#059669","#f0fdf4"],
-                      ["server","🖧 Server","#2563eb","#eff6ff"],
-                      ["endpoint","🖥️ Endpoint","#ea580c","#fff7ed"],
-                      ["app","📦 App","#7c3aed","#faf5ff"],
-                      ["eol","⚠️ EOL Only","#dc2626","#fef2f2"],
-                    ].map(([t,l,c,bg])=>(
+                      ["All","All",null],
+                      ["network","🌐 Network","#059669"],
+                      ["server","🖧 Server","#2563eb"],
+                      ["endpoint","🖥️ Endpoint","#ea580c"],
+                      ["app","📦 App","#7c3aed"],
+                      ["eol","⚠️ EOL Only","#dc2626"],
+                    ].map(([t,l,c])=>(
                       <button key={t} className={"filter-chip"+(fCnxTier===t?" active":"")}
-                        style={fCnxTier===t&&c?{background:bg,borderColor:c,color:c,fontWeight:700}:{}}
+                        style={fCnxTier===t&&c?{background:c,borderColor:c,color:"#fff"}:{}}
                         onClick={()=>setFCnxTier(t)}>{l}
                       </button>
                     ))}
