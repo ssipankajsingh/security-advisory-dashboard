@@ -1062,20 +1062,17 @@ function Dashboard({onLogout}){
     setFLoad(true);
     if(PROXY_URL){
       const useForce=manual||forceFirst;
+      const url=`${PROXY_URL}/advisories${useForce?"?force=true":""}`;
       const headers={"Content-Type":"application/json",...getAuthHeader()};
-      // Retry logic: attempt 1 = Supabase cache (fast, ~2s), attempt 2 = live fetch (slow on cold start)
-      // Timeout 55s — Render free tier cold-starts can take 30-45s for full feed scan
+      // Retry logic: 2 attempts with 3s delay — handles Render free tier cold starts
       let lastErr=null;
       for(let attempt=1;attempt<=2;attempt++){
         try{
           if(attempt===2){
             setProxyHealth("reconnecting");
-            await new Promise(r=>setTimeout(r,4000)); // 4s gap before live retry
+            await new Promise(r=>setTimeout(r,3000)); // wait 3s before retry
           }
-          // Attempt 1: use cache unless forced. Attempt 2: always force live (cache clearly stale/empty)
-          const forceAttempt = useForce || attempt===2;
-          const url=`${PROXY_URL}/advisories${forceAttempt?"?force=true":""}`;
-          const res=await fetch(url,{headers,signal:AbortSignal.timeout(55000)});
+          const res=await fetch(url,{headers,signal:AbortSignal.timeout(20000)});
           if(!res.ok)throw new Error("Proxy returned "+res.status);
           const data=await res.json();
           setProxyHealth("ok");
@@ -1347,6 +1344,19 @@ function Dashboard({onLogout}){
   const selectedAdvisory=sel?advisories.find(a=>a.id===sel):null;
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
 
+
+  // ── NOTE PARSER — extracts human-readable text from structured JSON note ──────
+  // Notes saved after SOC Notes tab update are JSON: {note,impact,action,falsePos,by,at}
+  // Older notes may be plain text — parseNote handles both formats
+  function parseNote(raw){
+    if(!raw||typeof raw!=="string") return {note:"",impact:"",action:"",falsePos:false,by:"",at:""};
+    try{
+      const p=JSON.parse(raw);
+      if(p&&p.note!==undefined) return p;
+    }catch(e){}
+    return {note:raw,impact:"",action:"",falsePos:false,by:"",at:""};
+  }
+  function noteText(raw){ return parseNote(raw).note||""; }
 
   // ── SOC NOTES TAB — no API key needed, shared via Supabase ─────────────────
   function SOCNotesTab({advisory, ackInfo, userName, onSave}){
@@ -1688,7 +1698,7 @@ function Dashboard({onLogout}){
           {/* ── DETAIL TAB ── */}
           {readPane==="detail"&&(
             <div className="scroll-area">
-              {ackInfo?.note&&<div className="pane-ack-note">📝 {ackInfo.note}</div>}
+              {ackInfo?.note&&<div className="pane-ack-note">📝 {noteText(ackInfo.note)}{parseNote(ackInfo.note).falsePos&&<span style={{marginLeft:6,background:"#f5f5f5",color:"#888",border:"1px solid #e0e0e0",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700}}>FALSE POSITIVE</span>}</div>}
               {a.required_action&&(
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#14532d"}}>
                   <span style={{fontWeight:700,marginRight:6}}>✅ Required Action:</span>{a.required_action}
@@ -2037,7 +2047,7 @@ function Dashboard({onLogout}){
                 <div className="section-title" style={{marginTop:8}}>Acknowledge</div>
                 {ackInfo?(
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <div className="ack-box">✓ Acknowledged by <strong>{ackInfo.by}</strong> on {fmtTs(ackInfo.at)}{ackInfo.note&&<><br/>📝 {ackInfo.note}</>}</div>
+                    <div className="ack-box">✓ Acknowledged by <strong>{ackInfo.by}</strong> on {fmtTs(ackInfo.at)}{ackInfo.note&&<><br/>📝 {noteText(ackInfo.note)}{parseNote(ackInfo.note).falsePos&&<span style={{marginLeft:6,background:"#f5f5f5",color:"#888",border:"1px solid #e0e0e0",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700}}>FP</span>}</>}</div>
                     {isMyAck&&<button className="btn btn-danger" onClick={e=>handleUnack(a.id,e)} disabled={ackingId===a.id}>{ackingId===a.id?"…":"Undo Acknowledgment"}</button>}
                   </div>
                 ):(
@@ -2509,7 +2519,7 @@ function Dashboard({onLogout}){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:600,color:"#15803d",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
                       <div style={{fontSize:10,color:"#aaa"}}>by {info.by} · {fmtTs(info.at)}</div>
-                      {info.note&&<div style={{fontSize:11,color:"#888",marginTop:2}}>📝 {info.note}</div>}
+                      {info.note&&<div style={{fontSize:11,color:"#888",marginTop:2}}>📝 {noteText(info.note)}</div>}
                     </div>
                     {info.by===userName&&<button onClick={e=>handleUnack(id,e)} className="btn btn-danger" style={{padding:"2px 8px",fontSize:10}}>Undo</button>}
                   </div>
