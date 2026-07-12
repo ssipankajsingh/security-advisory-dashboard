@@ -1062,17 +1062,20 @@ function Dashboard({onLogout}){
     setFLoad(true);
     if(PROXY_URL){
       const useForce=manual||forceFirst;
-      const url=`${PROXY_URL}/advisories${useForce?"?force=true":""}`;
       const headers={"Content-Type":"application/json",...getAuthHeader()};
-      // Retry logic: 2 attempts with 3s delay — handles Render free tier cold starts
+      // Retry logic: attempt 1 = Supabase cache (fast, ~2s), attempt 2 = live fetch (slow on cold start)
+      // Timeout 55s — Render free tier cold-starts can take 30-45s for full feed scan
       let lastErr=null;
       for(let attempt=1;attempt<=2;attempt++){
         try{
           if(attempt===2){
             setProxyHealth("reconnecting");
-            await new Promise(r=>setTimeout(r,3000)); // wait 3s before retry
+            await new Promise(r=>setTimeout(r,4000)); // 4s gap before live retry
           }
-          const res=await fetch(url,{headers,signal:AbortSignal.timeout(20000)});
+          // Attempt 1: use cache unless forced. Attempt 2: always force live (cache clearly stale/empty)
+          const forceAttempt = useForce || attempt===2;
+          const url=`${PROXY_URL}/advisories${forceAttempt?"?force=true":""}`;
+          const res=await fetch(url,{headers,signal:AbortSignal.timeout(55000)});
           if(!res.ok)throw new Error("Proxy returned "+res.status);
           const data=await res.json();
           setProxyHealth("ok");
