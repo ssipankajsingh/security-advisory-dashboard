@@ -1062,19 +1062,37 @@ function Dashboard({onLogout}){
     setFLoad(true);
     if(PROXY_URL){
       const useForce=manual||forceFirst;
-      const url=`${PROXY_URL}/advisories${useForce?"?force=true":""}`;
       const headers={"Content-Type":"application/json",...getAuthHeader()};
-      // Retry logic: 2 attempts with 3s delay — handles Render free tier cold starts
+      // Backend now always responds fast (< 3s) by serving Supabase cache.
+      // On cold start it returns source:"empty" + kicks off background refresh.
+      // Timeout 15s — should be more than enough for a cache read.
+      // Retry: attempt 1 = cache (fast), attempt 2 = force=true (triggers bg refresh if not already running)
       let lastErr=null;
       for(let attempt=1;attempt<=2;attempt++){
         try{
           if(attempt===2){
             setProxyHealth("reconnecting");
-            await new Promise(r=>setTimeout(r,3000)); // wait 3s before retry
+            await new Promise(r=>setTimeout(r,5000)); // 5s gap — let cold start settle
           }
-          const res=await fetch(url,{headers,signal:AbortSignal.timeout(20000)});
-          if(!res.ok)throw new Error("Proxy returned "+res.status);
+          const forceAttempt=useForce||attempt===2;
+          const url=`${PROXY_URL}/advisories${forceAttempt?"?force=true":""}`;
+          const res=await fetch(url,{headers,signal:AbortSignal.timeout(15000)});
+          if(!res.ok)throw new Error("HTTP "+res.status);
           const data=await res.json();
+
+          // source:"empty" = cold start, backend is warming up in background
+          // Don't show Proxy Error — show warming state and auto-retry
+          if(data.source==="empty"||!data.advisories?.length){
+            setProxyHealth("reconnecting");
+            console.info("Backend warming up — retrying in 15s");
+            if(attempt===2){
+              // Schedule a retry after backend bg refresh completes (~30-45s from cold start)
+              setTimeout(()=>doRefresh(false,true),18000);
+            }
+            lastErr=null; // not a real error — backend is alive
+            break;
+          }
+
           setProxyHealth("ok");
           if(data.advisories?.length){
             const incoming=data.advisories.filter(a=>a&&a.id);
@@ -1344,19 +1362,6 @@ function Dashboard({onLogout}){
   const selectedAdvisory=sel?advisories.find(a=>a.id===sel):null;
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
 
-
-  // ── NOTE PARSER — extracts human-readable text from structured JSON note ──────
-  // Notes saved after SOC Notes tab update are JSON: {note,impact,action,falsePos,by,at}
-  // Older notes may be plain text — parseNote handles both formats
-  function parseNote(raw){
-    if(!raw||typeof raw!=="string") return {note:"",impact:"",action:"",falsePos:false,by:"",at:""};
-    try{
-      const p=JSON.parse(raw);
-      if(p&&p.note!==undefined) return p;
-    }catch(e){}
-    return {note:raw,impact:"",action:"",falsePos:false,by:"",at:""};
-  }
-  function noteText(raw){ return parseNote(raw).note||""; }
 
   // ── SOC NOTES TAB — no API key needed, shared via Supabase ─────────────────
   function SOCNotesTab({advisory, ackInfo, userName, onSave}){
@@ -1698,7 +1703,7 @@ function Dashboard({onLogout}){
           {/* ── DETAIL TAB ── */}
           {readPane==="detail"&&(
             <div className="scroll-area">
-              {ackInfo?.note&&<div className="pane-ack-note">📝 {noteText(ackInfo.note)}{parseNote(ackInfo.note).falsePos&&<span style={{marginLeft:6,background:"#f5f5f5",color:"#888",border:"1px solid #e0e0e0",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700}}>FALSE POSITIVE</span>}</div>}
+              {ackInfo?.note&&<div className="pane-ack-note">📝 {ackInfo.note}</div>}
               {a.required_action&&(
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:6,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#14532d"}}>
                   <span style={{fontWeight:700,marginRight:6}}>✅ Required Action:</span>{a.required_action}
@@ -2047,7 +2052,7 @@ function Dashboard({onLogout}){
                 <div className="section-title" style={{marginTop:8}}>Acknowledge</div>
                 {ackInfo?(
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <div className="ack-box">✓ Acknowledged by <strong>{ackInfo.by}</strong> on {fmtTs(ackInfo.at)}{ackInfo.note&&<><br/>📝 {noteText(ackInfo.note)}{parseNote(ackInfo.note).falsePos&&<span style={{marginLeft:6,background:"#f5f5f5",color:"#888",border:"1px solid #e0e0e0",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:700}}>FP</span>}</>}</div>
+                    <div className="ack-box">✓ Acknowledged by <strong>{ackInfo.by}</strong> on {fmtTs(ackInfo.at)}{ackInfo.note&&<><br/>📝 {ackInfo.note}</>}</div>
                     {isMyAck&&<button className="btn btn-danger" onClick={e=>handleUnack(a.id,e)} disabled={ackingId===a.id}>{ackingId===a.id?"…":"Undo Acknowledgment"}</button>}
                   </div>
                 ):(
@@ -2519,7 +2524,7 @@ function Dashboard({onLogout}){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:600,color:"#15803d",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
                       <div style={{fontSize:10,color:"#aaa"}}>by {info.by} · {fmtTs(info.at)}</div>
-                      {info.note&&<div style={{fontSize:11,color:"#888",marginTop:2}}>📝 {noteText(info.note)}</div>}
+                      {info.note&&<div style={{fontSize:11,color:"#888",marginTop:2}}>📝 {info.note}</div>}
                     </div>
                     {info.by===userName&&<button onClick={e=>handleUnack(id,e)} className="btn btn-danger" style={{padding:"2px 8px",fontSize:10}}>Undo</button>}
                   </div>
@@ -3721,7 +3726,7 @@ function Dashboard({onLogout}){
           {autoRefresh?(
             <div className={`live-pill${proxyHealth==="reconnecting"?" reconnecting":proxyHealth==="error"?" error":""}`}>
               <div className={proxyHealth==="reconnecting"?"live-dot-amber":proxyHealth==="error"?"live-dot-red":"live-dot-green"}/>
-              <span>{proxyHealth==="reconnecting"?"Reconnecting…":proxyHealth==="error"?"Proxy Error":"Live"}</span>
+              <span>{proxyHealth==="reconnecting"?"Warming up…":proxyHealth==="error"?"Proxy Error":"Live"}</span>
               {proxyHealth==="ok"&&<CountdownTimer nextRefresh={nextRefresh} autoRefresh={autoRefresh}/>}
             </div>
           ):(
