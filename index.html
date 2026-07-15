@@ -936,6 +936,7 @@ function Dashboard({onLogout}){
   const [advisories,setAdvisories]=useState([]);
   const [fLoad,setFLoad]=useState(false);
   const [proxyHealth,setProxyHealth]=useState("ok"); // "ok" | "reconnecting" | "error"
+  const [backendTotal,setBackendTotal]=useState(null); // real total from backend (uncapped)
   const ss=(k,d)=>{try{const v=sessionStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}};
   const [fSev,setFSev]=useState(()=>ss("sf_sev","All"));
   const [fCat,setFCat]=useState(()=>ss("sf_cat","All"));
@@ -1092,6 +1093,7 @@ function Dashboard({onLogout}){
           }
 
           setProxyHealth("ok");
+          if(data.total)setBackendTotal(data.total);
           if(data.advisories?.length){
             const incoming=data.advisories.filter(a=>a&&a.id);
             setAdvisories(prev=>{
@@ -2979,7 +2981,7 @@ function Dashboard({onLogout}){
       const vendorMap={};
       advisories.forEach(a=>{const v=a.vendor||a.source||"Unknown";vendorMap[v]=(vendorMap[v]||0)+1;});
       const topVendors=Object.entries(vendorMap).sort(([,a],[,b])=>b-a).slice(0,5);
-      return{critical,high,medium,low,zeroDays,oem,withEpss,highEpss,top5,topVendors,total:advisories.length};
+      return{critical,high,medium,low,zeroDays,oem,withEpss,highEpss,top5,topVendors,total:advisories.length,loaded:advisories.length};
     },[advisories]);
 
     const weekLabel=(()=>{
@@ -3757,9 +3759,9 @@ function Dashboard({onLogout}){
         {/* Group 1: Total + Severity */}
         <div className="stat-group">
           <div className="stat-group-label">Severity</div>
-          {[["Total",stats.total,"#444"],["Critical",stats.critical,"#dc2626"],["High",stats.high,"#ea580c"],["Medium",stats.medium,"#ca8a04"],["Low",stats.low,"#16a34a"]].map(([l,v,c])=>(
+          {[["Total",stats.loaded,"#444"],["Critical",stats.critical,"#dc2626"],["High",stats.high,"#ea580c"],["Medium",stats.medium,"#ca8a04"],["Low",stats.low,"#16a34a"]].map(([l,v,c])=>(
             <div key={l} className="stat-item">
-              <div className="stat-val" style={{color:v>0?c:"#ccc"}}>{fLoad&&v===0?"…":v}</div>
+              <div className="stat-val" style={{color:v>0?c:"#ccc"}}>{fLoad&&v===0?"…":l==="Total"&&backendTotal&&backendTotal>15000?backendTotal.toLocaleString():v}</div>
               <div className="stat-lbl">{l}</div>
             </div>
           ))}
