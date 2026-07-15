@@ -1063,33 +1063,31 @@ function Dashboard({onLogout}){
     if(PROXY_URL){
       const useForce=manual||forceFirst;
       const headers={"Content-Type":"application/json",...getAuthHeader()};
-      // Backend now always responds fast (< 3s) by serving Supabase cache.
-      // On cold start it returns source:"empty" + kicks off background refresh.
-      // Timeout 15s — should be more than enough for a cache read.
-      // Retry: attempt 1 = cache (fast), attempt 2 = force=true (triggers bg refresh if not already running)
+      // Backend always responds fast by serving Supabase cache.
+      // On cold start: returns source:"empty" + bg refresh starts → auto-retry handles it.
+      // Timeout 30s — cache read can take 8-12s on loaded Supabase free tier.
+      // Only 1 attempt needed: backend is fast; retry only on genuine network failure.
       let lastErr=null;
       for(let attempt=1;attempt<=2;attempt++){
         try{
           if(attempt===2){
             setProxyHealth("reconnecting");
-            await new Promise(r=>setTimeout(r,5000)); // 5s gap — let cold start settle
+            await new Promise(r=>setTimeout(r,6000)); // 6s gap before retry
           }
           const forceAttempt=useForce||attempt===2;
           const url=`${PROXY_URL}/advisories${forceAttempt?"?force=true":""}`;
-          const res=await fetch(url,{headers,signal:AbortSignal.timeout(15000)});
+          const res=await fetch(url,{headers,signal:AbortSignal.timeout(30000)});
           if(!res.ok)throw new Error("HTTP "+res.status);
           const data=await res.json();
 
-          // source:"empty" = cold start, backend is warming up in background
-          // Don't show Proxy Error — show warming state and auto-retry
+          // source:"empty" = cold start warming up — backend alive, just no cache yet
           if(data.source==="empty"||!data.advisories?.length){
             setProxyHealth("reconnecting");
-            console.info("Backend warming up — retrying in 15s");
-            if(attempt===2){
-              // Schedule a retry after backend bg refresh completes (~30-45s from cold start)
-              setTimeout(()=>doRefresh(false,true),18000);
+            console.info("Backend warming up — auto-retry in 20s");
+            if(attempt>=1){
+              setTimeout(()=>doRefresh(false,true),20000);
             }
-            lastErr=null; // not a real error — backend is alive
+            lastErr=null;
             break;
           }
 
@@ -1134,8 +1132,22 @@ function Dashboard({onLogout}){
         }
       }
       if(lastErr){
-        setProxyHealth("error");
-        console.error("Proxy unreachable after retries:",lastErr.message);
+        // Only show Proxy Error if we have NO data loaded at all.
+        // If advisories are already visible, a refresh failure is a transient blip —
+        // keep showing the last good data with a "reconnecting" indicator instead.
+        setAdvisories(prev=>{
+          if(prev.length>0){
+            // Data already loaded — show reconnecting, not hard error
+            setProxyHealth("reconnecting");
+            console.warn("Refresh failed but data loaded — staying reconnecting:",lastErr.message);
+            // Auto-retry in 30s — don't leave user stuck
+            setTimeout(()=>doRefresh(false,false),30000);
+          } else {
+            setProxyHealth("error");
+            console.error("Proxy unreachable, no data:",lastErr.message);
+          }
+          return prev; // keep existing advisories visible
+        });
       }
     }
     const now=new Date();
