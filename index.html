@@ -847,7 +847,7 @@ function LoginScreen({onLogin,onDenied}){
 
           </div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -963,7 +963,7 @@ function Dashboard({onLogout}){
   const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
   const [newRecipient,setNewRecipient]=useState("");
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
-  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
+  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix GSE Dashboard");
   const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
   const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"IST");
   const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
@@ -1099,7 +1099,7 @@ function Dashboard({onLogout}){
                   const fr=localStorage.getItem("sad_sender")||"";
                   if(wh||em){
                     fetch(`${PROXY_URL}/notify/critical`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
-                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix SOC"})})
+                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix GSE"})})
                       .catch(()=>{});
                   }
                 }
@@ -1180,7 +1180,7 @@ function Dashboard({onLogout}){
     if(!apiKey){alert("Add your Anthropic API key in Settings first.");setTab("settings");return;}
     setTriageLoading(t=>({...t,[advisory.id]:true}));
     try{
-      const prompt=`You are a SOC analyst. In ONE sentence (max 20 words), give the single most critical immediate action for this advisory:\n[${advisory.severity}] ${advisory.id} — ${advisory.title} (${advisory.vendor||advisory.source}, CVSS: ${advisory.cvss||"N/A"}): ${(advisory.summary||"").slice(0,300)}\nRespond with ONLY the action sentence.`;
+      const prompt=`You are a GSE analyst. In ONE sentence (max 20 words), give the single most critical immediate action for this advisory:\n[${advisory.severity}] ${advisory.id} — ${advisory.title} (${advisory.vendor||advisory.source}, CVSS: ${advisory.cvss||"N/A"}): ${(advisory.summary||"").slice(0,300)}\nRespond with ONLY the action sentence.`;
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:80,messages:[{role:"user",content:prompt}]})});
       const data=await res.json();
       if(data.error){alert("AI error: "+data.error.message);return;}
