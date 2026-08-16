@@ -2154,6 +2154,7 @@ function Dashboard({onLogout}){
       {id:"autorefresh",label:"Auto-Refresh",icon:"🔄",badge:0},
       {id:"email",label:"Email & Notifications",icon:"📧",badge:0},
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
+      {id:"apikeys",label:"API Keys",icon:"🔑",badge:0},
       {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
       {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
       {id:"heatmap",label:"CVE Heatmap",icon:"🗓️",badge:0},
@@ -2878,6 +2879,199 @@ function Dashboard({onLogout}){
               </div>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  function ApiKeysPanel(){
+    const [keys,setKeys]=React.useState([]);
+    const [usage,setUsage]=React.useState([]);
+    const [loading,setLoading]=React.useState(false);
+    const [creating,setCreating]=React.useState(false);
+    const [newKey,setNewKey]=React.useState(null); // shown once after creation
+    const [form,setForm]=React.useState({name:"",owner:"",tier:"standard",rate_limit_per_hour:100,expires_days:0,notes:""});
+    const [status,setStatus]=React.useState(null);
+    const [showForm,setShowForm]=React.useState(false);
+
+    const tierColors={internal:"#7c3aed",standard:"#2563eb",readonly:"#059669",restricted:"#dc2626"};
+    const tierLimits={internal:9999,standard:100,readonly:50,restricted:20};
+
+    const loadKeys=React.useCallback(async()=>{
+      setLoading(true);
+      try{
+        const [kr,ur]=await Promise.all([
+          fetch(`${PROXY_URL}/admin/keys`,{headers:getAuthHeader()}),
+          fetch(`${PROXY_URL}/admin/keys/usage`,{headers:getAuthHeader()})
+        ]);
+        const kd=await kr.json(); const ud=await ur.json();
+        if(kd.success) setKeys(kd.keys||[]);
+        if(ud.success) setUsage(ud.usage||[]);
+      }catch(e){console.error(e);}
+      setLoading(false);
+    },[]);
+
+    React.useEffect(()=>{loadKeys();},[loadKeys]);
+
+    const createKey=async()=>{
+      if(!form.name.trim()){setStatus({ok:false,msg:"Name is required"});return;}
+      setCreating(true); setStatus(null);
+      try{
+        const r=await fetch(`${PROXY_URL}/admin/keys`,{method:"POST",
+          headers:{"Content-Type":"application/json",...getAuthHeader()},
+          body:JSON.stringify({...form,rate_limit_per_hour:Number(form.rate_limit_per_hour),expires_days:Number(form.expires_days)})});
+        const d=await r.json();
+        if(d.success){
+          setNewKey(d.key);
+          setShowForm(false);
+          setForm({name:"",owner:"",tier:"standard",rate_limit_per_hour:100,expires_days:0,notes:""});
+          setStatus({ok:true,msg:`Key created for "${d.name}"`});
+          loadKeys();
+        } else setStatus({ok:false,msg:d.error||"Failed to create key"});
+      }catch(e){setStatus({ok:false,msg:e.message});}
+      setCreating(false);
+    };
+
+    const revokeKey=async(key,name)=>{
+      if(!confirm(`Revoke key for "${name}"? It will stop working immediately.`)) return;
+      try{
+        const r=await fetch(`${PROXY_URL}/admin/keys/${encodeURIComponent(key)}/revoke`,
+          {method:"POST",headers:getAuthHeader()});
+        const d=await r.json();
+        if(d.success){setStatus({ok:true,msg:`Key revoked for "${name}"`});loadKeys();}
+        else setStatus({ok:false,msg:d.error});
+      }catch(e){setStatus({ok:false,msg:e.message});}
+    };
+
+    const activateKey=async(key,name)=>{
+      try{
+        const r=await fetch(`${PROXY_URL}/admin/keys/${encodeURIComponent(key)}/activate`,
+          {method:"POST",headers:getAuthHeader()});
+        const d=await r.json();
+        if(d.success){setStatus({ok:true,msg:`Key activated for "${name}"`});loadKeys();}
+      }catch(e){setStatus({ok:false,msg:e.message});}
+    };
+
+    const fmtDate=d=>{try{return d?new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—";}catch{return"—";}};
+
+    return(
+      <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+        <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🔑 API Keys</div></div>
+
+        {/* New key banner — shown once after creation */}
+        {newKey&&(
+          <div style={{background:"#f0fdf4",border:"1px solid #86efac",padding:"12px 16px",margin:"12px",borderRadius:8}}>
+            <div style={{fontWeight:700,color:"#166534",marginBottom:6}}>✅ Key created — save it now, it won't be shown again</div>
+            <div style={{fontFamily:"monospace",fontSize:12,background:"#fff",padding:"8px 12px",borderRadius:6,border:"1px solid #d1fae5",wordBreak:"break-all",userSelect:"all"}}>{newKey}</div>
+            <button onClick={()=>{navigator.clipboard.writeText(newKey);}} className="btn btn-secondary" style={{marginTop:8,fontSize:11}}>📋 Copy to clipboard</button>
+            <button onClick={()=>setNewKey(null)} style={{marginTop:8,marginLeft:8,fontSize:11,background:"none",border:"none",color:"#888",cursor:"pointer"}}>Dismiss</button>
+          </div>
+        )}
+
+        {status&&<div style={{margin:"8px 16px",padding:"8px 12px",borderRadius:6,fontSize:12,
+          background:status.ok?"#f0fdf4":"#fef2f2",color:status.ok?"#166534":"#dc2626",
+          border:`1px solid ${status.ok?"#86efac":"#fca5a5"}`}}>{status.msg}</div>}
+
+        {/* Controls */}
+        <div style={{padding:"10px 16px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+          <button onClick={loadKeys} disabled={loading} className="btn btn-secondary">{loading?"⟳ Loading…":"⟳ Refresh"}</button>
+          <button onClick={()=>{setShowForm(f=>!f);setStatus(null);}} className="btn btn-primary" style={{fontSize:12}}>
+            {showForm?"✕ Cancel":"＋ New API Key"}
+          </button>
+          {usage.length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"#888"}}>{usage.length} keys active this hour</span>}
+        </div>
+
+        {/* Create form */}
+        {showForm&&(
+          <div style={{padding:"12px 16px",background:"#f8fafc",borderBottom:"1px solid #e5e7eb",flexShrink:0}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              <div><label style={{fontSize:11,color:"#555"}}>Name *</label>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Team or app name"
+                  style={{width:"100%",padding:"5px 8px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:4,marginTop:2}}/></div>
+              <div><label style={{fontSize:11,color:"#555"}}>Owner</label>
+                <input value={form.owner} onChange={e=>setForm(f=>({...f,owner:e.target.value}))} placeholder="Person responsible"
+                  style={{width:"100%",padding:"5px 8px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:4,marginTop:2}}/></div>
+              <div><label style={{fontSize:11,color:"#555"}}>Tier</label>
+                <select value={form.tier} onChange={e=>setForm(f=>({...f,tier:e.target.value,rate_limit_per_hour:tierLimits[e.target.value]||100}))}
+                  className="field-select" style={{marginTop:2,fontSize:12}}>
+                  <option value="standard">Standard (100/hr)</option>
+                  <option value="readonly">Read-only (50/hr)</option>
+                  <option value="restricted">Restricted (20/hr)</option>
+                  <option value="internal">Internal (unlimited)</option>
+                </select></div>
+              <div><label style={{fontSize:11,color:"#555"}}>Rate limit (req/hr)</label>
+                <input type="number" value={form.rate_limit_per_hour} onChange={e=>setForm(f=>({...f,rate_limit_per_hour:e.target.value}))}
+                  style={{width:"100%",padding:"5px 8px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:4,marginTop:2}}/></div>
+              <div><label style={{fontSize:11,color:"#555"}}>Expires in days (0 = never)</label>
+                <input type="number" value={form.expires_days} onChange={e=>setForm(f=>({...f,expires_days:e.target.value}))}
+                  style={{width:"100%",padding:"5px 8px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:4,marginTop:2}}/></div>
+              <div><label style={{fontSize:11,color:"#555"}}>Notes</label>
+                <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Optional notes"
+                  style={{width:"100%",padding:"5px 8px",fontSize:12,border:"1px solid #e0e0e0",borderRadius:4,marginTop:2}}/></div>
+            </div>
+            <button onClick={createKey} disabled={creating} className="btn btn-primary" style={{fontSize:12}}>
+              {creating?"Creating…":"🔑 Generate Key"}
+            </button>
+          </div>
+        )}
+
+        <div style={{flex:1,overflowY:"auto",padding:"0 0 16px 0"}}>
+          {/* Usage summary */}
+          {usage.length>0&&(
+            <div style={{padding:"10px 16px",borderBottom:"1px solid #f5f5f5"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"#888",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.5px"}}>This hour's usage</div>
+              {usage.map(u=>(
+                <div key={u.key_masked} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <span style={{fontSize:11,color:"#333",width:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name}</span>
+                  <div style={{flex:1,height:6,background:"#f0f0f0",borderRadius:3,overflow:"hidden"}}>
+                    <div style={{width:`${Math.min(u.pct_used,100)}%`,height:"100%",
+                      background:u.pct_used>90?"#dc2626":u.pct_used>70?"#ea580c":"#2563eb",borderRadius:3}}/>
+                  </div>
+                  <span style={{fontSize:11,color:"#555",width:80,textAlign:"right"}}>{u.requests_this_hour}/{u.limit}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Keys list */}
+          <div style={{padding:"0 0 8px 0"}}>
+            {loading&&!keys.length&&<div style={{padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>Loading keys…</div>}
+            {!loading&&!keys.length&&<div style={{padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>No API keys found.</div>}
+            {keys.map(k=>(
+              <div key={k.key_masked} style={{padding:"12px 16px",borderBottom:"1px solid #f5f5f5",
+                opacity:k.is_active?1:0.5}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                  <span style={{background:tierColors[k.tier]||"#2563eb",color:"#fff",
+                    fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:3,flexShrink:0}}>{(k.tier||"standard").toUpperCase()}</span>
+                  {!k.is_active&&<span style={{background:"#f3f4f6",color:"#888",fontSize:10,padding:"1px 6px",borderRadius:3}}>REVOKED</span>}
+                  {k.is_internal&&<span style={{background:"#fef3c7",color:"#92400e",fontSize:10,padding:"1px 6px",borderRadius:3}}>INTERNAL</span>}
+                  <span style={{fontSize:13,fontWeight:600,color:"#111"}}>{k.name}</span>
+                  {k.owner&&<span style={{fontSize:11,color:"#888",marginLeft:"auto"}}>👤 {k.owner}</span>}
+                </div>
+                <div style={{fontFamily:"monospace",fontSize:11,color:"#555",marginBottom:6}}>{k.key_masked}</div>
+                <div style={{display:"flex",gap:12,fontSize:11,color:"#888",marginBottom:8,flexWrap:"wrap"}}>
+                  <span>⚡ {k.rate_limit_per_hour}/hr</span>
+                  <span>📅 Created {fmtDate(k.created_at)}</span>
+                  {k.last_used_at&&<span>🕐 Last used {fmtDate(k.last_used_at)}</span>}
+                  {k.expires_at&&<span>⏱ Expires {fmtDate(k.expires_at)}</span>}
+                  {k.total_requests>0&&<span>📊 {k.total_requests.toLocaleString()} total requests</span>}
+                  {k.notes&&<span>📝 {k.notes}</span>}
+                </div>
+                {!k.is_internal&&(
+                  <div style={{display:"flex",gap:6}}>
+                    {k.is_active
+                      ?<button onClick={()=>revokeKey(k.key||k.key_masked,k.name)}
+                          style={{fontSize:11,padding:"2px 10px",background:"#fef2f2",color:"#dc2626",
+                            border:"1px solid #fca5a5",borderRadius:4,cursor:"pointer"}}>Revoke</button>
+                      :<button onClick={()=>activateKey(k.key||k.key_masked,k.name)}
+                          style={{fontSize:11,padding:"2px 10px",background:"#f0fdf4",color:"#16a34a",
+                            border:"1px solid #86efac",borderRadius:4,cursor:"pointer"}}>Activate</button>
+                    }
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -4026,6 +4220,7 @@ function Dashboard({onLogout}){
         {tab==="autorefresh"&&<AutoRefreshPanel/>}
         {tab==="email"&&<EmailPanel/>}
         {tab==="settings"&&<SettingsPanel/>}
+        {tab==="apikeys"&&<ApiKeysPanel/>}
         {tab==="cvesearch"&&<CVESearchPanel/>}
         {tab==="feedhealth"&&<FeedHealthPanel/>}
         {tab==="heatmap"&&<HeatmapPanel advisories={advisories}/>}
