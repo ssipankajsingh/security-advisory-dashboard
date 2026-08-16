@@ -847,7 +847,7 @@ function LoginScreen({onLogin,onDenied}){
 
           </div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -2156,7 +2156,7 @@ function Dashboard({onLogout}){
       {id:"autorefresh",label:"Auto-Refresh",icon:"🔄",badge:0},
       {id:"email",label:"Email & Notifications",icon:"📧",badge:0},
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
-      ...(adminVerified?[{id:"apikeys",label:"API Keys",icon:"🔑",badge:0}]:[]),
+      {id:"apikeys",label:"API Keys",icon:"🔑",badge:0},
       {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
       {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
       {id:"heatmap",label:"CVE Heatmap",icon:"🗓️",badge:0},
