@@ -2800,7 +2800,7 @@ function Dashboard({onLogout}){
       <div className="read-pane" style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>🗄️ Advisory Archive</div></div>
         <div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"10px 20px",fontSize:12,color:"#1e40af",flexShrink:0}}>
-          Archived advisories — older than 60 days, within 1-year retention. Fully searchable and exportable.
+          Archived advisories — older than 14 days, within 1-year retention. Fully searchable and exportable.
         </div>
         <div style={{padding:"10px 14px",borderBottom:"1px solid #f0f0f0",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
           <input placeholder="Search ID, title, CVE, vendor..." value={archSearch||""} onChange={e=>setArchSearch(e.target.value)}
