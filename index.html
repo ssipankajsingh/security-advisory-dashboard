@@ -847,7 +847,7 @@ function LoginScreen({onLogin,onDenied}){
 
           </div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -936,6 +936,8 @@ function Dashboard({onLogout}){
   const [advisories,setAdvisories]=useState([]);
   const [fLoad,setFLoad]=useState(false);
   const [proxyHealth,setProxyHealth]=useState("ok"); // "ok" | "reconnecting" | "error"
+  const [adminPin,setAdminPin]=useState("");  // admin PIN — cleared on tab close
+  const [adminVerified,setAdminVerified]=useState(false); // true after PIN verified this session
   const ss=(k,d)=>{try{const v=sessionStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}};
   const [fSev,setFSev]=useState(()=>ss("sf_sev","All"));
   const [fCat,setFCat]=useState(()=>ss("sf_cat","All"));
@@ -963,7 +965,7 @@ function Dashboard({onLogout}){
   const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
   const [newRecipient,setNewRecipient]=useState("");
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
-  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix GSE Dashboard");
+  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
   const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
   const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"IST");
   const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
@@ -1099,7 +1101,7 @@ function Dashboard({onLogout}){
                   const fr=localStorage.getItem("sad_sender")||"";
                   if(wh||em){
                     fetch(`${PROXY_URL}/notify/critical`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
-                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix GSE"})})
+                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix SOC"})})
                       .catch(()=>{});
                   }
                 }
@@ -1180,7 +1182,7 @@ function Dashboard({onLogout}){
     if(!apiKey){alert("Add your Anthropic API key in Settings first.");setTab("settings");return;}
     setTriageLoading(t=>({...t,[advisory.id]:true}));
     try{
-      const prompt=`You are a GSE analyst. In ONE sentence (max 20 words), give the single most critical immediate action for this advisory:\n[${advisory.severity}] ${advisory.id} — ${advisory.title} (${advisory.vendor||advisory.source}, CVSS: ${advisory.cvss||"N/A"}): ${(advisory.summary||"").slice(0,300)}\nRespond with ONLY the action sentence.`;
+      const prompt=`You are a SOC analyst. In ONE sentence (max 20 words), give the single most critical immediate action for this advisory:\n[${advisory.severity}] ${advisory.id} — ${advisory.title} (${advisory.vendor||advisory.source}, CVSS: ${advisory.cvss||"N/A"}): ${(advisory.summary||"").slice(0,300)}\nRespond with ONLY the action sentence.`;
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:80,messages:[{role:"user",content:prompt}]})});
       const data=await res.json();
       if(data.error){alert("AI error: "+data.error.message);return;}
@@ -2154,7 +2156,7 @@ function Dashboard({onLogout}){
       {id:"autorefresh",label:"Auto-Refresh",icon:"🔄",badge:0},
       {id:"email",label:"Email & Notifications",icon:"📧",badge:0},
       {id:"settings",label:"Settings",icon:"⚙️",badge:0},
-      {id:"apikeys",label:"API Keys",icon:"🔑",badge:0},
+      ...(adminVerified?[{id:"apikeys",label:"API Keys",icon:"🔑",badge:0}]:[]),
       {id:"cvesearch",label:"CVE Search (NVD)",icon:"🔍",badge:0},
       {id:"feedhealth",label:"Feed Health Monitor",icon:"🩺",badge:0},
       {id:"heatmap",label:"CVE Heatmap",icon:"🗓️",badge:0},
@@ -2884,7 +2886,56 @@ function Dashboard({onLogout}){
     );
   }
 
-  function ApiKeysPanel(){
+  function AdminPinGate({adminPin,setAdminPin,onVerified}){
+    const [pin,setPin]=React.useState("");
+    const [error,setError]=React.useState("");
+    const [checking,setChecking]=React.useState(false);
+
+    const verify=async()=>{
+      if(!pin.trim()){setError("Enter your admin PIN");return;}
+      setChecking(true); setError("");
+      try{
+        // Verify PIN by hitting admin/keys — 403 = wrong PIN, 200 = correct
+        const r=await fetch(`${PROXY_URL}/admin/keys`,{
+          headers:{...getAuthHeader(),"X-Admin-Pin":pin}});
+        if(r.status===200){
+          setAdminPin(pin);
+          onVerified();
+        } else if(r.status===403){
+          setError("Incorrect admin PIN. Try again.");
+        } else {
+          setError(`Unexpected error: HTTP ${r.status}`);
+        }
+      }catch(e){setError("Network error — "+e.message);}
+      setChecking(false);
+    };
+
+    return(
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",background:"#f8fafc"}}>
+        <div style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:12,padding:"32px 40px",
+          maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 4px 24px rgba(0,0,0,0.07)"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔐</div>
+          <div style={{fontWeight:700,fontSize:16,color:"#111",marginBottom:4}}>Admin Access Required</div>
+          <div style={{fontSize:12,color:"#888",marginBottom:24}}>API key management is restricted.<br/>Enter your admin PIN to continue.</div>
+          <input type="password" value={pin} onChange={e=>setPin(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&verify()}
+            placeholder="Admin PIN" autoFocus
+            style={{width:"100%",padding:"10px 12px",fontSize:14,border:"1px solid #e0e0e0",
+              borderRadius:6,marginBottom:8,boxSizing:"border-box",
+              outline:"none",borderColor:error?"#dc2626":"#e0e0e0"}}/>
+          {error&&<div style={{color:"#dc2626",fontSize:12,marginBottom:8}}>⚠️ {error}</div>}
+          <button onClick={verify} disabled={checking}
+            style={{width:"100%",padding:"10px",background:"#1e40af",color:"#fff",
+              border:"none",borderRadius:6,fontSize:14,fontWeight:600,cursor:"pointer"}}>
+            {checking?"Verifying…":"Unlock Admin Panel"}
+          </button>
+          <div style={{marginTop:16,fontSize:11,color:"#aaa"}}>Session expires when you close this tab.</div>
+        </div>
+      </div>
+    );
+  }
+
+  function ApiKeysPanel({adminPin}){
     const [keys,setKeys]=React.useState([]);
     const [usage,setUsage]=React.useState([]);
     const [loading,setLoading]=React.useState(false);
@@ -2897,12 +2948,14 @@ function Dashboard({onLogout}){
     const tierColors={internal:"#7c3aed",standard:"#2563eb",readonly:"#059669",restricted:"#dc2626"};
     const tierLimits={internal:9999,standard:100,readonly:50,restricted:20};
 
+    const adminHeaders=React.useMemo(()=>({...getAuthHeader(),"X-Admin-Pin":adminPin}),[adminPin]);
+
     const loadKeys=React.useCallback(async()=>{
       setLoading(true);
       try{
         const [kr,ur]=await Promise.all([
-          fetch(`${PROXY_URL}/admin/keys`,{headers:getAuthHeader()}),
-          fetch(`${PROXY_URL}/admin/keys/usage`,{headers:getAuthHeader()})
+          fetch(`${PROXY_URL}/admin/keys`,{headers:adminHeaders}),
+          fetch(`${PROXY_URL}/admin/keys/usage`,{headers:adminHeaders})
         ]);
         const kd=await kr.json(); const ud=await ur.json();
         if(kd.success) setKeys(kd.keys||[]);
@@ -2918,7 +2971,7 @@ function Dashboard({onLogout}){
       setCreating(true); setStatus(null);
       try{
         const r=await fetch(`${PROXY_URL}/admin/keys`,{method:"POST",
-          headers:{"Content-Type":"application/json",...getAuthHeader()},
+          headers:{"Content-Type":"application/json",...adminHeaders},
           body:JSON.stringify({...form,rate_limit_per_hour:Number(form.rate_limit_per_hour),expires_days:Number(form.expires_days)})});
         const d=await r.json();
         if(d.success){
@@ -2936,7 +2989,7 @@ function Dashboard({onLogout}){
       if(!confirm(`Revoke key for "${name}"? It will stop working immediately.`)) return;
       try{
         const r=await fetch(`${PROXY_URL}/admin/keys/${encodeURIComponent(key)}/revoke`,
-          {method:"POST",headers:getAuthHeader()});
+          {method:"POST",headers:adminHeaders});
         const d=await r.json();
         if(d.success){setStatus({ok:true,msg:`Key revoked for "${name}"`});loadKeys();}
         else setStatus({ok:false,msg:d.error});
@@ -2946,7 +2999,7 @@ function Dashboard({onLogout}){
     const activateKey=async(key,name)=>{
       try{
         const r=await fetch(`${PROXY_URL}/admin/keys/${encodeURIComponent(key)}/activate`,
-          {method:"POST",headers:getAuthHeader()});
+          {method:"POST",headers:adminHeaders});
         const d=await r.json();
         if(d.success){setStatus({ok:true,msg:`Key activated for "${name}"`});loadKeys();}
       }catch(e){setStatus({ok:false,msg:e.message});}
@@ -3933,7 +3986,7 @@ function Dashboard({onLogout}){
             <rect x="27" y="9.5" width="10" height="8" fill="#00C9B1"/>
           </svg>
           <span style={{fontSize:12,fontWeight:700,color:"#c0392b"}}>Security Advisory</span>
-          <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE</span>
+          <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE · SOC</span>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {autoRefresh?(
@@ -4220,7 +4273,7 @@ function Dashboard({onLogout}){
         {tab==="autorefresh"&&<AutoRefreshPanel/>}
         {tab==="email"&&<EmailPanel/>}
         {tab==="settings"&&<SettingsPanel/>}
-        {tab==="apikeys"&&<ApiKeysPanel/>}
+        {tab==="apikeys"&&(adminVerified?<ApiKeysPanel adminPin={adminPin}/>:<AdminPinGate adminPin={adminPin} setAdminPin={setAdminPin} onVerified={()=>{setAdminVerified(true);sessionStorage.setItem("sad_admin_pin",adminPin);}} />)}
         {tab==="cvesearch"&&<CVESearchPanel/>}
         {tab==="feedhealth"&&<FeedHealthPanel/>}
         {tab==="heatmap"&&<HeatmapPanel advisories={advisories}/>}
