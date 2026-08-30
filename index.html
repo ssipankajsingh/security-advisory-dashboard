@@ -477,7 +477,7 @@ async function loadSourceConfig(proxyUrl,authHeader){
   catch{return null;}
 }
 async function saveSourceConfig(proxyUrl,authHeader,sourceId,enabled){
-  try{await fetch(`${proxyUrl}/source-config`,{method:"POST",headers:{"Content-Type":"application/json",...authHeader},body:JSON.stringify({source_id:sourceId,enabled})});}
+  try{await fetch(`${proxyUrl}/source-config`,{method:"POST",headers:{"Content-Type":"application/json",...authHeader},body:JSON.stringify({id:sourceId,source_id:sourceId,enabled})});}
   catch{}
 }
 
@@ -912,17 +912,23 @@ function Dashboard({onLogout}){
   useEffect(()=>{
     fetch(`${PROXY_URL}/source-config`,{headers:getAuthHeader()})
       .then(r=>r.ok?r.json():null)
-      .then(cfg=>{
-        if(!cfg||!Array.isArray(cfg)||cfg.length===0) return;
-        const cfgMap={};
-        cfg.forEach(c=>{if(c.source_id)cfgMap[c.source_id]=c.enabled!==false;});
-        setSources(prev=>prev.map(s=>cfgMap.hasOwnProperty(s.id)?{...s,enabled:cfgMap[s.id]}:s));
+      .then(d=>{
+        // /source-config returns {config: {source_id: enabled_bool}}
+        const cfgMap=d?.config||{};
+        if(!cfgMap||typeof cfgMap!=="object"||Object.keys(cfgMap).length===0) return;
+        setSources(prev=>prev.map(s=>
+          cfgMap.hasOwnProperty(s.id)?{...s,enabled:cfgMap[s.id]!==false}:s
+        ));
+        // Supabase is source of truth — update localStorage to match
+        localStorage.setItem("sad_sources",JSON.stringify(
+          (prev=>prev.map(s=>cfgMap.hasOwnProperty(s.id)?{...s,enabled:cfgMap[s.id]!==false}:s))(JSON.parse(localStorage.getItem("sad_sources")||"[]"))
+        ));
       })
       .catch(()=>{});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // Persist sources to localStorage AND sync enabled state changes to Supabase
+  // Persist sources to localStorage — secondary cache (Supabase is source of truth)
   useEffect(()=>{
     localStorage.setItem("sad_sources",JSON.stringify(sources));
   },[sources]);
@@ -2674,7 +2680,12 @@ function Dashboard({onLogout}){
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button onClick={exportCSV} className="btn btn-secondary">⬇ Export CSV</button>
               <button onClick={()=>{if(confirm("Reset advisories? Clears Supabase cache and re-fetches live feeds (last 30 days only).")){setAdvisories([]);setNewCount(0);setVisibleCount(50);fetch(`${PROXY_URL}/cache/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});setTimeout(()=>doRefresh(true),500);}}} className="btn btn-danger">↺ Reset & Refresh (30d)</button>
-              <button onClick={()=>{if(confirm("Reset sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");fetch(`${PROXY_URL}/source-config/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});}}} style={{background:"#fff",color:"#ea580c",border:"1px solid #fed7aa",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>↺ Reset Sources</button>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontSize:11,color:"#888",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:4,padding:"3px 8px"}}>
+                  🔒 Shared state — changes apply to all team browsers
+                </span>
+                <button onClick={()=>{if(confirm("Reset sources to defaults?")){setSources(SOURCE_LIBRARY);localStorage.removeItem("sad_sources");fetch(`${PROXY_URL}/source-config/clear`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()}}).catch(()=>{});}}} style={{background:"#fff",color:"#ea580c",border:"1px solid #fed7aa",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>↺ Reset Sources</button>
+              </div>
             </div>
           </div>
         </div></div>
