@@ -938,6 +938,8 @@ function Dashboard({onLogout}){
   const [proxyHealth,setProxyHealth]=useState("ok"); // "ok" | "reconnecting" | "error"
   const [adminPin,setAdminPin]=useState("");  // admin PIN — cleared on tab close
   const [adminVerified,setAdminVerified]=useState(false); // true after PIN verified this session
+  const [focusMode,setFocusMode]=useState(()=>{try{return localStorage.getItem("sad_focus_mode")==="1";}catch{return false;}}); // Focus Mode: show only CRS≥60 | CNX | KEV
+  const [sortBy,setSortBy]=useState(()=>localStorage.getItem("sad_sort_by")||"crs"); // crs | published | severity | epss
   const ss=(k,d)=>{try{const v=sessionStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;}};
   const [fSev,setFSev]=useState(()=>ss("sf_sev","All"));
   const [fCat,setFCat]=useState(()=>ss("sf_cat","All"));
@@ -1279,7 +1281,24 @@ function Dashboard({onLogout}){
   // ── Feed tab: advisories (CVEs/PSIRTs) | news (articles/intel) ─────────────
   const [feedTab,setFeedTab]=useState(()=>{try{return sessionStorage.getItem("sf_feedtab")||"advisories";}catch{return"advisories";}});
   useEffect(()=>{try{sessionStorage.setItem("sf_feedtab",feedTab);}catch{}},[feedTab]);
-  const filteredAdvisories=useMemo(()=>filtered.filter(a=>{
+  // ── CRS sort + Focus Mode ─────────────────────────────────────────────────
+  const SEV_ORD={"Critical":4,"High":3,"Medium":2,"Low":1};
+  const sortedFiltered=useMemo(()=>{
+    let list=[...filtered];
+    if(focusMode) list=list.filter(a=>{
+      const crs=computeCRS(a);
+      return crs>=60||a.cnxStack||(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source||""));
+    });
+    if(sortBy==="crs") list.sort((a,b)=>computeCRS(b)-computeCRS(a));
+    else if(sortBy==="published") list.sort((a,b)=>new Date(b.published||0)-new Date(a.published||0));
+    else if(sortBy==="severity") list.sort((a,b)=>(SEV_ORD[b.severity]||0)-(SEV_ORD[a.severity]||0));
+    else if(sortBy==="epss") list.sort((a,b)=>parseFloat(b.epss||0)-parseFloat(a.epss||0));
+    else if(sortBy==="cvss") list.sort((a,b)=>parseFloat(b.cvss||0)-parseFloat(a.cvss||0));
+    return list;
+  },[filtered,focusMode,sortBy]);
+  const focusTotalCount=focusMode?filtered.length:0;
+
+  const filteredAdvisories=useMemo(()=>sortedFiltered.filter(a=>{
     if(a.isNews||a.cat==="News") return false;
     // Thin-data items with no CVE and a blog-path URL are articles, not advisories
     if(a.data_quality==="thin"&&!a.cve&&!a.cves?.length){
@@ -1296,6 +1315,7 @@ function Dashboard({onLogout}){
     filteredNews.forEach(n=>{(n.cves||[n.cve]).filter(Boolean).forEach(cve=>{if(cveSet.has(cve))covered.add(cve);});});
     return covered;
   },[filteredAdvisories,filteredNews]);
+  const focusCount=filteredAdvisories.length;
   // Active list: advisories tab | news tab (threat intel first, then chrono)
   const activeFiltered=useMemo(()=>{
     if(feedTab==="advisories")return filteredAdvisories;
@@ -1346,6 +1366,40 @@ function Dashboard({onLogout}){
   const selectedAdvisory=sel?advisories.find(a=>a.id===sel):null;
   const filteredSources=sources.filter(s=>(srcCat==="All"||s.cat===srcCat)&&(!srcSearch||[s.name,s.vendor].some(f=>f?.toLowerCase().includes(srcSearch.toLowerCase()))));
 
+
+  // ── CONCENTRIX RISK SCORE (CRS) ──────────────────────────────────────────────
+  // Composite 0-100 score — answers "what should I look at right now?"
+  // Pure client-side computation from fields already in each advisory. Zero API calls.
+  // Weights: KEV=30 | CNX Stack=25 | EPSS=15 | CVSS=15 | Exploit=10 | OEM=5
+  function computeCRS(a){
+    if(!a) return 0;
+    let score = 0;
+    if(a.isKev||["cisa_kev","vulncheck_kev","CISA KEV"].includes(a.source||"")) score+=30;
+    if(a.cnxStack) score+=25;
+    const epss=parseFloat(a.epss||0);
+    if(epss>0) score+=Math.min(15,Math.round(epss/100*15));
+    const cvss=parseFloat(a.cvss||0);
+    if(cvss>0) score+=Math.min(15,Math.round(cvss/10*15));
+    if(a.zeroDay||a.patch_status==="exploit_published"||epss>=70) score+=10;
+    if(a.isOEM) score+=5;
+    return Math.min(100,score);
+  }
+
+  function crsColor(s){
+    return s>=80?"#dc2626":s>=60?"#ea580c":s>=40?"#ca8a04":"#94a3b8";
+  }
+
+  function CRSBadge({score}){
+    if(!score||score<10) return null;
+    const label=score>=80?"Critical Risk":score>=60?"High Risk":score>=40?"Medium Risk":"Low Risk";
+    return(
+      <span title={`Concentrix Risk Score: ${score}/100 — ${label}`}
+        style={{background:crsColor(score),color:"#fff",borderRadius:4,
+          padding:"1px 6px",fontSize:9,fontWeight:800,letterSpacing:"0.3px",flexShrink:0}}>
+        CRS {score}
+      </span>
+    );
+  }
 
   // ── SOC NOTES TAB — no API key needed, shared via Supabase ─────────────────
   function SOCNotesTab({advisory, ackInfo, userName, onSave}){
@@ -1585,6 +1639,12 @@ function Dashboard({onLogout}){
             <div className="rph-left">
               <div className="rph-badges">
                 <SevBadge sev={a.severity} title={sevTooltip(a)}/>
+                {(()=>{const crs=computeCRS(a);return crs>=10?(<span title={`Concentrix Risk Score: ${crs}/100`}
+                  style={{background:crsColor(crs),color:"#fff",borderRadius:4,padding:"2px 8px",
+                    fontSize:10,fontWeight:800,letterSpacing:"0.3px"}}>
+                  🎯 CRS {crs}
+                  <span style={{fontWeight:400,opacity:0.8,marginLeft:4,fontSize:9}}>/ 100</span>
+                </span>):null;})()}
                 {a.cvss?<span style={{background:({"Critical":"#fef2f2","High":"#fff7ed","Medium":"#fefce8","Low":"#f0fdf4"}[a.severity])||"#f5f5f5",color:({"Critical":"#dc2626","High":"#ea580c","Medium":"#ca8a04","Low":"#16a34a"}[a.severity])||"#888",border:`1px solid ${({"Critical":"#fecaca","High":"#fed7aa","Medium":"#fef08a","Low":"#bbf7d0"}[a.severity])||"#e0e0e0"}`,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>CVSS {a.cvss}</span>:<span style={{background:"#f8fafc",color:"#94a3b8",border:"1px dashed #cbd5e1",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}} title="CVSS pending NVD enrichment">CVSS —</span>}
                 {a.zeroDay&&<ZDBadge/>}
                 {a.isNew&&!ackInfo&&<NewBadge/>}
@@ -2100,6 +2160,7 @@ function Dashboard({onLogout}){
         <div style={{flex:1,minWidth:0}}>
         <div className="fi-badges">
           <SevBadge sev={a.severity} title={sevTooltip(a)}/>
+          <CRSBadge score={computeCRS(a)}/>
           {a.zeroDay&&<ZDBadge/>}
           {a.epss!=null&&a.epss>=20&&(
             <span title={`EPSS: ${a.epss}% probability of exploitation (${a.epss_pct}th percentile)`}
@@ -4201,6 +4262,26 @@ function Dashboard({onLogout}){
                 {(fSev!=="All"||fZD||fNew||fAck!=="All"||fStatus!=="All"||fAssignee!=="All"||fCat!=="All"||fDateRange!=="all"||search)&&(
                   <button className="filter-chip" style={{color:"#c0392b",borderColor:"#fca5a5"}} onClick={()=>{setFSev("All");setFZD(false);setFNew(false);setFAck("All");setFStatus("All");setFAssignee("All");setFCat("All");setFCnxTier("All");setFDateRange("all");setSearch("");}}>✕ Clear</button>
                 )}
+                {/* ── CRS Sort ── */}
+                <select value={sortBy} onChange={e=>{setSortBy(e.target.value);try{localStorage.setItem("sad_sort_by",e.target.value);}catch{}}}
+                  style={{fontSize:11,padding:"3px 6px",border:"1px solid #e0e0e0",borderRadius:5,background:"#fff",color:"#374151",cursor:"pointer"}}
+                  title="Sort advisories">
+                  <option value="crs">↓ Risk Score</option>
+                  <option value="published">↓ Date</option>
+                  <option value="severity">↓ Severity</option>
+                  <option value="epss">↓ EPSS</option>
+                  <option value="cvss">↓ CVSS</option>
+                </select>
+                {/* ── Focus Mode ── */}
+                <button
+                  onClick={()=>{const n=!focusMode;setFocusMode(n);try{localStorage.setItem("sad_focus_mode",n?"1":"0");}catch{};}}
+                  title={focusMode?"Exit Focus Mode — show all advisories":"Focus Mode — show only CRS≥60 | CNX Stack | KEV"}
+                  style={{fontSize:11,padding:"3px 10px",borderRadius:5,cursor:"pointer",fontWeight:700,flexShrink:0,
+                    background:focusMode?"#dc2626":"#f8fafc",
+                    color:focusMode?"#fff":"#374151",
+                    border:focusMode?"1px solid #dc2626":"1px solid #e0e0e0"}}>
+                  {focusMode?`🎯 Focus (${focusCount} / ${focusTotalCount})`:"🎯 Focus Mode"}
+                </button>
               </div>
               {fDateRange==="custom"&&(
                 <div style={{display:"flex",gap:5,padding:"5px 10px",background:"#fafafa",borderBottom:"1px solid #efefef",flexShrink:0}}>
