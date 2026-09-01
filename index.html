@@ -847,7 +847,7 @@ function LoginScreen({onLogin,onDenied}){
 
           </div>
           <div className="login-logo-title">Security Advisory Dashboard</div>
-          <div className="login-logo-sub">Endpoint Security · GSE SOC Team</div>
+          <div className="login-logo-sub">Endpoint Security · GSE Team</div>
         </div>
         <div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:6}}>Team Access Code</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -973,7 +973,7 @@ function Dashboard({onLogout}){
   const [emailRecipients,setEmailRecipients]=useState(()=>ls("sad_recipients")||[]);
   const [newRecipient,setNewRecipient]=useState("");
   const [senderEmail,setSenderEmail]=useState(()=>localStorage.getItem("sad_sender")||"");
-  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix SOC Dashboard");
+  const [senderName,setSenderName]=useState(()=>localStorage.getItem("sad_sendername")||"Concentrix GSE Dashboard");
   const [digestTime,setDigestTime]=useState(()=>localStorage.getItem("sad_digesttime")||"08:00");
   const [digestTZ,setDigestTZ]=useState(()=>localStorage.getItem("sad_digesttz")||"IST");
   const [scheduleEnabled,setScheduleEnabled]=useState(()=>ls("sad_scheduleenabled")??false);
@@ -1109,7 +1109,7 @@ function Dashboard({onLogout}){
                   const fr=localStorage.getItem("sad_sender")||"";
                   if(wh||em){
                     fetch(`${PROXY_URL}/notify/critical`,{method:"POST",headers:{"Content-Type":"application/json",...getAuthHeader()},
-                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix SOC"})})
+                      body:JSON.stringify({advisories:critNew,webhookUrl:wh,to:em,from:fr,senderName:localStorage.getItem("sad_sendername")||"Concentrix GSE"})})
                       .catch(()=>{});
                   }
                 }
@@ -1745,7 +1745,7 @@ function Dashboard({onLogout}){
         {/* Panel tabs */}
         <div className="panel-tabs">
           <div className={"panel-tab"+(readPane==="detail"?" active":"")} onClick={()=>setReadPane("detail")}>Advisory Details</div>
-          <div className={"panel-tab"+(readPane==="triage"?" active":"")} onClick={()=>setReadPane("triage")}>📋 SOC Notes</div>
+          <div className={"panel-tab"+(readPane==="triage"?" active":"")} onClick={()=>setReadPane("triage")}>📋 GSE Notes</div>
           <div className={"panel-tab"+(readPane==="assign"?" active":"")} onClick={()=>setReadPane("assign")}>👤 Assign & Status</div>
         </div>
 
@@ -4058,7 +4058,7 @@ function Dashboard({onLogout}){
             <rect x="27" y="9.5" width="10" height="8" fill="#00C9B1"/>
           </svg>
           <span style={{fontSize:12,fontWeight:700,color:"#c0392b"}}>Security Advisory</span>
-          <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE · SOC</span>
+          <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>GSE</span>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {autoRefresh?(
