@@ -32,7 +32,7 @@ window.addEventListener('appinstalled', function() {
   window.dispatchEvent(new CustomEvent('pwa-installed'));
 });
 
-// Register Service Worker early — required for PWA install prompt
+// Register Service Worker early — required for PWA install prompt.
 // Service Worker: auto-reload when new version deployed
 // New SW activates immediately (skipWaiting) and notifies all tabs
 if ('serviceWorker' in navigator) {
