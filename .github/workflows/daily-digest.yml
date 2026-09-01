@@ -10,21 +10,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Email Digest
+        env:
+          ACCESS_CODE: ${{ secrets.ADVISORY_ACCESS_CODE }}
+          DIGEST_TO: ${{ secrets.ADVISORY_DIGEST_TO }}
+          DIGEST_FROM: ${{ secrets.ADVISORY_DIGEST_FROM }}
         run: |
+          if [ -z "$ACCESS_CODE" ]; then
+            echo "❌ ADVISORY_ACCESS_CODE secret not configured"
+            exit 1
+          fi
+
           response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -H "x-access-code: CNXadvisorySEC@123" \
-            -d '{
-              "to": "Endpoint_Security_Management@concentrix.com",
-              "from": "pankaj.singh15@concentrix.com",
-              "senderName": "Security Advisory"
-            }' \
+            -H "x-access-code: ${ACCESS_CODE}" \
+            -d "{
+              \"to\": \"${DIGEST_TO:-Endpoint_Security_Management@concentrix.com}\",
+              \"from\": \"${DIGEST_FROM:-pankaj.singh15@concentrix.com}\",
+              \"senderName\": \"Security Advisory\"
+            }" \
             https://security-advisory-proxy.onrender.com/email-digest)
-          
+
           echo "HTTP Status: $response"
           cat /tmp/response.json
-          
+
           if [ "$response" -ne 200 ]; then
             echo "❌ Digest send failed with status $response"
             exit 1
