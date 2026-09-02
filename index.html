@@ -2384,7 +2384,7 @@ function Dashboard({onLogout}){
                   </div>
                   {catSrcs.map(s=>(
                     <div key={s.id} className="source-row" style={s.enabled?{borderLeftColor:cc,borderLeftWidth:3}:{}}>
-                      <div className="toggle" style={{background:s.enabled?cc:"#ddd"}} onClick={()=>toggleSrc(s.id)}>
+                      <div className="toggle" style={{background:s.enabled?cc:"#ddd",opacity:isViewerRole()?0.5:1,cursor:isViewerRole()?"not-allowed":"pointer"}} onClick={()=>toggleSrc(s.id)}>
                         <div className="toggle-knob" style={{left:s.enabled?19:3}}/>
                       </div>
                       <div style={{flex:1,minWidth:0}}>
@@ -2461,6 +2461,7 @@ function Dashboard({onLogout}){
 
   // ── EMAIL PANEL ───────────────────────────────────────────────────────────
   function EmailPanel(){
+    const viewOnly=isViewerRole();
     return(
       <div className="read-pane" style={{background:"#fafafa"}}>
         <div className="read-pane-header"><div style={{fontWeight:700,fontSize:15}}>📧 Email Digest & Notifications</div></div>
@@ -2475,57 +2476,58 @@ function Dashboard({onLogout}){
           <div className="section-card">
             <div className="section-title">📬 Distribution List</div>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
-              <input placeholder="Enter email address..." value={newRecipient} onChange={e=>setNewRecipient(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newRecipient.includes("@")){setEmailRecipients(p=>[...p,newRecipient.trim()]);setNewRecipient("");}}} className="field-input" style={{flex:1}}/>
-              <button onClick={()=>{if(newRecipient.includes("@")){setEmailRecipients(p=>[...p,newRecipient.trim()]);setNewRecipient("");}}} className="btn btn-primary">+ Add</button>
+              <input placeholder="Enter email address..." value={newRecipient} disabled={viewOnly} onChange={e=>setNewRecipient(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newRecipient.includes("@")){setEmailRecipients(p=>[...p,newRecipient.trim()]);setNewRecipient("");}}} className="field-input" style={{flex:1}}/>
+              <button disabled={viewOnly} onClick={()=>{if(newRecipient.includes("@")){setEmailRecipients(p=>[...p,newRecipient.trim()]);setNewRecipient("");}}} className="btn btn-primary">+ Add</button>
             </div>
             {emailRecipients.map(r=>(
               <div key={r} style={{background:"#f8f8f8",border:"1px solid #efefef",borderRadius:6,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                 <span style={{fontSize:12}}>📧 {r}</span>
-                <button onClick={()=>setEmailRecipients(p=>p.filter(x=>x!==r))} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer"}}>✕</button>
+                {!viewOnly&&<button onClick={()=>setEmailRecipients(p=>p.filter(x=>x!==r))} style={{background:"none",border:"none",color:"#dc2626",cursor:"pointer"}}>✕</button>}
               </div>
             ))}
           </div>
           <div className="section-card">
             <div className="section-title">✉ Sender Details</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div><div className="field-label">Sender Name</div><input value={senderName} onChange={e=>setSenderName(e.target.value)} className="field-input"/></div>
-              <div><div className="field-label">Sender Email</div><input value={senderEmail} onChange={e=>setSenderEmail(e.target.value)} className="field-input"/></div>
+              <div><div className="field-label">Sender Name</div><input value={senderName} disabled={viewOnly} onChange={e=>setSenderName(e.target.value)} className="field-input"/></div>
+              <div><div className="field-label">Sender Email</div><input value={senderEmail} disabled={viewOnly} onChange={e=>setSenderEmail(e.target.value)} className="field-input"/></div>
             </div>
           </div>
           <div className="section-card" style={scheduleEnabled?{borderColor:"#86efac"}:{}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <div><div className="section-title" style={{marginBottom:2}}>⏰ Scheduled Daily Digest</div><div style={{color:"#888",fontSize:12}}>Auto-sends every day at your chosen time</div></div>
-              <div className="toggle" style={{background:scheduleEnabled?"#16a34a":"#ddd"}} onClick={()=>saveSchedule(!scheduleEnabled)}><div className="toggle-knob" style={{left:scheduleEnabled?19:3}}/></div>
+              <div className="toggle" style={{background:scheduleEnabled?"#16a34a":"#ddd",opacity:viewOnly?0.5:1,cursor:viewOnly?"not-allowed":"pointer"}} onClick={()=>{if(!viewOnly)saveSchedule(!scheduleEnabled);}}><div className="toggle-knob" style={{left:scheduleEnabled?19:3}}/></div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-              <div><div className="field-label">Send Time</div><input type="time" value={digestTime} onChange={e=>setDigestTime(e.target.value)} className="field-input"/></div>
-              <div><div className="field-label">Timezone</div><select value={digestTZ} onChange={e=>setDigestTZ(e.target.value)} className="field-select">{["UTC","IST","EST","CST","MST","PST","CET","AEST"].map(tz=><option key={tz}>{tz}</option>)}</select></div>
+              <div><div className="field-label">Send Time</div><input type="time" value={digestTime} disabled={viewOnly} onChange={e=>setDigestTime(e.target.value)} className="field-input"/></div>
+              <div><div className="field-label">Timezone</div><select value={digestTZ} disabled={viewOnly} onChange={e=>setDigestTZ(e.target.value)} className="field-select">{["UTC","IST","EST","CST","MST","PST","CET","AEST"].map(tz=><option key={tz}>{tz}</option>)}</select></div>
             </div>
-            <button onClick={()=>saveSchedule(scheduleEnabled)} className="btn btn-secondary">💾 Save Schedule</button>
+            <button disabled={viewOnly} onClick={()=>saveSchedule(scheduleEnabled)} className="btn btn-secondary">💾 Save Schedule</button>
             {scheduleStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:scheduleStatus.ok?"#f0fdf4":"#fef2f2",color:scheduleStatus.ok?"#15803d":"#dc2626",fontSize:12}}>{scheduleStatus.msg}</div>}
           </div>
           <div className="section-card">
             <div className="section-title">📤 Send Digest Now</div>
-            <button onClick={sendEmailNow} disabled={emailSending||!emailRecipients.length} className={"btn "+(emailRecipients.length?"btn-primary":"btn-secondary")} style={{width:"100%",justifyContent:"center",padding:"10px"}}>
-              {emailSending?"⟳ Sending…":"📧 Send Digest Now"}
+            <button onClick={sendEmailNow} disabled={viewOnly||emailSending||!emailRecipients.length} className={"btn "+(emailRecipients.length?"btn-primary":"btn-secondary")} style={{width:"100%",justifyContent:"center",padding:"10px"}}>
+              {emailSending?"⟳ Sending…":viewOnly?"🔒 View Only":"📧 Send Digest Now"}
             </button>
             {emailStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:emailStatus.ok?"#f0fdf4":"#fef2f2",color:emailStatus.ok?"#15803d":"#dc2626",fontSize:12}}>{emailStatus.msg}</div>}
           </div>
           <div className="section-card" style={{borderColor:"#c7d2fe"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><span style={{fontSize:18}}>💬</span><div className="section-title" style={{marginBottom:0}}>Microsoft Teams Notifications</div></div>
             <div className="field-label" style={{marginBottom:4}}>Teams Incoming Webhook URL</div>
-            <input placeholder="https://your-org.webhook.office.com/…" value={teamsWebhook} onChange={e=>{setTeamsWebhook(e.target.value);setTeamsStatus(null);}} className="field-input" style={{marginBottom:10}}/>
-            <button onClick={sendTeamsNow} disabled={teamsSending||!teamsWebhook.trim()} className={"btn "+(teamsWebhook.trim()?"btn-teams":"btn-secondary")} style={{width:"100%",justifyContent:"center",marginBottom:8}}>
-              {teamsSending?"⟳ Sending…":"💬 Send to Teams Now"}
+            <input placeholder="https://your-org.webhook.office.com/…" value={teamsWebhook} disabled={viewOnly} onChange={e=>{setTeamsWebhook(e.target.value);setTeamsStatus(null);}} className="field-input" style={{marginBottom:10}}/>
+            <button onClick={sendTeamsNow} disabled={viewOnly||teamsSending||!teamsWebhook.trim()} className={"btn "+(teamsWebhook.trim()?"btn-teams":"btn-secondary")} style={{width:"100%",justifyContent:"center",marginBottom:8}}>
+              {teamsSending?"⟳ Sending…":viewOnly?"🔒 View Only":"💬 Send to Teams Now"}
             </button>
-            <button onClick={async()=>{
+            <button disabled={viewOnly} onClick={async()=>{
+              if(viewOnly)return;
               try{
                 const r=await fetch(`${PROXY_URL}/handover-report?send=true`,{headers:getAuthHeader()});
                 const d=await r.json();
                 alert(`✅ Handover report sent!\nNew: ${d.report?.new_total||0} | Critical: ${d.report?.new_critical||0} | SLA Overdue: ${d.report?.sla_overdue||0}`);
               }catch(e){alert("❌ "+e.message);}
             }} className="btn btn-secondary" style={{width:"100%",justifyContent:"center"}}>
-              🔄 Send Handover Report Now
+              {viewOnly?"🔒 View Only":"🔄 Send Handover Report Now"}
             </button>
             {teamsStatus&&<div style={{marginTop:10,padding:"8px 12px",borderRadius:6,background:teamsStatus.ok?"#f0fdf4":"#fef2f2",color:teamsStatus.ok?"#15803d":"#dc2626",fontSize:12}}>{teamsStatus.msg}</div>}
           </div>
@@ -3261,7 +3263,7 @@ function Dashboard({onLogout}){
               <input placeholder="e.g. All Cisco Critical — unassigned" value={name}
                 onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()}
                 className="field-input"/>
-              <button onClick={save} className="btn btn-primary">Save</button>
+              <button onClick={save} disabled={isViewerRole()} className="btn btn-primary">{isViewerRole()?"🔒":"Save"}</button>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div><div className="field-label">Owner</div>
@@ -4331,9 +4333,9 @@ function Dashboard({onLogout}){
                     {["In Review","Assigned","Patched","Accepted Risk","False Positive"].map(s=>
                       <option key={s} style={{color:"#000"}}>{s}</option>)}
                   </select>
-                  <button onClick={doBulkAck} disabled={bulking}
+                  <button onClick={doBulkAck} disabled={bulking||isViewerRole()}
                     style={{background:"#fff",color:"#1a3a7a",border:"none",padding:"4px 14px",
-                      borderRadius:4,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                      borderRadius:4,fontSize:11,fontWeight:700,cursor:isViewerRole()?"not-allowed":"pointer"}}>
                     {bulking?"Updating…":"✓ Apply"}
                   </button>
                   <button onClick={()=>setSelectedIds(new Set(activeFiltered.map(a=>a.id)))}
