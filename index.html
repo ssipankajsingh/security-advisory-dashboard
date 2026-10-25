@@ -59,8 +59,9 @@ if ('serviceWorker' in navigator) {
   });
 
   window.addEventListener('load', function() {
-    var swUrl = '/security-advisory-dashboard/sw.js';
-    navigator.serviceWorker.register(swUrl, {scope: '/security-advisory-dashboard/'})
+    // Relative paths — works on GitHub Pages (/security-advisory-dashboard/) and nginx root (/)
+    var swUrl = './sw.js';
+    navigator.serviceWorker.register(swUrl, {scope: './'})
       .then(function(reg) {
         console.log('[SW] Registered scope:', reg.scope);
         window.dispatchEvent(new CustomEvent('sw-registered'));
@@ -2616,11 +2617,11 @@ function Dashboard({onLogout}){
                 window.addEventListener("sw-registered",()=>setSwState("registered"));
                 // Check SW status immediately
                 if("serviceWorker" in navigator){
-                  navigator.serviceWorker.getRegistration("/security-advisory-dashboard/").then(reg=>{
+                  navigator.serviceWorker.getRegistration("./").then(reg=>{
                     setSwState(reg?"registered":"pending");
                     if(!reg){
                       // Re-attempt registration
-                      navigator.serviceWorker.register("/security-advisory-dashboard/sw.js",{scope:"/security-advisory-dashboard/"})
+                      navigator.serviceWorker.register("./sw.js",{scope:"./"})
                         .then(()=>setSwState("registered")).catch(()=>setSwState("failed"));
                     }
                   }).catch(()=>setSwState("error"));
