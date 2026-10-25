@@ -4234,10 +4234,13 @@ function Dashboard({onLogout}){
               </div>
               {/* Old data warning */}
               {advisories.length>0&&(()=>{
+                // KEV + zero-day items are kept on purpose (backend retains them 1–2 years and the
+                // nightly archive skips them) — only count items that SHOULD have been archived.
                 const oldCount=advisories.filter(a=>{
+                  if(a.zeroDay||a.isKev||/kev/i.test(a.source||"")||(a.tags||[]).includes("KEV"))return false;
                   try{const d=new Date(a.published||a.date);return !isNaN(d)&&(Date.now()-d.getTime())>120*24*3600000;}catch{return false;}
                 }).length;
-                if(oldCount<50)return null; // only warn if significant number older than 120 days
+                if(oldCount<50)return null; // only warn if significant number of non-retained items are stale
                 return(
                   <div style={{padding:"5px 10px",background:"#fff7ed",borderBottom:"1px solid #fed7aa",display:"flex",alignItems:"center",justifyContent:"space-between",gap:7,fontSize:11,color:"#92400e",flexShrink:0}}>
                     <span style={{display:"flex",alignItems:"center",gap:5}}>
