@@ -152,7 +152,7 @@ a:hover{text-decoration:underline}
 .mid-extra-filters{padding:5px 10px;background:#fafafa;border-bottom:1px solid #efefef;flex-shrink:0;display:flex;gap:5px;flex-wrap:wrap}
 .mid-extra-filters select{background:#fff;border:1px solid #e0e0e0;border-radius:5px;padding:3px 6px;font-size:11px;color:#444;cursor:pointer;max-width:120px}
 .mid-list{flex:1;overflow-y:auto;min-height:0}
-.feed-item{padding:8px 12px 8px 14px;border-bottom:1px solid #efefef;cursor:pointer;transition:background 0.1s;border-left:3px solid #e8e8e8;position:relative}
+.feed-item{padding:8px 12px 10px 14px;border-bottom:1px solid #d9dde3;cursor:pointer;transition:background 0.1s;border-left:3px solid #e8e8e8;position:relative}
 .feed-item:hover{background:#f5f5f5}
 .feed-item.selected{background:#fdf0ef;border-left-color:#c0392b;border-left-width:4px}
 .feed-item.is-new{background:#fffaf9}
@@ -163,7 +163,9 @@ a:hover{text-decoration:underline}
 .feed-item .fi-meta span{overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .feed-item.unread .fi-title{font-weight:700;color:#111}
 .unread-dot{width:6px;height:6px;border-radius:50%;background:#c0392b;position:absolute;right:10px;top:11px;flex-shrink:0}
-.sla-bar{position:absolute;bottom:0;left:0;height:2px;border-radius:0;pointer-events:none}
+/* SLA progress — inset on a grey track so it reads as a meter, not as the card separator */
+.sla-track{position:absolute;bottom:4px;left:17px;right:12px;height:3px;background:#eef0f3;border-radius:2px;overflow:hidden}
+.sla-bar{height:100%;border-radius:2px;pointer-events:none}
 .load-more-btn{width:100%;padding:10px;text-align:center;font-size:11px;color:#888;background:#f8f8f8;border:none;border-top:1px solid #efefef;cursor:pointer}
 .load-more-btn:hover{background:#f0f0f0;color:#555}
 
@@ -2254,7 +2256,8 @@ function Dashboard({onLogout}){
           if(!sl||st==="Patched"||st==="Accepted Risk"||st==="False Positive")return null;
           const pct=sl.overdue?100:Math.round((1-(sl.remainH/sl.limitH))*100);
           const color=sl.overdue?"#dc2626":pct>80?"#ea580c":pct>50?"#ca8a04":"#16a34a";
-          return<div className="sla-bar" style={{width:`${pct}%`,background:color,opacity:0.7}}/>;
+          const tip=sl.overdue?`SLA overdue by ${sl.remainH}h (${sl.limitH}h SLA)`:`SLA: ${sl.remainH}h left of ${sl.limitH}h (${pct}% used)`;
+          return<div className="sla-track" title={tip}><div className="sla-bar" style={{width:`${pct}%`,background:color,opacity:0.8}}/></div>;
         })()}
         </div>
         </div>
