@@ -661,6 +661,19 @@ const SOURCE_LIBRARY=[
   {id:"autodesk_security",name:"Autodesk Security Advisories",vendor:"Autodesk",cat:"Browser/Middleware",tier:1,enabled:true,rss:"https://www.autodesk.com/trust/security-advisories/rss.xml",url:"https://www.autodesk.com/trust/security-advisories"},
   {id:"zimbra_security",name:"Zimbra Security Advisories",vendor:"Zimbra",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://wiki.zimbra.com/wiki/Special:RecentChanges&feed=rss",url:"https://wiki.zimbra.com/wiki/Zimbra_Security_Advisories"},
   {id:"pgadmin_news",name:"pgAdmin Security News",vendor:"pgAdmin",cat:"Browser/Middleware",tier:2,enabled:true,rss:"https://www.pgadmin.org/rss.xml",url:"https://www.pgadmin.org/news/"},
+  // CNX vendors without a working feed: their own CVE records (vendor is the CNA), via NVD
+  {id:"oem_vmware",name:"VMware — vendor CVE records (OEM)",vendor:"VMware",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://support.broadcom.com/web/ecx/security-advisory?segment=VC"},
+  {id:"oem_citrix",name:"Citrix — vendor CVE records (OEM)",vendor:"Citrix",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://support.citrix.com/securitybulletins"},
+  {id:"oem_netapp",name:"NetApp — vendor CVE records (OEM)",vendor:"NetApp",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://security.netapp.com/advisory/"},
+  {id:"oem_sap",name:"SAP — vendor CVE records (OEM)",vendor:"SAP",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://support.sap.com/en/my-support/knowledge-base/security-notes-news.html"},
+  {id:"oem_adobe",name:"Adobe — vendor CVE records (OEM)",vendor:"Adobe",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.adobe.com/trust/security/bulletins-and-advisories.html"},
+  {id:"oem_apache",name:"Apache (Log4j, Tomcat, Struts, HTTPD) — vendor CVE records (OEM)",vendor:"Apache",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.apache.org/security/"},
+  {id:"oem_arista",name:"Arista — vendor CVE records (OEM)",vendor:"Arista",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.arista.com/en/support/advisories-notices"},
+  {id:"oem_brocade",name:"Brocade — vendor CVE records (OEM)",vendor:"Brocade",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://support.broadcom.com/web/ecx/security-advisory?segment=BSD"},
+  {id:"oem_zscaler",name:"Zscaler — vendor CVE records (OEM)",vendor:"Zscaler",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://trust.zscaler.com/"},
+  {id:"oem_netskope",name:"Netskope — vendor CVE records (OEM)",vendor:"Netskope",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.netskope.com/company/security-compliance-and-assurance/security-advisories-and-disclosures"},
+  {id:"oem_crowdstrike",name:"CrowdStrike — vendor CVE records (OEM)",vendor:"CrowdStrike",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://www.crowdstrike.com/trust-center/"},
+  {id:"oem_avaya",name:"Avaya — vendor CVE records (OEM)",vendor:"Avaya",cat:"Your Stack",tier:1,enabled:true,rss:"",url:"https://support.avaya.com/security"},
 ];
 
 const CATEGORIES=[...new Set(SOURCE_LIBRARY.map(s=>s.cat))];
